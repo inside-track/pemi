@@ -41,13 +41,13 @@ class PandasMapper:
                 caught_idx.append(idx)
 
         mapped_idx = [idx for idx in self.df.index if idx not in caught_idx]
-        self.mapped_df = self.mapped_df.loc[mapped_idx]
+        self.mapped_df = self.mapped_df.loc[mapped_idx].astype(object)
         return self.mapped_df
 
 
     def _errors_df(self):
         if len(self.mapping_errors) > 0:
             self.errors_df = self.df.loc[self.mapping_errors.keys()]
-            self.errors_df['__mapping_errors__'] = pd.DataFrame(self.mapping_errors).transpose()[0]
+            self.errors_df['__mapping_errors__'] = pd.DataFrame(self.mapping_errors).transpose()[0].astype(object)
 
         return self.errors_df

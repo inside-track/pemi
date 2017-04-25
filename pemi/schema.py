@@ -25,13 +25,6 @@ class Schema:
     def __getitem__(self, key):
         return self.fields[key]
 
-    def __setitem__(self, key, value):
-        # should we do some parsing of value, or just require that it is already good?
-        self.fields[key] = value
-
-    def __delitem__(self, key, value):
-        del self.fields[key]
-
     def keys(self):
         return self.fields.keys()
 
