@@ -5,8 +5,8 @@ import pandas as pd
 
 import pemi.mappers.pandas
 from pemi.mappers.pandas import PandasMapper
-from pemi.mappers.handler import Handler
-from pemi.mappers.field_map import FieldMap
+from pemi import Handler
+from pemi import FieldMap
 
 
 
