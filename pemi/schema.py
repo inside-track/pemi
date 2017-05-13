@@ -1,25 +1,20 @@
+import pemi.field
+
 from collections import OrderedDict
 
-import pemi.field
-from pemi.field import Field
-
-class FieldExistsError(KeyError): pass
-
 class Schema:
-    def __init__(self, *field_tuples):
-        self.fields = self.__fields_from_tuples(field_tuples)
+    def __init__(self, schema={}):
+        if schema.__class__ == Schema:
+            self.fields = schema.fields
+        else:
+            self.fields = self.__fields_from_dict(schema)
 
-    def __fields_from_tuples(self, field_tuples):
+
+    def __fields_from_dict(self, schema_dict):
         fields_dict = OrderedDict()
-        for field in field_tuples:
-            name = field[0]
-            ftype = field[1]
-            metadata = field[2]
 
-            if name in fields_dict:
-                raise FieldExistsError("Field '{}' already defined".format(name))
-
-            fields_dict[name] = pemi.field.ftypes[ftype](name, **metadata)
+        for name, meta in schema_dict.items():
+            fields_dict[name] = pemi.field.ftypes[meta['type']](name, **meta)
         return fields_dict
 
     def __getitem__(self, key):
