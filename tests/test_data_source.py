@@ -8,7 +8,7 @@ import pandas as pd
 
 import pemi
 import pemi.subjects.files
-import pemi.engines.csv
+import pemi.interfaces.csv
 
 import os
 from pathlib import Path
@@ -32,7 +32,7 @@ class TestDataSource(unittest.TestCase):
 
         ds_beers = pemi.subjects.files.LocalFilesSource(
             my_schema,
-            pemi.engines.csv.CsvFilesEngine,
+            pemi.interfaces.csv.CsvFilesInterface,
             path=self.fixtures_path / Path('beers.csv'),
             csv_opts={}
         )
