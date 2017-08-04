@@ -1,3 +1,5 @@
 pandas
 jupyter
 nose2(pip)
+dask
+graphviz pip

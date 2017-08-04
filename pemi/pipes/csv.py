@@ -16,7 +16,7 @@ class LocalCsvFileSourcePipe(SourcePipe):
         self.paths = params['paths']
         self.csv_opts = self._build_csv_opts(params.get('csv_opts', {}))
 
-        self.targets['standard'].schema = self.schema
+        self.targets['main'].schema = self.schema
         self.field_maps = self._build_field_maps()
 
     def extract(self):
@@ -30,10 +30,10 @@ class LocalCsvFileSourcePipe(SourcePipe):
             mapped_dfs.append(parsed_dfs.mapped_df)
             error_dfs.append(parsed_dfs.errors_df)
 
-        self.targets['standard'].data = pd.concat(mapped_dfs)
+        self.targets['main'].data = pd.concat(mapped_dfs)
         self.targets['error'].data = pd.concat(error_dfs)
 
-        return self.targets['standard'].data
+        return self.targets['main'].data
 
     def _build_csv_opts(self, user_csv_opts):
         mandatory_opts = {
@@ -72,7 +72,7 @@ class LocalCsvFileTargetPipe(TargetPipe):
         self.csv_opts = self._build_csv_opts(params.get('csv_opts', {}))
 
     def encode(self):
-        return self.sources['standard'].data
+        return self.sources['main'].data
 
     def load(self, df):
         print('df is {}'.format(df))
