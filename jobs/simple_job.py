@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 
 import pemi
@@ -129,7 +131,7 @@ class MyJob(pemi.Pipe):
             'sources': {
                 'sales_file': {
                     'beer_id':  {'type': 'integer', 'required': True},
-                    'sold_at':  {'type': 'date', 'in_format': '%d/%m/%Y', 'required': True},
+                    'sold_at':  {'type': 'date', 'in_format': '%m/%d/%Y', 'required': True},
                     'quantity': {'type': 'integer', 'required': True}
                 },
                 'beers_file': {
@@ -145,7 +147,7 @@ class MyJob(pemi.Pipe):
                     'beer_id':    {'type': 'integer', 'required': True},
                     'name':       {'type': 'string', 'required': True},
                     'style':      {'type': 'string'},
-                    'sold_at':    {'type': 'date', 'in_format': '%d/%m/%Y', 'required': True},
+                    'sold_at':    {'type': 'date', 'in_format': '%m/%d/%Y', 'required': True},
                     'quantity':   {'type': 'integer', 'required': True},
                     'unit_price': {'type': 'decimal', 'precision': 16, 'scale': 2},
                     'sell_price': {'type': 'decimal', 'precision': 16, 'scale': 2}
@@ -167,7 +169,10 @@ class MyJob(pemi.Pipe):
             name='sales_file',
             pipe=pemi.pipes.csv.LocalCsvFileSourcePipe(
                 schema=self.schemas['sources']['sales_file'],
-                paths=['sales.csv']
+                paths=[Path(__file__).parent / Path('fixtures') / Path('sales.csv')],
+                csv_opts={
+                    'sep': '|'
+                }
             )
         )
 
@@ -175,7 +180,10 @@ class MyJob(pemi.Pipe):
             name='beers_file',
             pipe=pemi.pipes.csv.LocalCsvFileSourcePipe(
                 schema=self.schemas['sources']['beers_file'],
-                paths=['beers.csv']
+                paths=[Path(__file__).parent / Path('fixtures') / Path('beers.csv')],
+                csv_opts={
+                    'sep': '|'
+                }
             )
         )
 

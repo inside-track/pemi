@@ -1,4 +1,12 @@
 import unittest
+import datetime
+import decimal
+import tempfile
+from pathlib import Path
+
+import pandas as pd
+from pandas.util.testing import assert_frame_equal
+
 
 import pemi
 from pemi import DataSubject
@@ -6,14 +14,6 @@ from pemi import SourcePipe
 from pemi import TargetPipe
 import pemi.pipes.csv
 
-from pathlib import Path
-
-import pandas as pd
-from pandas.util.testing import assert_frame_equal
-
-import datetime
-import decimal
-import tempfile
 
 class TestLocalCsvFileSourcePipe(unittest.TestCase):
     def test_it_parses_a_complex_csv(self):

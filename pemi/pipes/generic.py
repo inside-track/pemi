@@ -3,24 +3,41 @@ import pemi
 from collections import OrderedDict
 
 class PipeConnection():
-    def __init__(self, pipe, target):
-        self.from_pipe = pipe
-        self.from_subject = target
+    def __init__(self, parent, from_subject):
+        self.parent = parent
+        self.from_pipe_name = from_subject.pipe.name
+        self.from_subject_name = from_subject.name
 
-    def to(self, pipe, source):
-        self.to_pipe = pipe
-        self.to_subject = source
+    def to(self, to_subject):
+        self.to_pipe_name = to_subject.pipe.name
+        self.to_subject_name = to_subject.name
         return self
 
+    @property
+    def from_pipe(self):
+        return self.parent.pipes[self.from_pipe_name]
+
+    @property
+    def to_pipe(self):
+        return self.parent.pipes[self.to_pipe_name]
+
+    @property
+    def from_subject(self):
+        return self.from_pipe.targets[self.from_subject_name]
+
+    @property
+    def to_subject(self):
+        return self.to_pipe.sources[self.to_subject_name]
+
     def connect(self):
-        self.to_pipe.sources[self.to_subject] = self.from_pipe.targets[self.from_subject]
+        self.to_subject.data = self.from_subject.data
 
     def __str__(self):
-        return 'PipeConnection: {from_pipe}[{from_subject}] -> {to_pipe}[{to_subject}]'.format(
-            from_pipe=self.from_pipe,
-            from_subject=self.from_subject,
-            to_pipe=self.to_pipe,
-            to_subject=self.to_subject
+        return 'PipeConnection: {}.{} -> {}.{}'.format(
+            self.from_pipe,
+            self.from_subject,
+            self.to_pipe,
+            self.to_subject
         )
 
     def __repr__(self):
@@ -47,12 +64,14 @@ class Pipe():
 
     def source(self, name, schema=pemi.Schema()):
         self.sources[name] = pemi.DataSource(
+            pipe=self,
             name=name,
             schema=schema
         )
 
     def target(self, name, schema=pemi.Schema()):
         self.targets[name] = pemi.DataTarget(
+            pipe=self,
             name=name,
             schema=schema
         )
@@ -62,8 +81,9 @@ class Pipe():
         self.pipes[name] = pipe
 
 
-    def connect(self, pipe, target):
-        conn = PipeConnection(pipe, target)
+    def connect(self, connect_from):
+        conn = PipeConnection(self, connect_from)
+
         self.connections.append(conn)
         return conn
 
@@ -72,7 +92,7 @@ class Pipe():
         raise NotImplementedError
 
     def __str__(self):
-        return "<{}({})>".format(self.__class__.__name__, self.name)
+        return "<{}({}) {}>".format(self.__class__.__name__, self.name, id(self))
 
 
 class SourcePipe(Pipe):
