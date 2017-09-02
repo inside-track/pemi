@@ -55,7 +55,7 @@ class DaskFlow():
     def _node_edge(self, conn):
         return {
             '{}.targets'.format(conn.from_pipe.name): (DaskPipe(conn.from_pipe), []),
-            '{}.targets[{}]'.format(conn.from_pipe.name, conn.from_subject): (self._get_target(conn.from_subject), '{}.targets'.format(conn.from_pipe.name)),
-            '{}.sources[{}]'.format(conn.to_pipe.name, conn.to_subject): (self._connect_to(conn.to_pipe.sources[conn.to_subject], conn), '{}.targets[{}]'.format(conn.from_pipe.name, conn.from_subject)),
-            '{}.targets'.format(conn.to_pipe.name): (DaskPipe(conn.to_pipe), ['{}.sources[{}]'.format(conn.to_pipe.name, conn.to_subject)])
+            '{}.targets[{}]'.format(conn.from_pipe.name, conn.from_subject.name): (self._get_target(conn.from_subject.name), '{}.targets'.format(conn.from_pipe.name)),
+            '{}.sources[{}]'.format(conn.to_pipe.name, conn.to_subject.name): (self._connect_to(conn.to_pipe.sources[conn.to_subject.name], conn), '{}.targets[{}]'.format(conn.from_pipe.name, conn.from_subject.name)),
+            '{}.targets'.format(conn.to_pipe.name): (DaskPipe(conn.to_pipe), ['{}.sources[{}]'.format(conn.to_pipe.name, conn.to_subject.name)])
         }
