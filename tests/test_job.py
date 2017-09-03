@@ -128,11 +128,70 @@ class BlackBoxJob(pemi.Pipe):
 
 # Can I test all of these conditions?
 # # Deduplicates based on id
-# # Redirects records that don't have an id
 # # Redirects duplicate records
 
 
-class TestBlackBoxJob(unittest.TestCase):
+# TODO: SPlit this up into two classes
+#       One with given = conforms to schema
+#       Another with specific example data
+
+
+class TestBlackBoxJobMappings(unittest.TestCase):
+    def setUp(self):
+        self.pipe = BlackBoxJob()
+
+        self.mocker = pemi.testing.PipeMocker(self.pipe)
+        self.mocker.mock_pipe_subject(self.pipe.pipes['beers_file'].targets['main'])
+        self.mocker.mock_pipe_subject(self.pipe.pipes['beers_w_style_file'].sources['main'])
+
+        self.rules = pemi.testing.BasicRules(
+            source_subject=self.pipe.pipes['beers_file'].targets['main'],
+            target_subject=self.pipe.pipes['beers_w_style_file'].sources['main'],
+            mocker=self.mocker
+        )
+
+        self.scenario = pemi.testing.Scenario(
+            runner=self.pipe.flow,
+            givens=[self.rules.when_source_conforms_to_schema()]
+        )
+
+
+    def test_it_copies_the_name_field(self):
+        'The name field is directly copied to the target'
+
+        self.scenario.when(
+        ).then(
+            self.rules.then_field_is_copied('name', 'name')
+        )
+        return self.scenario.run()
+
+    def test_direct_copies(self):
+        'Fields that are directly copied to the target'
+
+        self.scenario.when(
+            self.rules.when_source_conforms_to_schema()
+        ).then(
+            *self.rules.then_fields_are_copied({
+                'id': 'id',
+                'name': 'name',
+                'abv': 'abv'
+            })
+        )
+        return self.scenario.run()
+
+    def test_it_uses_a_default_style(self):
+        'The style is set to unknown if can not be deduced'
+
+        self.scenario.when(
+            self.rules.when_source_field_has_value('name', 'Deduce This!')
+        ).then(
+            self.rules.then_target_field_has_value('style', 'Unknown Style')
+        )
+        return self.scenario.run()
+
+
+
+class TestBlackBoxJobExamples(unittest.TestCase):
 
     def setUp(self):
         self.pipe = BlackBoxJob()
@@ -144,33 +203,21 @@ class TestBlackBoxJob(unittest.TestCase):
         self.source_subject = self.pipe.pipes['beers_file'].targets['main']
         self.target_subject = self.pipe.pipes['beers_w_style_file'].sources['main']
 
+        #TODO: How can I have the rules autodetect sources and targets?
+        self.rules = pemi.testing.BasicRules(
+            source_subject=self.pipe.pipes['beers_file'].targets['main'],
+            target_subject=self.pipe.pipes['beers_w_style_file'].sources['main'],
+            mocker=self.mocker
+        )
+
         self.scenario = pemi.testing.Scenario(
             runner=self.pipe.flow,
-            givens=[self.given]
+            givens=[self.given_example_beers()]
         )
 
 
-    def given(self):
-        pass
-
-
-    # TODO: move WHENs and THENs into a common library
-    #        - Use composition over inheritance to make it easier to build user-specific conditions
-    # WHENS
-
-    def when_conforms_to_schema(self):
-        'The source file conforms to the schema'
-
-        data = TestTable(
-            schema=self.source_subject.schema
-        ).df
-
-        self.mocker.mock_subject_data(self.source_subject, data)
-
-    def when_name_examples(self):
-        'Some example beer names'
-
-        data = TestTable(
+    def example_beers(self):
+        return TestTable(
             '''
             | id | name                     |
             | -  | -                        |
@@ -179,44 +226,18 @@ class TestBlackBoxJob(unittest.TestCase):
             | 3  | Ginormous India Pale Ale |
             ''',
             schema=self.source_subject.schema
-        ).df
-
-        self.mocker.mock_subject_data(self.source_subject, data)
-
-    def when_field_has_value(self, source_subject, field_name, field_value):
-        # This is definitely pandas specific, so perhaps we wrap up these conditions
-        # in data type specific modules.
-
-        def set_value():
-            source_subject.data[field_name] = pd.Series([field_value] * len(source_subject.data))
-
-        return set_value
-
-    # THENS
-
-    def then_field_is_copied(self, name):
-        def then_field_X_is_copied():
-            given = self.source_subject.data
-            actual = self.target_subject.data
-            pd.testing.assert_series_equal(given[name], actual[name])
-
-        return then_field_X_is_copied
-
-    def then_name_field_copied(self):
-        'The name field is copied to the target'
-
-        given = self.source_subject.data
-        actual = self.target_subject.data
-        pd.testing.assert_series_equal(given['name'], actual['name'])
+        )
 
 
-    def then_fields_are_directly_copied(self, *fields):
-        return [self.then_field_is_copied(field) for field in fields]
+    def given_example_beers(self):
+        'Some example beer names'
+        return self.rules.when_example_for_source(self.example_beers())
 
-    def then_name_examples_to_style(self):
-        'Example beer names matches to style name'
 
-        expected = TestTable(
+    def test_it_deduces_style_from_name(self):
+        'The style is deduced from the name'
+
+        expected_styles = TestTable(
             '''
             | id | name                     | style |
             | -  | -                        | -     |
@@ -225,61 +246,14 @@ class TestBlackBoxJob(unittest.TestCase):
             | 3  | Ginormous India Pale Ale | IPA   |
             ''',
             schema=self.target_subject.schema
-        ).df
-
-        actual = self.target_subject.data
-
-        subject_fields = ['id', 'name', 'style']
-        assert_frame_equal(actual[subject_fields], expected[subject_fields])
-
-    def then_field_has_value(self, target_subject, field_name, field_value):
-        def check_value():
-            assert_series_equal(target_subject.data[field_name], pd.Series([field_value] * len(target_subject.data)), check_names=False)
-
-        return check_value
-
-    # TESTS
-
-    def test_it_copies_the_name_field(self):
-        'The name field is directly copied to the target'
+        )
 
         self.scenario.when(
-            self.when_conforms_to_schema
         ).then(
-            self.then_name_field_copied
+            self.rules.then_target_matches_example(expected_styles)
         )
         return self.scenario.run()
 
-    def test_direct_copies(self):
-        'Many fields are directly copied to the target'
-
-        self.scenario.when(
-            self.when_conforms_to_schema
-        ).then(
-            *self.then_fields_are_directly_copied('id', 'name', 'abv')
-        )
-        return self.scenario.run()
-
-    def test_it_deduces_style_from_name(self):
-        'The style is deduced from the name'
-
-        self.scenario.when(
-            self.when_name_examples
-        ).then(
-            self.then_name_examples_to_style
-        )
-        return self.scenario.run()
-
-    def test_it_uses_a_default_style(self):
-        'The style is set to unknown if can not be deduced'
-
-        self.scenario.when(
-            self.when_conforms_to_schema,
-            self.when_field_has_value(self.source_subject, 'name', 'Deduce This!')
-        ).then(
-            self.then_field_has_value(self.target_subject, 'style', 'Unknown Style')
-        )
-        return self.scenario.run()
 
 
 class TestBlackBoxPipe(unittest.TestCase):
@@ -363,3 +337,8 @@ class TestBlackBoxPipe(unittest.TestCase):
             self.then_name_examples_to_style
         )
         return self.scenario.run()
+
+if __name__ == '__main__':
+    t = TestBlackBoxJob()
+    t.setUp()
+    print(dir(t))
