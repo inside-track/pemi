@@ -30,6 +30,11 @@ class TestTable:
         self.nrows = nrows
         self.fake_with = fake_with
 
+        if self.markdown:
+            self.defined_fields = list(self._build_from_markdown().columns)
+        else:
+            self.defined_fields = list(self.schema.keys())
+
     def _clean_markdown(self):
         cleaned = self.markdown
 
@@ -153,3 +158,94 @@ class Scenario():
             then()
 
         return self
+
+
+class BasicRules():
+    def __init__(self, source_subject, target_subject, mocker):
+        self.source_subject = source_subject
+        self.target_subject = target_subject
+        self.mocker = mocker
+
+
+    def when_source_conforms_to_schema(self):
+        'The source data subject conforms to the schema'
+
+        def _when_source_conforms_to_schema():
+            data = TestTable(
+                schema=self.source_subject.schema
+            ).df
+
+            self.mocker.mock_subject_data(self.source_subject, data)
+
+        _when_source_conforms_to_schema.__doc__ = '''
+            The source data subject {} conforms to the schema: {}
+        '''.format(
+            self.source_subject,
+            self.source_subject.schema
+        )
+
+        return _when_source_conforms_to_schema
+
+
+    def then_field_is_copied(self, source_name, target_name):
+        def _then_field_is_copied():
+            given = self.source_subject.data
+            actual = self.target_subject.data
+            pd.testing.assert_series_equal(given[source_name], actual[target_name])
+
+
+        _then_field_is_copied.__doc__ = '''
+            The field {} from the source {} is copied to field {} on the target {}
+        '''.format(
+            self.source_subject,
+            source_name,
+            self.target_subject,
+            target_name
+        )
+        return _then_field_is_copied
+
+    def then_fields_are_copied(self, fields):
+        return [self.then_field_is_copied(source, target) for source, target in fields.items()]
+
+    def when_source_field_has_value(self, field_name, field_value):
+        # This is definitely pandas specific, so perhaps we wrap up these conditions
+        # in data type specific modules.
+
+        def _when_source_field_has_value():
+            self.source_subject.data[field_name] = pd.Series([field_value] * len(self.source_subject.data))
+
+        _when_source_field_has_value.__doc__ = '''
+            The source field '{}' has the value "{}"
+        '''.format(self.source_subject, field_value)
+        return _when_source_field_has_value
+
+    def then_target_field_has_value(self, field_name, field_value):
+        def _then_target_field_has_value():
+            pd.testing.assert_series_equal(self.target_subject.data[field_name], pd.Series([field_value] * len(self.target_subject.data)), check_names=False)
+
+        _then_target_field_has_value.__doc__ = '''
+            The target field '{}' has the value "{}"
+        '''.format(self.target_subject, field_value)
+        return _then_target_field_has_value
+
+    def when_example_for_source(self, table):
+        def _when_example_for_source():
+            self.mocker.mock_subject_data(self.source_subject, table.df)
+
+        _when_example_for_source.__doc__ = '''
+            The following example for '{}':
+            {}
+        '''.format(self.source_subject, table.df[table.defined_fields])
+        return _when_example_for_source
+
+    def then_target_matches_example(self, expected_table):
+        subject_fields = expected_table.defined_fields
+        def _then_target_matches_example():
+            expected = expected_table.df[subject_fields]
+            actual = self.target_subject.data[subject_fields]
+            pd.testing.assert_frame_equal(actual, expected)
+
+        _then_target_matches_example.__doc__ = '''
+            The target '{}' matches the example:
+        '''.format(self.target_subject, expected_table.df[subject_fields])
+        return _then_target_matches_example
