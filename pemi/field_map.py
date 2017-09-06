@@ -1,5 +1,7 @@
 from collections import OrderedDict
 
+import pemi
+
 class Handler:
     def __init__(self, mode='catch', recode=None):
         # modes: raise, catch, recode, warn
@@ -21,7 +23,7 @@ class Handler:
         return {'mode': self.mode, 'index': idx, 'type': err.__class__.__name__, 'message': str(err)}
 
     def _raise(self, err, row_arg, idx):
-        print(mapping_error(err, idx))
+        pemi.log().error(mapping_error(err, idx))
         raise err
 
     def _recode(self, err, row_arg, idx):
@@ -29,7 +31,7 @@ class Handler:
         return self.recode(row_arg)
 
     def _warn(self, err, row_arg, idx):
-        print('WARNING: {}'.format(self.mapping_error(err, idx)))
+        pemi.log().warning(self.mapping_error(err, idx))
         return None
 
     def _catch(self, err, row_arg, idx):

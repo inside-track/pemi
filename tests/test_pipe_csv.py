@@ -29,7 +29,7 @@ class TestLocalCsvFileSourcePipe(unittest.TestCase):
             },
             paths=[Path(__file__).parent / Path('fixtures') / Path('beers.csv')]
         )
-        pipe.execute()
+        pipe.flow()
 
         fdt = lambda x: datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
         fd  = lambda x: datetime.datetime.strptime(x, '%Y-%m-%d').date()
@@ -48,7 +48,7 @@ class TestLocalCsvFileSourcePipe(unittest.TestCase):
             index= ['id',         'name','is_awesome',      'price','details',       'sell_date',               'updated_at']
         ).transpose()
 
-        assert_frame_equal(pipe.targets['standard'].data, expected_df)
+        assert_frame_equal(pipe.targets['main'].data, expected_df)
 
     def test_it_combines_multiple_csvs(self):
         pipe = pemi.pipes.csv.LocalCsvFileSourcePipe(
@@ -61,7 +61,7 @@ class TestLocalCsvFileSourcePipe(unittest.TestCase):
                 Path(__file__).parent / Path('fixtures') / Path('id_name_2.csv')
             ]
         )
-        pipe.execute()
+        pipe.flow()
 
         df_1 = pd.DataFrame(
             {
@@ -81,7 +81,7 @@ class TestLocalCsvFileSourcePipe(unittest.TestCase):
         ).transpose()
 
         expected_df = pd.concat([df_1, df_2])
-        assert_frame_equal(pipe.targets['standard'].data, expected_df)
+        assert_frame_equal(pipe.targets['main'].data, expected_df)
 
 
 class TestLocalCsvFileTargetPipe(unittest.TestCase):
@@ -106,8 +106,8 @@ class TestLocalCsvFileTargetPipe(unittest.TestCase):
             index=['id', 'name']#pipe.schema.keys#
         ).transpose()
 
-        pipe.sources['standard'].data = given_df
-        pipe.execute()
+        pipe.sources['main'].data = given_df
+        pipe.flow()
 
         expected_csv = '\n'.join([
             'id|name',
