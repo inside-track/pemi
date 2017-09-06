@@ -1,0 +1,10 @@
+invoke
+pandas>=0.20,<0.21
+nose2
+dask
+graphviz
+faker
+sqlalchemy
+psycopg2
+jupyter
+jupyterlab

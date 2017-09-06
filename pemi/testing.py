@@ -3,139 +3,16 @@ import io
 import unittest
 
 import pandas as pd
-import faker
-from faker import Factory
 
 import pemi
-
-fake = Factory.create()
-
-class InvalidHeaderSeparatorError(Exception): pass
-
-default_fakers = {
-    'integer': fake.pyint,
-    'string': fake.word,
-    'date': fake.date_object,
-    'datetime': fake.date_time,
-    'float': fake.pyfloat,
-    'decimal': fake.pydecimal,
-    'boolean': fake.pybool
-}
-
-
-class TestTable:
-    def __init__(self, markdown=None, nrows=10, schema=pemi.Schema(), fake_with={}):
-        self.markdown = markdown
-        self.schema = pemi.Schema(schema)
-        self.nrows = nrows
-        self.fake_with = fake_with
-
-        if self.markdown:
-            self.defined_fields = list(self._build_from_markdown().columns)
-        else:
-            self.defined_fields = list(self.schema.keys())
-
-    def _clean_markdown(self):
-        cleaned = self.markdown
-
-        # Remove trailing comments
-        cleaned = re.compile(r'(#.*$)', flags = re.MULTILINE).sub('', cleaned)
-
-        # Remove beginning and terminal pipe on each row
-        cleaned = re.compile(r'(^\s*\|\s*|\s*\|\s*$)', flags = re.MULTILINE).sub('', cleaned)
-
-        # Remove whitespace surrouding pipes
-        cleaned = re.compile(r'\s*\|\s*').sub('|', cleaned)
-
-        # Split by newlines
-        cleaned = cleaned.split('\n')
-
-        # Remove header separator
-        header_separator = cleaned.pop(1)
-        if re.search(re.compile(r'^[\s\-\|]*$'), header_separator) == None:
-            raise InvalidHeaderSeparatorError('Bad header separator: {}'.format(header_separator))
-
-        # Unsplit
-        cleaned = '\n'.join(cleaned)
-        return cleaned
-
-    def _build_from_markdown(self):
-        cleaned = self._clean_markdown()
-        str_df = pd.read_csv(io.StringIO(cleaned), sep='|', converters=self.schema.str_converters())
-
-        df = pd.DataFrame()
-        for header in list(str_df):
-            if header in self.schema.keys():
-                df[header] = str_df[header].apply(self.schema[header].in_converter)
-            else:
-                df[header] = str_df[header]
-        return df
-
-    def _fake_series(self, column, nsample=5):
-        meta = self.schema[column]
-        faker_func = self.fake_with.get(column, {}).get('valid') or default_fakers[meta['type']]
-
-        if self.fake_with.get(column, {}).get('unique'):
-            fake_data_dupes = [faker_func() for i in range(nsample * 3)]
-            fake_data = list(set(fake_data_dupes))[0:nsample]
-            random.shuffle(fake_data)
-        else:
-            fake_data = [faker_func() for i in range(nsample)]
-
-        return pd.Series(fake_data)
-
-
-    @property
-    def df(self):
-        if self.markdown:
-            df = self._build_from_markdown()
-        else:
-            df = pd.DataFrame([], index=range(self.nrows))
-
-        for column in self.schema.keys():
-            if column in df:
-                next
-            else:
-                df[column] = self._fake_series(column, len(df))
-        return df
-
-
-
-class MockPipe(pemi.Pipe):
-    def flow(self):
-        pemi.log().debug('FLOWING mocked pipe: {}'.format(self))
-        pass
-
-
-class PipeMocker():
-    def __init__(self, pipe):
-        self.pipe = pipe
-
-    def mock_subject_data(self, subject, data=None):
-        subject.data = data
-
-    def mock_pipe_subject(self, subject):
-        pipe_of_subject = subject.pipe
-
-        mocked = MockPipe(name=pipe_of_subject.name)
-        if subject.name in pipe_of_subject.targets:
-            mocked.target(
-                name=subject.name,
-                schema=subject.schema
-            )
-
-        if subject.name in pipe_of_subject.sources:
-            mocked.source(
-                name=subject.name,
-                schema=subject.schema
-            )
-
-        self.pipe.pipes[pipe_of_subject.name] = mocked
+import pemi.data
 
 
 class Scenario():
-    def __init__(self, runner, givens=[]):
+    def __init__(self, runner=lambda: None, source_subjects=[], target_subjects=[], givens=[]):
         self.runner = runner
+        self.source_subjects = source_subjects
+        self.target_subjects = target_subjects
         self.givens = givens
         self.whens = []
         self.thens = []
@@ -143,6 +20,14 @@ class Scenario():
     def when(self, *whens):
         self.whens = whens
         return self
+
+    def load_test_data_to_source_subjects(self):
+        for source in self.source_subjects:
+            source.from_pd(source.__test_data__)
+
+    def get_test_data_from_target_subjects(self):
+        for target in self.target_subjects:
+            target.__test_data__ = target.to_pd()
 
     def then(self, *thens):
         self.thens = thens
@@ -153,107 +38,174 @@ class Scenario():
             given()
         for when in self.whens:
             when()
+        self.load_test_data_to_source_subjects()
         self.runner()
+        self.get_test_data_from_target_subjects()
         for then in self.thens:
             then()
 
         return self
 
-
-class BasicRules():
-    def __init__(self, source_subject, target_subject, mocker):
-        self.source_subject = source_subject
-        self.target_subject = target_subject
-        self.mocker = mocker
+class MockPipe(pemi.Pipe):
+    def flow(self):
+        pemi.log().debug('FLOWING mocked pipe: {}'.format(self))
+        pass
 
 
-    def when_source_conforms_to_schema(self):
+
+def mock_pipe(pipe):
+    mocked = MockPipe(name=pipe.name)
+    for source in pipe.sources:
+        mocked.sources[source] = pipe.sources[source]
+        mocked.sources[source].pipe = mocked
+
+    for target in pipe.targets:
+        mocked.targets[target] = pipe.targets[target]
+        mocked.targets[target].pipe = mocked
+
+    return mocked
+
+
+
+class MultipleSubjectsError(Exception): pass
+
+class Rules():
+    def __init__(self, source_subjects, target_subjects):
+        self.source_subjects = source_subjects
+        self.target_subjects = target_subjects
+
+    def _find_source(self, subject):
+        return self._find_subject(self.source_subjects, subject)
+
+    def _find_target(self, subject):
+        return self._find_subject(self.target_subjects, subject)
+
+    def _find_subject(self, subject_list, subject):
+        if subject == None and len(subject_list) == 1:
+            return subject_list[0]
+        elif subject != None:
+            return subject
+        else:
+            raise MultipleSubjectsError('Multiple subjects defined in rules, none selected: {}'.format(subject_list))
+
+
+    def when_source_conforms_to_schema(self, source_subject=None):
         'The source data subject conforms to the schema'
+        source_subject = self._find_source(source_subject)
 
         def _when_source_conforms_to_schema():
-            data = TestTable(
-                schema=self.source_subject.schema
+            data = pemi.data.Table(
+                schema=source_subject.schema
             ).df
 
-            self.mocker.mock_subject_data(self.source_subject, data)
+            source_subject.__test_data__ = data
 
         _when_source_conforms_to_schema.__doc__ = '''
             The source data subject {} conforms to the schema: {}
         '''.format(
-            self.source_subject,
-            self.source_subject.schema
+            source_subject,
+            source_subject.schema
         )
 
         return _when_source_conforms_to_schema
 
+    def when_sources_conform_to_schemas(self):
+        return [self.when_source_conforms_to_schema(source_subject) for source_subject in self.source_subjects]
 
-    def then_field_is_copied(self, source_name, target_name, by=None):
+
+    def then_field_is_copied(self, source_field, target_field, source_subject=None, target_subject=None, by=None):
+        source_subject = self._find_source(source_subject)
+        target_subject = self._find_target(target_subject)
+
+        if source_field == None:
+            raise TypeError('Expecting a field name for source_field_name, got None')
+        if target_field == None:
+            raise TypeError('Expecting a field name for target_field_name, got None')
+
         def _then_field_is_copied():
-            expected = self.source_subject.data
-            actual = self.target_subject.data
+            expected = source_subject.__test_data__
+            actual = target_subject.__test_data__
 
             if by:
                 expected = expected.sort_values(by).reset_index(drop=True)
                 actual = actual.sort_values(by).reset_index(drop=True)
 
-            pd.testing.assert_series_equal(expected[source_name], actual[target_name])
+            pd.testing.assert_series_equal(expected[source_field], actual[target_field])
 
 
         _then_field_is_copied.__doc__ = '''
             The field {} from the source {} is copied to field {} on the target {}
         '''.format(
-            self.source_subject,
-            source_name,
-            self.target_subject,
-            target_name
+            source_subject,
+            source_field,
+            target_subject,
+            target_field
         )
         return _then_field_is_copied
 
-    def then_fields_are_copied(self, fields, by=None):
-        return [self.then_field_is_copied(source, target, by=by) for source, target in fields.items()]
+    def then_fields_are_copied(self, mapping, source_subject=None, target_subject=None, by=None):
+        thens = []
+        for source_field, target_field in mapping.items():
+            thens.append(
+                self.then_field_is_copied(
+                    source_subject=source_subject,
+                    target_subject=target_subject,
+                    source_field=source_field,
+                    target_field=target_field,
+                    by=by
+                )
+            )
+        return thens
 
-    def when_source_field_has_value(self, field_name, field_value):
-        # This is definitely pandas specific, so perhaps we wrap up these conditions
-        # in data type specific modules.
+    def when_source_field_has_value(self, field_name, field_value, source_subject=None):
+        source_subject = self._find_source(source_subject)
 
         def _when_source_field_has_value():
-            self.source_subject.data[field_name] = pd.Series([field_value] * len(self.source_subject.data))
+            source_data = source_subject.__test_data__
+            source_data[field_name] = pd.Series([field_value] * len(source_data))
 
         _when_source_field_has_value.__doc__ = '''
             The source field '{}' has the value "{}"
-        '''.format(self.source_subject, field_value)
+        '''.format(source_subject, field_value)
         return _when_source_field_has_value
 
-    def then_target_field_has_value(self, field_name, field_value):
+    def then_target_field_has_value(self, field_name, field_value, target_subject=None):
+        target_subject = self._find_target(target_subject)
+
         def _then_target_field_has_value():
-            pd.testing.assert_series_equal(self.target_subject.data[field_name], pd.Series([field_value] * len(self.target_subject.data)), check_names=False)
+            target_data = target_subject.__test_data__
+            pd.testing.assert_series_equal(target_data[field_name], pd.Series([field_value] * len(target_data)), check_names=False)
 
         _then_target_field_has_value.__doc__ = '''
             The target field '{}' has the value "{}"
-        '''.format(self.target_subject, field_value)
+        '''.format(target_subject, field_value)
         return _then_target_field_has_value
 
-    def when_example_for_source(self, table):
+    def when_example_for_source(self, table, source_subject=None):
+        source_subject = self._find_source(source_subject)
+
         def _when_example_for_source():
-            self.mocker.mock_subject_data(self.source_subject, table.df)
+            source_subject.__test_data__ = table.df
 
         _when_example_for_source.__doc__ = '''
             The following example for '{}':
             {}
-        '''.format(self.source_subject, table.df[table.defined_fields])
+        '''.format(source_subject, table.df[table.defined_fields])
         return _when_example_for_source
 
-    def then_target_matches_example(self, expected_table):
+    def then_target_matches_example(self, expected_table, target_subject=None):
+        target_subject = self._find_target(target_subject)
         subject_fields = expected_table.defined_fields
+
         def _then_target_matches_example():
             expected = expected_table.df[subject_fields]
             expected.reset_index(inplace=True, drop=True)
-            actual = self.target_subject.data[subject_fields]
+            actual = target_subject.__test_data__[subject_fields]
             actual.reset_index(inplace=True, drop=True)
 
             pd.testing.assert_frame_equal(actual, expected, check_names=False)
 
         _then_target_matches_example.__doc__ = '''
             The target '{}' matches the example:
-        '''.format(self.target_subject, expected_table.df[subject_fields])
+        '''.format(target_subject, expected_table.df[subject_fields])
         return _then_target_matches_example

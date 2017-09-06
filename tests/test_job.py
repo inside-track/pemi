@@ -7,8 +7,9 @@ from pandas.util.testing import assert_frame_equal
 from pandas.util.testing import assert_series_equal
 
 import pemi
+import pemi.testing
 import pemi.pipes.dask
-from pemi.testing import TestTable
+from pemi.data_subject import PdDataSubject
 
 import logging
 pemi.log('pemi').setLevel(logging.WARN)
@@ -19,58 +20,62 @@ this = sys.modules[__name__]
 
 this.schemas = {
     'beers': {
-        'id': {'type': 'integer', 'required': True},
-        'name': {'type': 'string'},
-        'abv': {'type': 'decimal', 'precision': 3, 'scale': 1},
-        'last_brewed_at': {'type': 'date'}
+        'id': {'ftype': 'integer', 'required': True},
+        'name': {'ftype': 'string'},
+        'abv': {'ftype': 'decimal', 'precision': 3, 'scale': 1},
+        'last_brewed_at': {'ftype': 'date'}
     },
     'beers_w_style': {
-        'id': {'type': 'integer', 'required': True},
-        'name': {'type': 'string'},
-        'abv': {'type': 'decimal', 'precision': 3, 'scale': 1},
-        'style': {'type': 'string'}
+        'id': {'ftype': 'integer', 'required': True},
+        'name': {'ftype': 'string'},
+        'abv': {'ftype': 'decimal', 'precision': 3, 'scale': 1},
+        'style': {'ftype': 'string'}
     }
 }
 
 class RemoteSourcePipe(pemi.Pipe):
     def config(self):
         self.target(
+            PdDataSubject,
             name='main',
             schema=this.schemas['beers']
         )
 
     def flow(self):
         pemi.log().debug('FLOWING {}'.format(self))
-        self.targets['main'].data = pd.DataFrame({'id': [1,2,3], 'name': ['one', 'two', 'three']})
+        self.targets['main'].df = pd.DataFrame({'id': [1,2,3], 'name': ['one', 'two', 'three']})
         raise NotImplementedError('The test needs to mock out external calls')
 
 
 class RemoteTargetPipe(pemi.Pipe):
     def config(self):
         self.source(
+            PdDataSubject,
             name='main',
             schema=this.schemas['beers_w_style']
         )
 
     def flow(self):
         pemi.log().debug('FLOWING {}'.format(self))
-        self.data = pd.DataFrame()
         raise NotImplementedError('The test needs to mock out external calls')
 
 
 class BlackBoxPipe(pemi.Pipe):
     def config(self):
         self.source(
+            PdDataSubject,
             name='beers_file',
             schema=this.schemas['beers']
         )
 
         self.target(
+            PdDataSubject,
             name='beers_w_style_file',
             schema=this.schemas['beers_w_style']
         )
 
         self.target(
+            PdDataSubject,
             name='dropped_duplicates',
             schema=this.schemas['beers']
         )
@@ -89,7 +94,7 @@ class BlackBoxPipe(pemi.Pipe):
         return 'Unknown Style'
 
     def flow(self):
-        source_df = self.sources['beers_file'].data.copy()
+        source_df = self.sources['beers_file'].df
 
         grouped = source_df.groupby(['id'], as_index=False)
         deduped_df = grouped.first()
@@ -99,8 +104,8 @@ class BlackBoxPipe(pemi.Pipe):
         deduped_df['style'] = deduped_df['name'].apply(self.deduce_style)
 
         target_fields = list(self.targets['beers_w_style_file'].schema.keys())
-        self.targets['beers_w_style_file'].data = deduped_df[target_fields]
-        self.targets['dropped_duplicates'].data = dupes_df
+        self.targets['beers_w_style_file'].df = deduped_df[target_fields]
+        self.targets['dropped_duplicates'].df = dupes_df
 
 class BlackBoxJob(pemi.Pipe):
     def config(self):
@@ -142,18 +147,18 @@ class TestBlackBoxJobMappings(unittest.TestCase):
     def setUp(self):
         self.pipe = BlackBoxJob()
 
-        self.mocker = pemi.testing.PipeMocker(self.pipe)
-        self.mocker.mock_pipe_subject(self.pipe.pipes['beers_file'].targets['main'])
-        self.mocker.mock_pipe_subject(self.pipe.pipes['beers_w_style_file'].sources['main'])
+        self.pipe.pipes['beers_file'] = pemi.testing.mock_pipe(self.pipe.pipes['beers_file'])
+        self.pipe.pipes['beers_w_style_file'] = pemi.testing.mock_pipe(self.pipe.pipes['beers_w_style_file'])
 
-        self.rules = pemi.testing.BasicRules(
-            source_subject=self.pipe.pipes['beers_file'].targets['main'],
-            target_subject=self.pipe.pipes['beers_w_style_file'].sources['main'],
-            mocker=self.mocker
+        self.rules = pemi.testing.Rules(
+            source_subjects=[self.pipe.pipes['beers_file'].targets['main']],
+            target_subjects=[self.pipe.pipes['beers_w_style_file'].sources['main']]
         )
 
         self.scenario = pemi.testing.Scenario(
             runner=self.pipe.flow,
+            source_subjects=[self.pipe.pipes['beers_file'].targets['main']],
+            target_subjects=[self.pipe.pipes['beers_w_style_file'].sources['main']],
             givens=[self.rules.when_source_conforms_to_schema()]
         )
 
@@ -198,27 +203,27 @@ class TestBlackBoxJobExamples(unittest.TestCase):
     def setUp(self):
         self.pipe = BlackBoxJob()
 
-        self.mocker = pemi.testing.PipeMocker(self.pipe)
-        self.mocker.mock_pipe_subject(self.pipe.pipes['beers_file'].targets['main'])
-        self.mocker.mock_pipe_subject(self.pipe.pipes['beers_w_style_file'].sources['main'])
+        self.pipe.pipes['beers_file'] = pemi.testing.mock_pipe(self.pipe.pipes['beers_file'])
+        self.pipe.pipes['beers_w_style_file'] = pemi.testing.mock_pipe(self.pipe.pipes['beers_w_style_file'])
 
         self.source_subject = self.pipe.pipes['beers_file'].targets['main']
         self.target_subject = self.pipe.pipes['beers_w_style_file'].sources['main']
 
-        self.rules = pemi.testing.BasicRules(
-            source_subject=self.pipe.pipes['beers_file'].targets['main'],
-            target_subject=self.pipe.pipes['beers_w_style_file'].sources['main'],
-            mocker=self.mocker
+        self.rules = pemi.testing.Rules(
+            source_subjects=[self.pipe.pipes['beers_file'].targets['main']],
+            target_subjects=[self.pipe.pipes['beers_w_style_file'].sources['main']]
         )
 
         self.scenario = pemi.testing.Scenario(
             runner=self.pipe.flow,
+            source_subjects=[self.pipe.pipes['beers_file'].targets['main']],
+            target_subjects=[self.pipe.pipes['beers_w_style_file'].sources['main']],
             givens=[self.given_example_beers()]
         )
 
 
     def example_beers(self):
-        return TestTable(
+        return pemi.data.Table(
             '''
             | id | name                     |
             | -  | -                        |
@@ -238,7 +243,7 @@ class TestBlackBoxJobExamples(unittest.TestCase):
     def test_it_deduces_style_from_name(self):
         'The style is deduced from the name'
 
-        expected_styles = TestTable(
+        expected_styles = pemi.data.Table(
             '''
             | id | name                     | style |
             | -  | -                        | -     |
@@ -262,32 +267,29 @@ class TestBlackBoxJobDuplicates(unittest.TestCase):
     def setUp(self):
         self.pipe = BlackBoxJob()
 
-        self.mocker = pemi.testing.PipeMocker(self.pipe)
-        self.mocker.mock_pipe_subject(self.pipe.pipes['beers_file'].targets['main'])
-        self.mocker.mock_pipe_subject(self.pipe.pipes['beers_w_style_file'].sources['main'])
+        self.pipe.pipes['beers_file'] = pemi.testing.mock_pipe(self.pipe.pipes['beers_file'])
+        self.pipe.pipes['beers_w_style_file'] = pemi.testing.mock_pipe(self.pipe.pipes['beers_w_style_file'])
 
-        self.source_subject = self.pipe.pipes['beers_file'].targets['main']
-        self.target_subject = self.pipe.pipes['beers_w_style_file'].sources['main']
-
-        self.rules = pemi.testing.BasicRules(
-            source_subject=self.pipe.pipes['beers_file'].targets['main'],
-            target_subject=self.pipe.pipes['beers_w_style_file'].sources['main'],
-            mocker=self.mocker
-        )
-
-        self.dupe_rules = pemi.testing.BasicRules(
-            source_subject=self.pipe.pipes['beers_file'].targets['main'],
-            target_subject=self.pipe.pipes['black_box'].targets['dropped_duplicates'],
-            mocker=self.mocker
+        self.rules = pemi.testing.Rules(
+            source_subjects=[self.pipe.pipes['beers_file'].targets['main']],
+            target_subjects=[
+                self.pipe.pipes['beers_w_style_file'].sources['main'],
+                self.pipe.pipes['black_box'].targets['dropped_duplicates']
+            ],
         )
 
         self.scenario = pemi.testing.Scenario(
             runner=self.pipe.flow,
+            source_subjects=[self.pipe.pipes['beers_file'].targets['main']],
+            target_subjects=[
+                self.pipe.pipes['beers_w_style_file'].sources['main'],
+                self.pipe.pipes['black_box'].targets['dropped_duplicates']
+            ],
             givens=[self.given_example_duplicates()]
         )
 
     def example_duplicates(self):
-        return TestTable(
+        return pemi.data.Table(
             '''
             | id | name                     |
             | -  | -                        |
@@ -296,7 +298,7 @@ class TestBlackBoxJobDuplicates(unittest.TestCase):
             | 2  | Excellent ESB            |
             | 4  | Ginormous India Pale Ale |
             ''',
-            schema=self.source_subject.schema
+            schema=self.pipe.pipes['beers_file'].targets['main'].schema
         )
 
 
@@ -306,7 +308,7 @@ class TestBlackBoxJobDuplicates(unittest.TestCase):
 
 
     def test_it_drops_duplicates(self):
-        duplicates_dropped = TestTable(
+        duplicates_dropped = pemi.data.Table(
             '''
             | id | name                     |
             | -  | -                        |
@@ -314,28 +316,34 @@ class TestBlackBoxJobDuplicates(unittest.TestCase):
             | 2  | Perfunctory Pale Ale     |
             | 4  | Ginormous India Pale Ale |
             ''',
-            schema=self.target_subject.schema
+            schema=self.pipe.pipes['beers_w_style_file'].sources['main'].schema
         )
 
         self.scenario.when(
         ).then(
-            self.rules.then_target_matches_example(duplicates_dropped)
+            self.rules.then_target_matches_example(
+                duplicates_dropped,
+                target_subject=self.pipe.pipes['beers_w_style_file'].sources['main']
+            )
         )
         return self.scenario.run()
 
     def test_it_redirects_duplicates(self):
-        duplicates = TestTable(
+        duplicates = pemi.data.Table(
             '''
             | id | name                     |
             | -  | -                        |
             | 2  | Excellent ESB            |
             ''',
-            schema=self.source_subject.schema
+            schema=self.pipe.pipes['beers_file'].targets['main'].schema
         )
 
         self.scenario.when(
         ).then(
-            self.dupe_rules.then_target_matches_example(duplicates)
+            self.rules.then_target_matches_example(
+                duplicates,
+                target_subject=self.pipe.pipes['black_box'].targets['dropped_duplicates']
+            )
         )
         return self.scenario.run()
 
@@ -347,16 +355,15 @@ class TestBlackBoxPipe(unittest.TestCase):
     def setUp(self):
         self.pipe = BlackBoxPipe()
 
-        self.mocker = pemi.testing.PipeMocker(self.pipe)
-
-        self.rules = pemi.testing.BasicRules(
-            source_subject=self.pipe.sources['beers_file'],
-            target_subject=self.pipe.targets['beers_w_style_file'],
-            mocker=self.mocker
+        self.rules = pemi.testing.Rules(
+            source_subjects=[self.pipe.sources['beers_file']],
+            target_subjects=[self.pipe.targets['beers_w_style_file']]
         )
 
         self.scenario = pemi.testing.Scenario(
             runner=self.pipe.flow,
+            source_subjects=[self.pipe.sources['beers_file']],
+            target_subjects=[self.pipe.targets['beers_w_style_file']],
             givens=[self.rules.when_source_conforms_to_schema()]
         )
 

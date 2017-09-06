@@ -13,7 +13,6 @@ class Field:
         self.null = None
         self.metadata = {'ftype': ftype, 'required': required, **metadata}
 
-
     def _is_required(self, value):
         if self.required and not value:
             raise RequiredValueError('Missing required value for {}'.format(self.name))
@@ -40,7 +39,7 @@ class StringField(Field):
         super().__init__(name, 'string', **metadata)
         self.length = length
         self.null = ''
-        self.metadata = {'length': length, **metadata}
+        self.metadata = {**self.metadata, 'length': length, **metadata}
 
     def _type_converter(self, value):
         return str(value)
@@ -48,6 +47,7 @@ class StringField(Field):
 class IntegerField(Field):
     def __init__(self, name=None, **metadata):
         super().__init__(name, 'integer', **metadata)
+        self.metadata = {**self.metadata, **metadata}
 
     def _type_converter(self, value):
         return int(value)
@@ -57,17 +57,20 @@ class DateField(Field):
         super().__init__(name, 'date', **metadata)
         self.in_format = in_format
         self.out_format = out_format
-        self.metadata = {'in_format': in_format, 'out_format': out_format, **metadata}
+        self.metadata = {**self.metadata, 'in_format': in_format, 'out_format': out_format, **metadata}
 
     def _type_converter(self, value):
-        return datetime.datetime.strptime(value, self.in_format).date()
+        if hasattr(value, 'date'):
+            return value.date()
+        else:
+            return datetime.datetime.strptime(value, self.in_format).date()
 
 class DateTimeField(Field):
     def __init__(self, name=None, in_format='%Y-%m-%d %H:%M:%S', out_format='%Y-%m-%d %H:%M:%S',**metadata):
         super().__init__(name, 'datetime', **metadata)
         self.in_format = in_format
         self.out_format = out_format
-        self.metadata = {'in_format': in_format, 'out_format': out_format, **metadata}
+        self.metadata = {**self.metadata, 'in_format': in_format, 'out_format': out_format, **metadata}
         self.pd_converter = self.in_converter
 
     def _type_converter(self, value):
@@ -76,6 +79,7 @@ class DateTimeField(Field):
 class FloatField(Field):
     def __init__(self, name=None, **metadata):
         super().__init__(name, 'float', **metadata)
+        self.metadata = {**self.metadata, **metadata}
 
     def _type_converter(self, value):
         return float(value)
@@ -85,10 +89,14 @@ class DecimalField(Field):
         super().__init__(name, 'decimal', **metadata)
         self.precision = precision
         self.scale = scale
-        self.metadata = {'precision': precision, 'scale': scale, **metadata}
+        self.metadata = {**self.metadata, 'precision': precision, 'scale': scale, **metadata}
 
     def _type_converter(self, value):
-        dec = decimal.Decimal(value)
+        # TODO: This is just to catch an edge case where we get float('NaN') back from a db.  Refactor all None checking using pd.isnull()
+        if value != value:
+            return None
+
+        dec = decimal.Decimal(str(value))
 
         detected_precision = len(dec.as_tuple().digits)
         detected_scale = -dec.as_tuple().exponent
@@ -108,6 +116,7 @@ class BooleanField(Field):
     # TODOC: Point out that if unknown_truthiness is set, then that is used when no matching value is found (see tests)
     def __init__(self, name=None, map_true=[], map_false=[], **metadata):
         super().__init__(name, 'boolean', **metadata)
+        self.metadata = {**self.metadata, **metadata}
 
         self.true_values = ['t','true','y','yes','on','1'] + map_true
         self.false_values = ['f','false','n','no','off','0'] + map_false
@@ -128,6 +137,7 @@ class BooleanField(Field):
 class JsonField(Field):
     def __init__(self, name=None, **metadata):
         super().__init__(name, 'json', **metadata)
+        self.metadata = {**self.metadata, **metadata}
 
     def _type_converter(self, value):
         return json.loads(value)
