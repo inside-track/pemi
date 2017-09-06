@@ -75,8 +75,6 @@ class LocalCsvFileTargetPipe(TargetPipe):
         return self.sources['main'].data
 
     def load(self, df):
-        print('df is {}'.format(df))
-        print('path is {}'.format(self.path))
         df.to_csv(self.path, **self.csv_opts)
         return self.path
 

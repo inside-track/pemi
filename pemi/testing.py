@@ -187,11 +187,16 @@ class BasicRules():
         return _when_source_conforms_to_schema
 
 
-    def then_field_is_copied(self, source_name, target_name):
+    def then_field_is_copied(self, source_name, target_name, by=None):
         def _then_field_is_copied():
-            given = self.source_subject.data
+            expected = self.source_subject.data
             actual = self.target_subject.data
-            pd.testing.assert_series_equal(given[source_name], actual[target_name])
+
+            if by:
+                expected = expected.sort_values(by).reset_index(drop=True)
+                actual = actual.sort_values(by).reset_index(drop=True)
+
+            pd.testing.assert_series_equal(expected[source_name], actual[target_name])
 
 
         _then_field_is_copied.__doc__ = '''
@@ -204,8 +209,8 @@ class BasicRules():
         )
         return _then_field_is_copied
 
-    def then_fields_are_copied(self, fields):
-        return [self.then_field_is_copied(source, target) for source, target in fields.items()]
+    def then_fields_are_copied(self, fields, by=None):
+        return [self.then_field_is_copied(source, target, by=by) for source, target in fields.items()]
 
     def when_source_field_has_value(self, field_name, field_value):
         # This is definitely pandas specific, so perhaps we wrap up these conditions
@@ -242,8 +247,11 @@ class BasicRules():
         subject_fields = expected_table.defined_fields
         def _then_target_matches_example():
             expected = expected_table.df[subject_fields]
+            expected.reset_index(inplace=True, drop=True)
             actual = self.target_subject.data[subject_fields]
-            pd.testing.assert_frame_equal(actual, expected)
+            actual.reset_index(inplace=True, drop=True)
+
+            pd.testing.assert_frame_equal(actual, expected, check_names=False)
 
         _then_target_matches_example.__doc__ = '''
             The target '{}' matches the example:
