@@ -1,0 +1,38 @@
+version: '3.3'
+
+services:
+  # Primary services
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        TINI_VERSION:
+    env_file: .env
+    image: pemi/app-dev
+    container_name: pemi_app
+    command: jupyter lab . --ip=0.0.0.0 --allow-root --no-browser
+    depends_on:
+      - db
+    networks:
+      - services
+    volumes:
+      - ./.data/services/ap/bash_history:/root/.bash_history
+      - .:/app
+    ports:
+      - "${HOST_JUPYTER_PORT}:8888"
+
+  # Upstream services
+  db:
+    image: postgres:9.6
+    container_name: pemi_db
+    env_file: .env
+    networks:
+      - services
+    volumes:
+      - ./.data/db:/var/lib/postgresql/data
+    ports:
+      - "${HOST_POSTGRES_PORT}:5432"
+
+networks:
+  services:

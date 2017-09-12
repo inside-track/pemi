@@ -32,7 +32,9 @@ class DaskFlow():
         return dag
 
     def flow(self):
-        return dask.get(self.dag(), list(self.dag().keys()))
+        all_nodes = list(self.dag().keys())
+        non_recursive_nodes = [node for node in all_nodes if node != 'self.targets']
+        return dask.get(self.dag(), non_recursive_nodes)
 
     def graph(self):
         return dask.dot.dot_graph(self.dag(), rankdir='TB')

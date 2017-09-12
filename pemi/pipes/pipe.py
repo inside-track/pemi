@@ -1,6 +1,7 @@
-import pemi
-
 from collections import OrderedDict
+
+import pemi
+from pemi.data_subject import PdDataSubject
 
 class PipeConnection():
     def __init__(self, parent, from_subject):
@@ -30,7 +31,7 @@ class PipeConnection():
         return self.to_pipe.sources[self.to_subject_name]
 
     def connect(self):
-        self.to_subject.data = self.from_subject.data
+        self.to_subject.connect_from(self.from_subject)
 
     def __str__(self):
         return 'PipeConnection: {}.{} -> {}.{}'.format(
@@ -62,18 +63,20 @@ class Pipe():
         'Override this to configure attributes of specific pipes (sources, targets, connections, etc)'
         pass
 
-    def source(self, name, schema=pemi.Schema()):
-        self.sources[name] = pemi.DataSource(
+    def source(self, subject_class, name, schema=pemi.Schema(), **kwargs):
+        self.sources[name] = subject_class(
             pipe=self,
             name=name,
-            schema=schema
+            schema=schema,
+            **kwargs
         )
 
-    def target(self, name, schema=pemi.Schema()):
-        self.targets[name] = pemi.DataTarget(
+    def target(self, subject_class, name, schema=pemi.Schema(), **kwargs):
+        self.targets[name] = subject_class(
             pipe=self,
             name=name,
-            schema=schema
+            schema=schema,
+            **kwargs
         )
 
     def pipe(self, name, pipe):
@@ -101,11 +104,11 @@ class SourcePipe(Pipe):
     it into a data structure that can be used by subsequent pipes.
     '''
 
-    def __init__(self, **params):
+    def __init__(self, subject_class=PdDataSubject, **params):
         super().__init__(**params)
 
-        self.target(name='main')
-        self.target(name='error')
+        self.target(subject_class, name='main')
+        self.target(subject_class, name='error')
 
     def extract(self):
         #e.g., S3SourceExtractor.extract()
@@ -128,11 +131,11 @@ class TargetPipe(Pipe):
     understand by some external target, and then loads the data into that external target.
     '''
 
-    def __init__(self, **params):
+    def __init__(self, subject_class=PdDataSubject, **params):
         super().__init__(**params)
 
-        self.source(name='main')
-        self.target(name='load_response')
+        self.source(subject_class, name='main')
+        self.target(subject_class, name='load_response')
 
     def encode(self):
         #e.g., CsvTargetEncoder.encode()

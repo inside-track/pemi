@@ -1,22 +1,21 @@
 import unittest
 
 import pemi
-from pemi import DataSubject
 from pemi import Pipe
 from pemi import SourcePipe
 from pemi import TargetPipe
-
+from pemi.data_subject import PdDataSubject
 
 class DummySourcePipe(SourcePipe):
     def __init__(self, **params):
         super().__init__(**params)
 
         dummy_schema = pemi.Schema({
-            'id':   { 'type': 'integer', 'required': True },
-            'name': { 'type': 'string' }
+            'id':   { 'ftype': 'integer', 'required': True },
+            'name': { 'ftype': 'string' }
         })
 
-        self.targets['standard'] = DataSubject(dummy_schema)
+        self.targets['standard'] = PdDataSubject(dummy_schema)
 
     def execute(self):
         self.targets['standard'].data = {
@@ -42,11 +41,11 @@ class DummyTargetPipe(TargetPipe):
         super().__init__(**params)
 
         dummy_schema = pemi.Schema({
-            'id':   { 'type': 'integer', 'required': True },
-            'name': { 'type': 'string' }
+            'id':   { 'ftype': 'integer', 'required': True },
+            'name': { 'ftype': 'string' }
         })
 
-        self.sources['standard'] = DataSubject(dummy_schema)
+        self.sources['standard'] = PdDataSubject(dummy_schema)
 
     def execute(self):
         result = []
@@ -78,12 +77,12 @@ class DummyApiPipe(Pipe):
     def __init__(self, **params):
         super().__init__(**params)
 
-        self.sources['standard'] = DataSubject({
-            'number': { 'type': 'integer' }
+        self.sources['standard'] = PdDataSubject({
+            'number': { 'ftype': 'integer' }
         })
 
-        self.targets['standard'] = DataSubject({
-            'number': { 'type': 'integer' }
+        self.targets['standard'] = PdDataSubject({
+            'number': { 'ftype': 'integer' }
         })
 
     def execute(self):

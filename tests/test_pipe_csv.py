@@ -9,23 +9,22 @@ from pandas.util.testing import assert_frame_equal
 
 
 import pemi
-from pemi import DataSubject
+import pemi.pipes.csv
 from pemi import SourcePipe
 from pemi import TargetPipe
-import pemi.pipes.csv
 
 
 class TestLocalCsvFileSourcePipe(unittest.TestCase):
     def test_it_parses_a_complex_csv(self):
         pipe = pemi.pipes.csv.LocalCsvFileSourcePipe(
             schema={
-                'id':         {'type': 'string', 'required': True},
-                'name':       {'type': 'string', 'length': 80, 'required': True},
-                'is_awesome': {'type': 'boolean'},
-                'price':      {'type': 'decimal', 'precision': 4, 'scale': 2},
-                'details':    {'type': 'json'},
-                'sell_date':  {'type': 'date', 'in_format': '%m/%d/%Y', 'to_create': True, 'to_update': False},
-                'updated_at': {'type': 'datetime', 'in_format': '%m/%d/%Y %H:%M:%S', 'to_create': True, 'to_update': False}
+                'id':         {'ftype': 'string', 'required': True},
+                'name':       {'ftype': 'string', 'length': 80, 'required': True},
+                'is_awesome': {'ftype': 'boolean'},
+                'price':      {'ftype': 'decimal', 'precision': 4, 'scale': 2},
+                'details':    {'ftype': 'json'},
+                'sell_date':  {'ftype': 'date', 'in_format': '%m/%d/%Y', 'to_create': True, 'to_update': False},
+                'updated_at': {'ftype': 'datetime', 'in_format': '%m/%d/%Y %H:%M:%S', 'to_create': True, 'to_update': False}
             },
             paths=[Path(__file__).parent / Path('fixtures') / Path('beers.csv')]
         )
@@ -53,8 +52,8 @@ class TestLocalCsvFileSourcePipe(unittest.TestCase):
     def test_it_combines_multiple_csvs(self):
         pipe = pemi.pipes.csv.LocalCsvFileSourcePipe(
             schema={
-                'id':   {'type': 'string'},
-                'name': {'type': 'string'}
+                'id':   {'ftype': 'string'},
+                'name': {'ftype': 'string'}
             },
             paths=[
                 Path(__file__).parent / Path('fixtures') / Path('id_name_1.csv'),
@@ -90,8 +89,8 @@ class TestLocalCsvFileTargetPipe(unittest.TestCase):
 
         pipe = pemi.pipes.csv.LocalCsvFileTargetPipe(
             schema={
-                'id':   {'type': 'string'},
-                'name': {'type': 'string'}
+                'id':   {'ftype': 'string'},
+                'name': {'ftype': 'string'}
             },
             path=tmp_file.name,
             csv_opts={'sep': '|'}
