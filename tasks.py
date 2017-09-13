@@ -4,22 +4,22 @@ from invoke import task
 def compile_requirements(ctx):
     '''
     Compile Python requirements without upgrading.
-    Docker images need to be rebuilt after running this.
+    Docker images need to be rebuilt after running this (inv build).
     '''
-    ctx.run('docker-compose run --rm app inv pip-compile')
+    ctx.run('docker-compose run app inv pip-compile')
 
 @task
 def upgrade_requirements(ctx):
     '''
     Compile Python requirements with upgrading.
-    Docker images need to be rebuilt after running this.
+    Docker images need to be rebuilt after running this (inv build).
     '''
-    ctx.run('docker-compose run --rm app inv pip-compile-upgrade')
+    ctx.run('docker-compose run app inv pip-compile-upgrade')
 
 @task
 def build(ctx):
     'Build docker images'
-    ctx.run('docker-compose build --pull')
+    ctx.run('docker-compose build')
 
 @task
 def up(ctx):
@@ -43,7 +43,7 @@ def logs(ctx):
 @task(help={'nose2': "Arguments to pass to nose2 running in the container."})
 def test(ctx, nose2=''):
     'Runs the test suite.  User can specifiy nose2 options to run specific tests.'
-    ctx.run('docker-compose run --rm app nose2 {}'.format(nose2))
+    ctx.run('docker-compose run app nose2 {}'.format(nose2))
 
 @task
 def ps(ctx):

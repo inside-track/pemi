@@ -193,17 +193,27 @@ class Rules():
         '''.format(source_subject, table.df[table.defined_fields])
         return _when_example_for_source
 
-    def then_target_matches_example(self, expected_table, target_subject=None):
+    def then_target_matches_example(self, expected_table, target_subject=None, by=None):
         target_subject = self._find_target(target_subject)
         subject_fields = expected_table.defined_fields
 
         def _then_target_matches_example():
             expected = expected_table.df[subject_fields]
-            expected.reset_index(inplace=True, drop=True)
             actual = target_subject.__test_data__[subject_fields]
-            actual.reset_index(inplace=True, drop=True)
 
-            pd.testing.assert_frame_equal(actual, expected, check_names=False)
+            if by:
+                expected = expected.sort_values(by).reset_index(drop=True)
+                actual = actual.sort_values(by).reset_index(drop=True)
+            else:
+                expected = expected.reset_index(drop=True)
+                actual = actual.reset_index(drop=True)
+
+            try:
+                pd.testing.assert_frame_equal(actual, expected, check_names=False)
+            except AssertionError as err:
+                pemi.log().error('Actual:\n{}'.format(actual))
+                pemi.log().error('Expected:\n{}'.format(expected))
+                raise err
 
         _then_target_matches_example.__doc__ = '''
             The target '{}' matches the example:

@@ -81,3 +81,26 @@ class SaDataSubject(DataSubject):
 
     def connect_from(self, other):
         self.engine.dispose()
+
+
+
+class SparkDataSubject(DataSubject):
+    def __init__(self, spark, df=None, **kwargs):
+        super().__init__(**kwargs)
+        self.spark = spark
+        self.df = df
+
+    def to_pd(self):
+        converted_df = self.df.toPandas()
+        pd_df = pd.DataFrame()
+        for column in list(converted_df):
+            pd_df[column] = converted_df[column].apply(self.schema[column].in_converter)
+
+        return pd_df
+
+    def from_pd(self, pd_df):
+        self.df = self.spark.createDataFrame(pd_df)
+
+    def connect_from(self, other):
+        self.spark = other.spark.builder.getOrCreate()
+        self.df = other.df

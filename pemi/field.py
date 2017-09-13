@@ -62,6 +62,8 @@ class DateField(Field):
     def _type_converter(self, value):
         if hasattr(value, 'date'):
             return value.date()
+        elif hasattr(value, 'strftime'):
+            return value
         else:
             return datetime.datetime.strptime(value, self.in_format).date()
 
@@ -84,6 +86,8 @@ class FloatField(Field):
     def _type_converter(self, value):
         return float(value)
 
+
+# TODO: figure out a nice way for the converter to optionally truncate decimal without raising
 class DecimalField(Field):
     def __init__(self, name=None, precision=None, scale=None, **metadata):
         super().__init__(name, 'decimal', **metadata)
