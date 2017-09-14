@@ -42,7 +42,9 @@ pickleshare==0.7.4        # via ipython
 prompt-toolkit==1.0.15    # via ipython, jupyter-console
 psycopg2==2.7.3.1
 ptyprocess==0.5.2         # via pexpect, terminado
+py4j==0.10.4              # via pyspark
 pygments==2.2.0           # via ipython, jupyter-console, nbconvert, qtconsole
+pyspark==2.2.0.post0
 python-dateutil==2.6.1    # via faker, jupyter-client, pandas
 pytz==2017.2              # via pandas
 pyzmq==16.0.2             # via jupyter-client

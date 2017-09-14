@@ -8,3 +8,4 @@ sqlalchemy
 psycopg2
 jupyter
 jupyterlab
+pyspark
