@@ -8,6 +8,7 @@ import pemi
 import pemi.testing
 import pemi.pipes.dask
 from pemi.data_subject import SaDataSubject
+from pemi.fields import *
 
 import logging
 pemi.log('pemi').setLevel(logging.WARN)
@@ -83,7 +84,7 @@ with sa.create_engine(this.params['sa_conn_str']).connect() as conn:
 # how queries can be run in parallel via Dask.
 class DumbSaPipe(pemi.Pipe):
     def __init__(self, **params):
-        self.schema = pemi.Schema(params['schema'])
+        self.schema = params['schema']
         self.table = params['table']
         self.sa_engine = sa.create_engine(params['engine_opts']['conn_str'])
 
@@ -126,11 +127,11 @@ class DenormalizeBeersPipe(pemi.Pipe):
         self.source(
             SaDataSubject,
             name='sales',
-            schema={
-                'beer_id':  {'ftype': 'integer', 'required': True},
-                'sold_at':  {'ftype': 'date', 'in_format': '%m/%d/%Y', 'required': True},
-                'quantity': {'ftype': 'integer', 'required': True}
-            },
+            schema=pemi.Schema(
+                beer_id  = IntegerField(),
+                sold_at  = DateField(format='%m/%d/%Y'),
+                quantity = IntegerField()
+            ),
             engine=sa_engine,
             table='dumb_sales'
         )
@@ -138,13 +139,13 @@ class DenormalizeBeersPipe(pemi.Pipe):
         self.source(
             SaDataSubject,
             name='beers',
-            schema={
-                'id':       {'ftype': 'integer', 'required': True},
-                'name':     {'ftype': 'string', 'required': True},
-                'style':    {'ftype': 'string'},
-                'abv':      {'ftype': 'float'},
-                'price':    {'ftype': 'decimal', 'precision': 16, 'scale': 2}
-            },
+            schema = pemi.Schema(
+                id    = IntegerField(),
+                name  = StringField(),
+                style = StringField(),
+                abv   = FloatField(),
+                price = DecimalField(precision=16, scale=2)
+            ),
             engine=sa_engine,
             table='dumb_beers'
         )
@@ -152,15 +153,15 @@ class DenormalizeBeersPipe(pemi.Pipe):
         self.target(
             SaDataSubject,
             name='beer_sales',
-            schema={
-                'beer_id':    {'ftype': 'integer', 'required': True},
-                'name':       {'ftype': 'string'},
-                'style':      {'ftype': 'string'},
-                'sold_at':    {'ftype': 'date', 'in_format': '%m/%d/%Y', 'required': True},
-                'quantity':   {'ftype': 'integer', 'required': True},
-                'unit_price': {'ftype': 'decimal', 'precision': 16, 'scale': 2},
-                'sell_price': {'ftype': 'decimal', 'precision': 16, 'scale': 2}
-            },
+            schema=pemi.Schema(
+                beer_id    = IntegerField(),
+                name       = StringField(),
+                style      = StringField(),
+                sold_at    = DateField(format='%m/%d/%Y'),
+                quantity   = IntegerField(),
+                unit_price = DecimalField(precision=16, scale=2),
+                sell_price = DecimalField(precision=16, scale=2)
+            ),
             engine=sa_engine,
             table='beer_sales'
         )
@@ -272,7 +273,7 @@ class TestDenormalizeBeersPipe(unittest.TestCase):
             | 5       | 01/04/2017 | 6        |
             | 1       | 01/06/2017 | 1        |
             ''',
-            schema=self.pipe.sources['sales'].schema.merge(pemi.Schema({'bumpkin': {'ftype': 'string'}})),
+            schema=self.pipe.sources['sales'].schema.merge(pemi.Schema(bumpkin=StringField())),
             fake_with={
                 'beer_id': { 'valid': lambda: pemi.data.fake.random_int(1,4) },
                 'sold_at': { 'valid': lambda: pemi.data.fake.date_time_this_decade().date() },

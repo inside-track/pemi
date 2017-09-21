@@ -7,6 +7,7 @@ import pyspark
 import pemi
 import pemi.testing
 from pemi.data_subject import SparkDataSubject
+from pemi.fields import *
 
 import logging
 pemi.log('pemi').setLevel(logging.WARN)
@@ -28,39 +29,39 @@ class DenormalizeBeersPipe(pemi.Pipe):
         self.source(
             SparkDataSubject,
             name='sales',
-            schema={
-                'beer_id':  {'ftype': 'integer', 'required': True},
-                'sold_at':  {'ftype': 'date', 'in_format': '%m/%d/%Y', 'required': True},
-                'quantity': {'ftype': 'integer', 'required': True}
-            },
+            schema=pemi.Schema(
+                beer_id  = IntegerField(),
+                sold_at  = DateField(format='%m/%d/%Y'),
+                quantity = IntegerField()
+            ),
             spark=spark
         )
 
         self.source(
             SparkDataSubject,
             name='beers',
-            schema={
-                'id':       {'ftype': 'integer', 'required': True},
-                'name':     {'ftype': 'string', 'required': True},
-                'style':    {'ftype': 'string'},
-                'abv':      {'ftype': 'float'},
-                'price':    {'ftype': 'decimal', 'precision': 16, 'scale': 2}
-            },
+            schema = pemi.Schema(
+                id    = IntegerField(),
+                name  = StringField(),
+                style = StringField(),
+                abv   = FloatField(),
+                price = DecimalField(precision=16, scale=2)
+            ),
             spark=spark
         )
 
         self.target(
             SparkDataSubject,
             name='beer_sales',
-            schema={
-                'beer_id':    {'ftype': 'integer', 'required': True},
-                'name':       {'ftype': 'string'},
-                'style':      {'ftype': 'string'},
-                'sold_at':    {'ftype': 'date', 'in_format': '%m/%d/%Y', 'required': True},
-                'quantity':   {'ftype': 'integer', 'required': True},
-                'unit_price': {'ftype': 'decimal', 'precision': 16, 'scale': 2},
-                'sell_price': {'ftype': 'decimal', 'precision': 16, 'scale': 2}
-            },
+            schema=pemi.Schema(
+                beer_id    = IntegerField(),
+                name       = StringField(),
+                style      = StringField(),
+                sold_at    = DateField(format='%m/%d/%Y'),
+                quantity   = IntegerField(),
+                unit_price = DecimalField(precision=16, scale=2),
+                sell_price = DecimalField(precision=16, scale=2)
+            ),
             spark=spark
         )
 
@@ -124,7 +125,7 @@ class TestDenormalizeBeersPipe(unittest.TestCase):
             | 5       | 01/04/2017 | 6        |
             | 1       | 01/06/2017 | 1        |
             ''',
-            schema=self.pipe.sources['sales'].schema.merge(pemi.Schema({'bumpkin': {'ftype': 'string'}})),
+            schema=self.pipe.sources['sales'].schema.merge(pemi.Schema(bumpkin=StringField())),
             fake_with={
                 'beer_id': { 'valid': lambda: pemi.data.fake.random_int(1,4) },
                 'sold_at': { 'valid': lambda: pemi.data.fake.date_time_this_decade().date() },

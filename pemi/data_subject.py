@@ -10,7 +10,7 @@ class DataSubject():
     '''
 
     def __init__(self, schema=pemi.Schema(), data=None, name=None, pipe=None):
-        self.schema = pemi.Schema(schema)
+        self.schema = schema
         self.data = data
         self.name = name
         self.pipe = pipe
@@ -67,7 +67,7 @@ class SaDataSubject(DataSubject):
 
             df = pd.DataFrame()
             for column in list(sql_df):
-                df[column] = sql_df[column].apply(self.schema[column].in_converter)
+                df[column] = sql_df[column].apply(self.schema[column].coerce)
 
         return df
 
@@ -94,7 +94,7 @@ class SparkDataSubject(DataSubject):
         converted_df = self.df.toPandas()
         pd_df = pd.DataFrame()
         for column in list(converted_df):
-            pd_df[column] = converted_df[column].apply(self.schema[column].in_converter)
+            pd_df[column] = converted_df[column].apply(self.schema[column].coerce)
 
         return pd_df
 

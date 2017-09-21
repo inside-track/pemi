@@ -1,31 +1,33 @@
 import re
 import io
+import random
 
 import pandas as pd
 import faker
 from faker import Factory
 
 import pemi
+from pemi.fields import *
 
 fake = Factory.create()
 
 class InvalidHeaderSeparatorError(Exception): pass
 
 default_fakers = {
-    'integer': fake.pyint,
-    'string': fake.word,
-    'date': fake.date_object,
-    'datetime': fake.date_time,
-    'float': fake.pyfloat,
-    'decimal': fake.pydecimal,
-    'boolean': fake.pybool
+    IntegerField:  fake.pyint,
+    StringField:   fake.word,
+    DateField:     fake.date_object,
+    DateTimeField: fake.date_time,
+    FloatField:    fake.pyfloat,
+    DecimalField:  fake.pydecimal,
+    BooleanField:  fake.pybool
 }
 
 
 class Table:
     def __init__(self, markdown=None, nrows=10, schema=pemi.Schema(), fake_with={}):
         self.markdown = markdown
-        self.schema = pemi.Schema(schema)
+        self.schema = schema
         self.nrows = nrows
         self.fake_with = fake_with
 
@@ -60,19 +62,20 @@ class Table:
 
     def _build_from_markdown(self):
         cleaned = self._clean_markdown()
-        str_df = pd.read_csv(io.StringIO(cleaned), sep='|', converters=self.schema.str_converters())
+        str_df = pd.read_csv(io.StringIO(cleaned), sep='|', converters=self.schema.string_coercions())
 
         df = pd.DataFrame()
         for header in list(str_df):
             if header in self.schema.keys():
-                df[header] = str_df[header].apply(self.schema[header].in_converter)
+                df[header] = str_df[header].apply(self.schema[header].coerce)
             else:
                 df[header] = str_df[header]
         return df
 
     def _fake_series(self, column, nsample=5):
-        meta = self.schema[column]
-        faker_func = self.fake_with.get(column, {}).get('valid') or default_fakers[meta['ftype']]
+        default_faker = default_fakers.get(type(self.schema[column]))
+        valid_faker = self.fake_with.get(column, {}).get('valid')
+        faker_func = valid_faker or default_faker
 
         if self.fake_with.get(column, {}).get('unique'):
             fake_data_dupes = [faker_func() for i in range(nsample * 3)]

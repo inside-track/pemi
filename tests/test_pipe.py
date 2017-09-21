@@ -2,18 +2,19 @@ import unittest
 
 import pemi
 from pemi import Pipe
-from pemi import SourcePipe
-from pemi import TargetPipe
+from pemi.pipes.patterns import SourcePipe
+from pemi.pipes.patterns import TargetPipe
 from pemi.data_subject import PdDataSubject
+from pemi.fields import *
 
 class DummySourcePipe(SourcePipe):
     def __init__(self, **params):
         super().__init__(**params)
 
-        dummy_schema = pemi.Schema({
-            'id':   { 'ftype': 'integer', 'required': True },
-            'name': { 'ftype': 'string' }
-        })
+        dummy_schema = pemi.Schema(
+            id   = IntegerField(),
+            name = StringField()
+        )
 
         self.targets['standard'] = PdDataSubject(dummy_schema)
 
@@ -40,10 +41,10 @@ class DummyTargetPipe(TargetPipe):
     def __init__(self, **params):
         super().__init__(**params)
 
-        dummy_schema = pemi.Schema({
-            'id':   { 'ftype': 'integer', 'required': True },
-            'name': { 'ftype': 'string' }
-        })
+        dummy_schema = pemi.Schema(
+            id   = IntegerField(),
+            name = StringField()
+        )
 
         self.sources['standard'] = PdDataSubject(dummy_schema)
 
