@@ -1,6 +1,21 @@
 from invoke import task
 
 @task
+def package(ctx):
+    '''
+    Package distribution to upload to PyPI
+    '''
+    ctx.run('rm -rf dist')
+    ctx.run('python setup.py sdist')
+
+@task
+def package_deploy(ctx):
+    '''
+    Deploy package to PyPI
+    '''
+    ctx.run('twine upload dist/*')
+
+@task
 def compile_requirements(ctx):
     '''
     Compile Python requirements without upgrading.
