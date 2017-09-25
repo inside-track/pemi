@@ -1,15 +1,78 @@
 import unittest
 
-import pemi.schema
+import pemi
+from pemi.fields import *
+
 
 class TestSchema(unittest.TestCase):
-    def setUp(self):
-        self.schema = pemi.schema.Schema(
-            ('id'         , 'integer', {'required': True}),
-            ('name'       , 'string', {'length': 80}),
-            ('is_awesome' , 'boolean', {}),
-            ('price'      , 'decimal', {'precision': 4, 'scale': 2}),
-            ('details'    , 'json', {}),
-            ('sell_date'  , 'date', {'in_format': '%m/%d/%Y', 'to_create': True, 'to_update': False}),
-            ('updated_at' , 'datetime', {'in_format': '%m/%d/%Y %H:%M:%S', 'to_create': True, 'to_update': False}),
+    def test_create_schema_from_list(self):
+        '''
+        Creating a schema from a list of fields
+        '''
+        f1 = IntegerField('id')
+        f2 = StringField('name')
+        f3 = DateField('sell_at', format='%m/%d/%Y')
+
+
+        schema = pemi.Schema(f1, f2, f3)
+        expected_fields = {
+            'id': f1,
+            'name': f2,
+            'sell_at': f3
+        }
+        self.assertEqual(schema.fields, expected_fields)
+
+    def test_create_schema_from_keywords(self):
+        '''
+        Creating a schema from field keywords
+        '''
+        f1 = IntegerField()
+        f2 = StringField()
+        f3 = DateField(format='%m/%d/%Y')
+
+
+        schema = pemi.Schema(
+            id=f1,
+            name=f2,
+            sell_at=f3
         )
+        expected_fields = {
+            'id': f1,
+            'name': f2,
+            'sell_at': f3
+        }
+        self.assertEqual(schema.fields, expected_fields)
+
+
+    def test_get_metadata_for_a_field(self):
+        '''
+        Metadata for a field can be retrieved
+        '''
+
+        schema = pemi.Schema(
+            DateField('sell_at', format='%m/%d/%Y')
+        )
+
+        self.assertEqual(schema['sell_at'].metadata['format'], '%m/%d/%Y')
+
+
+    def test_schema_merge(self):
+        '''
+        Schemas and the field metadata can be merged
+        '''
+
+        s1f1 = IntegerField('id')
+        s1f2 = StringField('name', from_s1='yep', whoami='s1')
+        s1 = pemi.Schema(s1f1, s1f2)
+
+        s2f2 = StringField('name', from_s2='certainly', whoami='s2')
+        s2f3 = DateField('sell_at', format='%m/%d/%Y')
+        s2 = pemi.Schema(s2f2, s2f3)
+
+        merged = s1.merge(s2)
+        expected = pemi.Schema(
+            s1f1,
+            StringField('name', from_s1='yep', from_s2='certainly', whoami='s2'),
+            s2f3
+        )
+        self.assertEqual(merged, expected)

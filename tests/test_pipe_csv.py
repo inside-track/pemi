@@ -7,54 +7,77 @@ from pathlib import Path
 import pandas as pd
 from pandas.util.testing import assert_frame_equal
 
-
 import pemi
+import pemi.testing
 import pemi.pipes.csv
-from pemi import SourcePipe
-from pemi import TargetPipe
-
+from pemi.fields import *
 
 class TestLocalCsvFileSourcePipe(unittest.TestCase):
     def test_it_parses_a_complex_csv(self):
+        schema = pemi.Schema(
+            id         = StringField(),
+            name       = StringField(allow_null=False),
+            is_awesome = BooleanField(),
+            price      = DecimalField(precision=4, scale=2),
+            sell_date  = DateField(format='%m/%d/%Y'),
+            updated_at = DateTimeField(format='%m/%d/%Y %H:%M:%S')
+        )
+
         pipe = pemi.pipes.csv.LocalCsvFileSourcePipe(
-            schema={
-                'id':         {'ftype': 'string', 'required': True},
-                'name':       {'ftype': 'string', 'length': 80, 'required': True},
-                'is_awesome': {'ftype': 'boolean'},
-                'price':      {'ftype': 'decimal', 'precision': 4, 'scale': 2},
-                'details':    {'ftype': 'json'},
-                'sell_date':  {'ftype': 'date', 'in_format': '%m/%d/%Y', 'to_create': True, 'to_update': False},
-                'updated_at': {'ftype': 'datetime', 'in_format': '%m/%d/%Y %H:%M:%S', 'to_create': True, 'to_update': False}
-            },
+            schema=schema,
             paths=[Path(__file__).parent / Path('fixtures') / Path('beers.csv')]
         )
         pipe.flow()
+        actual_df = pipe.targets['main'].df
+        actual_errors_df = pipe.targets['errors'].df
 
-        fdt = lambda x: datetime.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
-        fd  = lambda x: datetime.datetime.strptime(x, '%Y-%m-%d').date()
-        fdc = lambda x: decimal.Decimal(x)
 
-        expected_df = pd.DataFrame(
-            {
-                0: ['01',        'DBIRA',        True, fdc('10.83'),       {},  fd('2017-03-27'), fdt('2017-01-01 23:39:39')],
-                2: ['03',       'Berber',       False, fdc('10.83'),       {},  fd('2017-03-22'), fdt('2017-01-01 23:39:39')],
-                3: ['04',      'SoLikey',       False, fdc('10.83'),       {},  fd('2017-03-22'), fdt('2017-01-01 23:39:39')],
-                4: ['05',  'Perfecticon',       False,         None,       {},  fd('2017-03-22'), fdt('2017-01-01 23:39:39')],
-                5: ['06',   'Hopticular',        True, fdc('10.83'),       {},  fd('2017-03-22'), fdt('2017-01-01 23:39:39')],
-                6: ['07',       'Malted',        None, fdc('10.83'),       {},  fd('2017-03-22'), fdt('2017-01-01 23:39:39')],
-                7: ['08',        'Foamy',        True, fdc('10.83'),       {},  fd('2017-03-22'), fdt('2017-01-01 23:39:39')]
-            },
-            index= ['id',         'name','is_awesome',      'price','details',       'sell_date',               'updated_at']
-        ).transpose()
+        expected_df = pemi.data.Table(
+            '''
+            | id | name         | is_awesome  | price | sell_date  | updated_at          |
+            | -  | -            | -           | -     | -          | -                   |
+            | 01 | DBIRA        | True        | 10.83 | 2017-03-27 | 2017-01-01 23:39:39 |
+            | 03 | Berber       | False       | 10.83 | 2017-03-22 | 2017-01-01 23:39:39 |
+            | 04 | SoLikey      | False       | 10.83 | 2017-03-22 | 2017-01-01 23:39:39 |
+            | 05 | Perfecticon  | False       |       | 2017-03-22 | 2017-01-01 23:39:39 |
+            | 06 | Hopticular   | True        | 10.83 | 2017-03-22 | 2017-01-01 23:39:39 |
+            | 07 | Malted       |             | 10.83 | 2017-03-22 | 2017-01-01 23:39:39 |
+            | 08 | Foamy        | True        | 10.83 | 2017-03-22 | 2017-01-01 23:39:39 |
+            ''',
+            schema=schema.merge(pemi.Schema(
+                sell_date  = DateField(format='%Y-%m-%d'),
+                updated_at = DateTimeField(format='%Y-%m-%d %H:%M:%S')
+            ))
+        ).df
 
-        assert_frame_equal(pipe.targets['main'].data, expected_df)
+        expected_errors_df = pemi.data.Table(
+            '''
+            | id | __error_message__                    |
+            | -  | -                                    |
+            | 02 | null is not allowed for field 'name' |
+            ''',
+            schema=pemi.Schema(
+                id                = StringField(),
+                __error_message__ = StringField()
+            )
+        ).df
+
+        expected_df.reset_index(drop=True, inplace=True)
+        actual_df.reset_index(drop=True, inplace=True)
+        pemi.testing.assert_frame_equal(actual_df, expected_df, check_names=False)
+
+
+        expected_errors_df.reset_index(drop=True, inplace=True)
+        actual_errors_df.reset_index(drop=True, inplace=True)
+        pemi.testing.assert_frame_equal(actual_errors_df[expected_errors_df.columns], expected_errors_df, check_names=False)
+
 
     def test_it_combines_multiple_csvs(self):
         pipe = pemi.pipes.csv.LocalCsvFileSourcePipe(
-            schema={
-                'id':   {'ftype': 'string'},
-                'name': {'ftype': 'string'}
-            },
+            schema=pemi.Schema(
+                id   = StringField(),
+                name = StringField()
+            ),
             paths=[
                 Path(__file__).parent / Path('fixtures') / Path('id_name_1.csv'),
                 Path(__file__).parent / Path('fixtures') / Path('id_name_2.csv')
@@ -80,7 +103,7 @@ class TestLocalCsvFileSourcePipe(unittest.TestCase):
         ).transpose()
 
         expected_df = pd.concat([df_1, df_2])
-        assert_frame_equal(pipe.targets['main'].data, expected_df)
+        assert_frame_equal(pipe.targets['main'].df, expected_df)
 
 
 class TestLocalCsvFileTargetPipe(unittest.TestCase):
@@ -88,10 +111,10 @@ class TestLocalCsvFileTargetPipe(unittest.TestCase):
         tmp_file = tempfile.NamedTemporaryFile()
 
         pipe = pemi.pipes.csv.LocalCsvFileTargetPipe(
-            schema={
-                'id':   {'ftype': 'string'},
-                'name': {'ftype': 'string'}
-            },
+            schema=pemi.Schema(
+                id   = StringField(),
+                name = StringField()
+            ),
             path=tmp_file.name,
             csv_opts={'sep': '|'}
         )
@@ -105,7 +128,7 @@ class TestLocalCsvFileTargetPipe(unittest.TestCase):
             index=['id', 'name']#pipe.schema.keys#
         ).transpose()
 
-        pipe.sources['main'].data = given_df
+        pipe.sources['main'].df = given_df
         pipe.flow()
 
         expected_csv = '\n'.join([

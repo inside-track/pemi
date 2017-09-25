@@ -3,9 +3,18 @@ import io
 import unittest
 
 import pandas as pd
+from pandas.util.testing import assert_frame_equal
 
 import pemi
 import pemi.data
+
+def assert_frame_equal(actual, expected, **kwargs):
+    try:
+        pd.util.testing.assert_frame_equal(actual, expected, **kwargs)
+    except AssertionError as err:
+        print('Actual:\n{}'.format(actual))
+        print('Expected:\n{}'.format(expected))
+        raise err
 
 
 class Scenario():
@@ -208,12 +217,7 @@ class Rules():
                 expected = expected.reset_index(drop=True)
                 actual = actual.reset_index(drop=True)
 
-            try:
-                pd.testing.assert_frame_equal(actual, expected, check_names=False)
-            except AssertionError as err:
-                pemi.log().error('Actual:\n{}'.format(actual))
-                pemi.log().error('Expected:\n{}'.format(expected))
-                raise err
+            assert_frame_equal(actual, expected, check_names=False)
 
         _then_target_matches_example.__doc__ = '''
             The target '{}' matches the example:

@@ -10,6 +10,7 @@ import pemi
 import pemi.testing
 import pemi.pipes.dask
 from pemi.data_subject import PdDataSubject
+from pemi.fields import *
 
 import logging
 pemi.log('pemi').setLevel(logging.WARN)
@@ -19,18 +20,18 @@ import sys
 this = sys.modules[__name__]
 
 this.schemas = {
-    'beers': {
-        'id': {'ftype': 'integer', 'required': True},
-        'name': {'ftype': 'string'},
-        'abv': {'ftype': 'decimal', 'precision': 3, 'scale': 1},
-        'last_brewed_at': {'ftype': 'date'}
-    },
-    'beers_w_style': {
-        'id': {'ftype': 'integer', 'required': True},
-        'name': {'ftype': 'string'},
-        'abv': {'ftype': 'decimal', 'precision': 3, 'scale': 1},
-        'style': {'ftype': 'string'}
-    }
+    'beers': pemi.Schema(
+        id             = IntegerField(),
+        name           = StringField(),
+        abv            = DecimalField(precision=3, scale=1),
+        last_brewed_at = DateField()
+    ),
+    'beers_w_style': pemi.Schema(
+        id    = IntegerField(),
+        name  = StringField(),
+        abv   = DecimalField(precision=3, scale=1),
+        style = StringField()
+    )
 }
 
 class RemoteSourcePipe(pemi.Pipe):

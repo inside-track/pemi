@@ -1,22 +1,14 @@
-import pemi.field
-
 from collections import OrderedDict
 
 class Schema:
-    def __init__(self, schema={}):
-        if schema.__class__ == Schema:
-            self.fields = schema.fields
-        else:
-            self.fields = self.__fields_from_dict(schema)
+    def __init__(self, *args, **kwargs):
+        self.fields = OrderedDict()
+        for field in args:
+            self.fields[field.name] = field
 
-
-    def __fields_from_dict(self, schema_dict):
-        fields_dict = OrderedDict()
-
-        for name, meta in schema_dict.items():
-            init_meta = {k:v for (k,v) in meta.items() if k != 'ftype'}
-            fields_dict[name] = pemi.field.ftypes[meta['ftype']](name, **init_meta)
-        return fields_dict
+        for name, field in kwargs.items():
+            field.name = name
+            self.fields[name] = field
 
     def __getitem__(self, key):
         return self.fields[key]
@@ -30,17 +22,24 @@ class Schema:
     def items(self):
         return self.fields.items()
 
-    def in_converters(self):
-        return {f.name: f.in_converter for f in self.fields.values()}
+    def coercions(self):
+        return {f.name: f.coerce for f in self.fields.values()}
 
-    def str_converters(self):
+    def string_coercions(self):
         return {f.name: str for f in self.fields.values()}
 
     def __str__(self):
         return "\n".join(['{} -> {}'.format(name, meta.__str__()) for name, meta in self.fields.items()])
 
+    def __eq__(self, other):
+        return self.fields == other.fields
+
+
+
+
     def merge(self, other):
         merged_fields = {**self.fields, **other.fields}
+
         for name, field in merged_fields.items():
             if name in self.fields:
                 self_meta = self.fields[name].metadata
@@ -53,6 +52,6 @@ class Schema:
                 other_meta = {}
 
             merged_field_metadata = {**self_meta, **other_meta}
-            merged_fields[name] = merged_field_metadata
+            merged_fields[name] = type(field)(**merged_field_metadata)
 
-        return Schema(merged_fields)
+        return Schema(**merged_fields)
