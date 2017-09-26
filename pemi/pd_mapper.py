@@ -110,6 +110,10 @@ class PdMap():
             self.apply = getattr(self, '_apply_copy')
         elif len(self.sources) == 1 and len(self.targets) == 1:
             self.apply = getattr(self, '_apply_one_to_one')
+        elif len(self.sources) == 1 and len(self.targets) == 0:
+            self.apply = getattr(self, '_apply_one_to_zero')
+        elif len(self.sources) == 0 and len(self.targets) == 1:
+            self.apply = getattr(self, '_apply_zero_to_one')
         elif len(self.targets) == 1:
             self.apply = getattr(self, '_apply_many_to_one')
         else:
@@ -120,6 +124,9 @@ class PdMap():
 
     def _transform_one_to_one(self, row):
         return self.handler.apply(self._transform, row[self.source], row.name)
+
+    def _transform_zero_to_one(self, row):
+        return self.handler.apply(self._transform, row['__none__'], row.name)
 
     def _transform_many_to_one(self, row):
         return self.handler.apply(self._transform, row, row.name)
@@ -132,6 +139,14 @@ class PdMap():
 
     def _apply_one_to_one(self):
         self.mapped_df[self.target] = self.source_df[[self.source]].apply(self._transform_one_to_one, axis=1)
+
+    def _apply_zero_to_one(self):
+        empty_df = pd.DataFrame([], index=self.source_df.index)
+        empty_df['__none__'] = None
+        self.mapped_df[self.target] = empty_df.apply(self._transform_zero_to_one, axis=1)
+
+    def _apply_one_to_zero(self):
+        self.source_df[[self.source]].apply(self._transform_one_to_one, axis=1)
 
     def _apply_many_to_one(self):
         self.mapped_df[self.target] = self.source_df[self.sources].apply(self._transform_many_to_one, axis=1)
