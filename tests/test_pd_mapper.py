@@ -110,6 +110,57 @@ class TestCardinalities(unittest.TestCase):
         pemi.testing.assert_frame_equal(result_df, expected_df)
 
 
+    def test_one_to_zero_map(self):
+        '''
+        One-to-zero mapping
+        '''
+
+        def recorder(values):
+            def _recorder(value):
+                values.append(value)
+            return _recorder
+
+        saved = []
+        mapper = PdMapper(self.df, maps=[
+            PdMap(source='num', transform=recorder(saved)),
+        ]).apply()
+
+        self.assertEqual(saved, [1,2,3])
+
+
+    def test_many_to_zero_map(self):
+        '''
+        Many-to-zero mapping
+        '''
+
+        def recorder(values):
+            def _recorder(row):
+                values.append('-'.join([str(v) for v in row.values]))
+            return _recorder
+
+        saved = []
+        mapper = PdMapper(self.df, maps=[
+            PdMap(source=['num', 'name'], transform=recorder(saved)),
+        ]).apply()
+
+        self.assertEqual(saved, ['1-one','2-two','3-three'])
+
+
+    def test_zero_to_one_map(self):
+        '''
+        Zero-to-one mapping
+        '''
+        mapper = PdMapper(self.df, maps=[
+            PdMap(target='my_constant', transform=lambda v: 5)
+        ]).apply()
+
+        result_df = mapper.mapped_df
+        expected_df = pd.DataFrame({'my_constant': [5,5,5]})
+
+        pemi.testing.assert_frame_equal(result_df, expected_df)
+
+
+
 class TestHandlerModes(unittest.TestCase):
     def setUp(self):
         self.df = pd.DataFrame(
