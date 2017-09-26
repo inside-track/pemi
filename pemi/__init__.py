@@ -1,6 +1,7 @@
 '''
 Package containing core Pemi functionality
 '''
+from pemi.version import __version__ as version
 
 import logging
 logging.basicConfig()
