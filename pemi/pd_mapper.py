@@ -56,10 +56,11 @@ class RowHandler:
 class PdMapper():
     def __init__(self, source_df, mapped_df=None, maps=[]):
         self.source_df = source_df
-        if mapped_df == None:
+        if mapped_df is None:
             self.mapped_df = pd.DataFrame(index=self.source_df.index)
         else:
             self.mapped_df = mapped_df
+
         self.errors_df = pd.DataFrame([])
         self.maps = maps
 

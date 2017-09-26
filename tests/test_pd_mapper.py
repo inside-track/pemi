@@ -289,3 +289,34 @@ class TestHandlerModes(unittest.TestCase):
             columns = ['split_num', 'split_name']
         )
         pemi.testing.assert_frame_equal(mapped_df, expected_mapped_df)
+
+
+class TestPassthrough(unittest.TestCase):
+    def setUp(self):
+        self.df = pd.DataFrame(
+            {
+                'field1': [1,2,3],
+                'field2': [1,2,3],
+                'field3': [1,2,3],
+                'field4': [1,2,3]
+            }
+        )
+
+    def test_fields_can_be_passed_through(self):
+        mapper = PdMapper(self.df, mapped_df=self.df.copy(), maps=[
+            PdMap(source='field3', target='field3', transform=lambda v: v + 10),
+            PdMap(source='field2', target='field2p', transform=lambda v: v + 10)
+        ]).apply()
+
+        expected_mapped_df = pd.DataFrame(
+            {
+                'field1': [1,2,3],
+                'field2': [1,2,3],
+                'field3': [11,12,13],
+                'field4': [1,2,3],
+                'field2p': [11,12,13]
+            },
+            columns = ['field1', 'field2', 'field3', 'field4', 'field2p']
+        )
+
+        pemi.testing.assert_frame_equal(mapper.mapped_df, expected_mapped_df)
