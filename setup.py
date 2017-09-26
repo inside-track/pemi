@@ -18,13 +18,19 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
+version = {}
+with open('./pemi/version.py') as fp:
+    exec(fp.read(), version)
+# later on we use: version['__version__']
+
+
 setup(
     name='pemi',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.2',
+    version=version['__version__'],
 
     description='Pemi - Python Extract Modify Integrate',
     long_description=long_description,
