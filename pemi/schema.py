@@ -14,10 +14,10 @@ class Schema:
         return self.fields[key]
 
     def keys(self):
-        return self.fields.keys()
+        return list(self.fields.keys())
 
     def values(self):
-        return self.fields.values()
+        return list(self.fields.values())
 
     def items(self):
         return self.fields.items()
