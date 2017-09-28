@@ -179,7 +179,7 @@ class TestBlackBoxJobMappings(unittest.TestCase):
         self.scenario.when(
             self.rules.when_source_conforms_to_schema()
         ).then(
-            *self.rules.then_fields_are_copied({
+            self.rules.then_fields_are_copied({
                 'id': 'id',
                 'name': 'name',
                 'abv': 'abv'
@@ -383,7 +383,7 @@ class TestBlackBoxPipe(unittest.TestCase):
         self.scenario.when(
             self.rules.when_source_conforms_to_schema()
         ).then(
-            *self.rules.then_fields_are_copied({
+            self.rules.then_fields_are_copied({
                 'id': 'id',
                 'name': 'name',
                 'abv': 'abv'

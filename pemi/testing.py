@@ -153,9 +153,8 @@ class Rules():
         return _then_field_is_copied
 
     def then_fields_are_copied(self, mapping, source_subject=None, target_subject=None, by=None):
-        thens = []
-        for source_field, target_field in mapping.items():
-            thens.append(
+        def _then_fields_are_copied():
+            for source_field, target_field in mapping.items():
                 self.then_field_is_copied(
                     source_subject=source_subject,
                     target_subject=target_subject,
@@ -163,8 +162,14 @@ class Rules():
                     target_field=target_field,
                     by=by
                 )
-            )
-        return thens
+
+        mapping_doc = "\n".join(["'{}' -> '{}'".format(s,t) for s,t in mapping.items()])
+
+        _then_fields_are_copied.__doc__ = '''
+            Fields are directly copied from '{}' to '{}' according to the mapping:
+            {}
+        '''.format(source_subject, target_subject, mapping_doc)
+        return _then_fields_are_copied
 
     def when_source_field_has_value(self, field_name, field_value, source_subject=None):
         source_subject = self._find_source(source_subject)
@@ -177,6 +182,22 @@ class Rules():
             The source field '{}' has the value "{}"
         '''.format(source_subject, field_value)
         return _when_source_field_has_value
+
+
+    def when_source_field_has_value_like(self, field_name, generator, source_subject=None):
+        source_subject = self._find_source(source_subject)
+
+        def _when_source_field_has_value_like():
+            source_data = source_subject.__test_data__
+            source_data[field_name] = pd.Series([generator() for i in range(len(source_data))])
+
+        doc_values = list(set([generator() for i in range(10)]))
+        _when_source_field_has_value_like.__doc__ = '''
+            The source field '{}' has the value "{}"
+        '''.format(source_subject, doc_values)
+        return _when_source_field_has_value_like
+
+
 
     def then_target_field_has_value(self, field_name, field_value, target_subject=None):
         target_subject = self._find_target(target_subject)
@@ -223,3 +244,28 @@ class Rules():
             The target '{}' matches the example:
         '''.format(target_subject, expected_table.df[subject_fields])
         return _then_target_matches_example
+
+    def then_target_does_not_have_field(self, field_name, target_subject=None):
+        target_subject = self._find_target(target_subject)
+
+        def _then_target_does_not_have_field():
+            if field_name in target_subject.__test_data__.columns:
+                raise AssertionError("'{}' was not expected to be found in the target".format(field_name))
+
+        _then_target_does_not_have_field.__doc__='''
+            The target '{}' does not have a field called '{}'
+        '''.format(target_subject, field_name)
+        return _then_target_does_not_have_field
+
+    def then_target_does_not_have_fields(self, field_names, target_subject=None):
+        target_subject = self._find_target(target_subject)
+
+        def _then_target_does_not_have_fields():
+            unexpected_fields = set(field_names) & set(target_subject.__test_data__.columns)
+            if len(unexpected_fields) > 0:
+                raise AssertionError("The fields '{}' were not expected to be found in the target".format(unexpected_fields))
+
+        _then_target_does_not_have_fields.__doc__='''
+            The target '{}' does not have any of the following fields: '{}'
+        '''.format(target_subject, "','".join(field_names))
+        return _then_target_does_not_have_fields
