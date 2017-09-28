@@ -1,3 +1,5 @@
+import pandas as pd
+
 # TODO: concatenate, prefix, postfix, nvl, ifblank, blankif
 
 def validate_no_null(field):
@@ -6,3 +8,6 @@ def validate_no_null(field):
             raise ValueError("null is not allowed for field '{}'".format(field.name))
         return value
     return _validate
+
+def isblank(value):
+    return value is not False and (value is None or pd.isnull(value) or not value)
