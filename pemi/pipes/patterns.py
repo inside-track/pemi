@@ -1,3 +1,5 @@
+import pandas as pd
+
 import pemi
 from pemi.data_subject import PdDataSubject
 
@@ -52,3 +54,46 @@ class TargetPipe(pemi.Pipe):
 
     def flow(self):
         return self.load(self.encode())
+
+
+class ForkPipe(pemi.Pipe):
+    ''' A fork pipe accepts a single source and delivers it to multiple named targets '''
+    def __init__(self, subject_class=pemi.PdDataSubject, forks=[], **params):
+        super().__init__(**params)
+
+        self.source(subject_class, name='main')
+        for fork in forks:
+            self.target(subject_class, name=fork)
+
+    def fork(self, source, target):
+        raise NotImplementedError
+
+    def flow(self):
+        raise NotImplementedError
+
+
+class PdForkPipe(ForkPipe):
+    def flow(self):
+        for target in self.targets.values():
+            target.df = self.sources['main'].df
+
+
+class ConcatPipe(pemi.Pipe):
+    ''' A concat pipe accepts multiple sources and combines them into a single target '''
+    def __init__(self, subject_class=pemi.PdDataSubject, sources=[], **params):
+        super().__init__(**params)
+        self.named_sources = sources
+
+        for source in sources:
+            self.source(subject_class, name=source)
+        self.target(subject_class, name='main')
+
+    def flow(self):
+        raise NotImplementedError
+
+class PdConcatPipe(ConcatPipe):
+    def flow(self):
+        opts = self.params.get('concat_opts', {})
+
+        source_dfs = [source.df for source in self.sources.values()]
+        self.targets['main'].df = pd.concat(source_dfs, **opts)

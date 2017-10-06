@@ -1,7 +1,11 @@
+from collections import defaultdict
+
 import dask
 import dask.dot
 
 import pemi
+
+class DagValidationError(Exception): pass
 
 class DaskPipe():
     'DaskPipe is just a wrapper around Pipe that allows us to use the Pipes in the context of Dask'
@@ -21,7 +25,26 @@ class DaskFlow():
     def __init__(self, connections):
         self.connections = connections
 
+    def _validate_dag(self):
+        targets = defaultdict(list)
+        sources = defaultdict(list)
+        for conn in self.connections:
+            to_str = '{}.sources[{}]'.format(conn.to_pipe.name, conn.to_subject.name)
+            from_str = '{}.targets[{}]'.format(conn.from_pipe.name, conn.from_subject.name)
+            sources[from_str].append(to_str)
+            targets[to_str].append(from_str)
+
+        target_dupes = {k:v for k,v in targets.items() if len(v) > 1}
+        if len(target_dupes) > 0:
+            raise DagValidationError('Multiple connections to the same target.  Use a concatenator pipe instead.  Details: {}'.format(target_dupes))
+
+        source_dupes = {k:v for k,v in sources.items() if len(v) > 1}
+        if len(source_dupes) > 0:
+            raise DagValidationError('Multiple connections from the same source.  Use a fork pipe instead.  Details: {}'.format(source_dupes))
+
+
     def dag(self):
+        self._validate_dag()
         dag = {}
         for conn in self.connections:
             for node, edge in self._node_edge(conn).items():
