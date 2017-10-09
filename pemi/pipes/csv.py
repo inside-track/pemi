@@ -1,11 +1,17 @@
+import re
+
 import pandas as pd
 
 import pemi
-import pemi.transforms
+import pemi.pd_mapper
 from pemi.pipes.patterns import SourcePipe
 from pemi.pipes.patterns import TargetPipe
 
-from pemi.pd_mapper import RowHandler, PdMapper, PdMap
+def default_column_normalizer(name):
+    name = re.sub(r'\s+', '_', name).lower()
+    name = re.sub(r'[^a-z0-9_]', '_', name)
+    return name
+
 
 class LocalCsvFileSourcePipe(SourcePipe):
     def __init__(self, **params):
@@ -15,8 +21,17 @@ class LocalCsvFileSourcePipe(SourcePipe):
         self.paths = params['paths']
         self.csv_opts = self._build_csv_opts(params.get('csv_opts', {}))
 
+        #TODO: Tests for this
+        normalize_columns = params.get('normalize_columns', True)
+        if callable(normalize_columns):
+            self.column_normalizer = normalize_columns
+        elif normalize_columns:
+            self.column_normalizer = default_column_normalizer
+        else:
+            self.column_normalizer = lambda col: col
+
         self.targets['main'].schema = self.schema
-        self.field_maps = self._build_field_maps()
+        self.field_maps = pemi.pd_mapper.schema_maps(self.schema)
 
     def extract(self):
         return self.paths
@@ -35,9 +50,11 @@ class LocalCsvFileSourcePipe(SourcePipe):
         return self.targets['main'].df
 
     def _build_csv_opts(self, user_csv_opts):
+        normalizer = lambda x: column_normalizer(x) in self.schema.keys()
+
         mandatory_opts = {
-            'converters': self.schema.string_coercions(),
-            'usecols':    self.schema.keys()
+            'converters': {idx:str for idx in range(10000)}, # Assumes we'll never get a csv with more than 10000 columns
+            'usecols':    lambda col: self.column_normalizer(col) in self.schema.keys()
         }
 
         default_opts = {
@@ -47,30 +64,10 @@ class LocalCsvFileSourcePipe(SourcePipe):
 
         return {**default_opts, **user_csv_opts, **mandatory_opts}
 
-    def _build_field_maps(self):
-        field_maps = []
-        for name, field in self.schema.items():
-            fm = PdMap(source=name, target=name,
-                       transform=field.coerce,
-                       handler=RowHandler('exclude')
-            )
-            field_maps.append(fm)
-
-            if field.metadata.get('allow_null', True) == False:
-                fm = PdMap(source=name, target=name,
-                           transform=pemi.transforms.validate_no_null(field),
-                           handler=RowHandler('exclude')
-                )
-                field_maps.append(fm)
-
-
-
-
-        return field_maps
-
     def _parse_one(self, filepath):
         raw_df = pd.read_csv(filepath, **self.csv_opts)
-        mapper = PdMapper(raw_df, maps = self.field_maps).apply()
+        raw_df.columns = [self.column_normalizer(col) for col in raw_df.columns]
+        mapper = pemi.pd_mapper.PdMapper(raw_df, maps = self.field_maps).apply()
         return mapper
 
 

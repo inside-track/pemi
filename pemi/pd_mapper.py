@@ -1,6 +1,7 @@
 import pandas as pd
 
 import pemi
+import pemi.transforms
 
 __all__ = [
     'RowHandler',
@@ -163,6 +164,23 @@ class PdMap():
         self.error_df = error_df
         self.apply()
         return self
+
+def schema_maps(schema):
+    field_maps = []
+    for name, field in schema.items():
+        fm = PdMap(source=name, target=name,
+                   transform=field.coerce,
+                   handler=RowHandler('exclude')
+        )
+        field_maps.append(fm)
+
+        if field.metadata.get('allow_null', True) == False:
+            fm = PdMap(source=name, target=name,
+                       transform=pemi.transforms.validate_no_null(field),
+                       handler=RowHandler('exclude')
+            )
+            field_maps.append(fm)
+    return field_maps
 
 
 if __name__ == '__main__':
