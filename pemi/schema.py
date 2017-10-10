@@ -25,9 +25,6 @@ class Schema:
     def coercions(self):
         return {f.name: f.coerce for f in self.fields.values()}
 
-    def string_coercions(self):
-        return {f.name: str for f in self.fields.values()}
-
     def __str__(self):
         return "\n".join(['{} -> {}'.format(name, meta.__str__()) for name, meta in self.fields.items()])
 
