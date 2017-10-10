@@ -10,7 +10,6 @@ from pemi.data_subject import SaDataSubject
 from pemi.fields import *
 
 import logging
-pemi.log('pemi').setLevel(logging.WARN)
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
 import sys

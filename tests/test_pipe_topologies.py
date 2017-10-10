@@ -95,11 +95,7 @@ class TestAa1ToXx1(unittest.TestCase):
                 pipe=XPipe()
             )
 
-            self.connect(
-                self.pipes['A'].targets['a1']
-            ).to(
-                self.pipes['X'].sources['x1']
-            )
+            self.connect('A', 'a1').to('X', 'x1')
 
             self.dask = pemi.pipes.dask.DaskFlow(self.connections)
 
@@ -130,17 +126,8 @@ class TestAa1a2ToXx1x2(unittest.TestCase):
                 pipe=XPipe()
             )
 
-            self.connect(
-                self.pipes['A'].targets['a1']
-            ).to(
-                self.pipes['X'].sources['x1']
-            )
-
-            self.connect(
-                self.pipes['A'].targets['a2']
-            ).to(
-                self.pipes['X'].sources['x2']
-            )
+            self.connect('A', 'a1').to('X', 'x1')
+            self.connect('A', 'a2').to('X', 'x2')
 
             self.dask = pemi.pipes.dask.DaskFlow(self.connections)
 
@@ -176,17 +163,8 @@ class TestAa1Bb1ToXx1x2(unittest.TestCase):
                 pipe=XPipe()
             )
 
-            self.connect(
-                self.pipes['A'].targets['a1']
-            ).to(
-                self.pipes['X'].sources['x1']
-            )
-
-            self.connect(
-                self.pipes['B'].targets['b1']
-            ).to(
-                self.pipes['X'].sources['x2']
-            )
+            self.connect('A', 'a1').to('X', 'x1')
+            self.connect('B', 'b1').to('X', 'x2')
 
             self.dask = pemi.pipes.dask.DaskFlow(self.connections)
 
@@ -221,17 +199,8 @@ class TestAa1a2ToXx1Yy1(unittest.TestCase):
                 pipe=YPipe()
             )
 
-            self.connect(
-                self.pipes['A'].targets['a1']
-            ).to(
-                self.pipes['X'].sources['x1']
-            )
-
-            self.connect(
-                self.pipes['A'].targets['a2']
-            ).to(
-                self.pipes['Y'].sources['y1']
-            )
+            self.connect('A', 'a1').to('X', 'x1')
+            self.connect('A', 'a2').to('Y', 'y1')
 
             self.dask = pemi.pipes.dask.DaskFlow(self.connections)
 
@@ -272,23 +241,9 @@ class TestAa1ToXx1Yy1(unittest.TestCase):
                 pipe=YPipe()
             )
 
-            self.connect(
-                self.pipes['A'].targets['a1']
-            ).to(
-                self.pipes['Fork'].sources['main']
-            )
-
-            self.connect(
-                self.pipes['Fork'].targets['fork0']
-            ).to(
-                self.pipes['X'].sources['x1']
-            )
-
-            self.connect(
-                self.pipes['Fork'].targets['fork1']
-            ).to(
-                self.pipes['Y'].sources['y1']
-            )
+            self.connect('A', 'a1').to('Fork', 'main')
+            self.connect('Fork', 'fork0').to('X', 'x1')
+            self.connect('Fork', 'fork1').to('Y', 'y1')
 
             self.dask = pemi.pipes.dask.DaskFlow(self.connections)
 
@@ -313,17 +268,8 @@ class TestAa1ToXx1Yy1(unittest.TestCase):
                 pipe=YPipe()
             )
 
-            self.connect(
-                self.pipes['A'].targets['a1']
-            ).to(
-                self.pipes['X'].sources['x1']
-            )
-
-            self.connect(
-                self.pipes['A'].targets['a1']
-            ).to(
-                self.pipes['Y'].sources['y1']
-            )
+            self.connect('A', 'a1').to('X', 'x1')
+            self.connect('A', 'a1').to('Y', 'y1')
 
             self.dask = pemi.pipes.dask.DaskFlow(self.connections)
 
@@ -363,23 +309,9 @@ class TestAa1a2ToXx1(unittest.TestCase):
                 pipe=XPipe()
             )
 
-            self.connect(
-                self.pipes['A'].targets['a1']
-            ).to(
-                self.pipes['Concat'].sources['Aa1']
-            )
-
-            self.connect(
-                self.pipes['A'].targets['a2']
-            ).to(
-                self.pipes['Concat'].sources['Aa2']
-            )
-
-            self.connect(
-                self.pipes['Concat'].targets['main']
-            ).to(
-                self.pipes['X'].sources['x1']
-            )
+            self.connect('A', 'a1').to('Concat', 'Aa1')
+            self.connect('A', 'a2').to('Concat', 'Aa2')
+            self.connect('Concat', 'main').to('X', 'x1')
 
             self.dask = pemi.pipes.dask.DaskFlow(self.connections)
 
@@ -399,17 +331,8 @@ class TestAa1a2ToXx1(unittest.TestCase):
                 pipe=XPipe()
             )
 
-            self.connect(
-                self.pipes['A'].targets['a1']
-            ).to(
-                self.pipes['X'].sources['x1']
-            )
-
-            self.connect(
-                self.pipes['A'].targets['a2']
-            ).to(
-                self.pipes['X'].sources['x1']
-            )
+            self.connect('A', 'a1').to('X', 'x1')
+            self.connect('A', 'a2').to('X', 'x1')
 
             self.dask = pemi.pipes.dask.DaskFlow(self.connections)
 
@@ -453,23 +376,15 @@ class TestAa1Bb1ToXx1(unittest.TestCase):
                 pipe=XPipe()
             )
 
-            self.connect(
-                self.pipes['A'].targets['a1']
-            ).to(
-                self.pipes['Concat'].sources['Aa1']
-            )
+            # self.connect('A', 'a1').to('Concat', 'Aa1')
+            # self.connect('B', 'b1').to('Concat', 'Bb1')
+            # self.connect('Concat', 'main').to('X', 'x1')
+            self.connect_graph('''
+                A[a1]        -> Concat[Aa1]
+                B[b1]        -> Concat[Bb1]
+                Concat[main] -> X[x1]
+            ''')
 
-            self.connect(
-                self.pipes['B'].targets['b1']
-            ).to(
-                self.pipes['Concat'].sources['Bb1']
-            )
-
-            self.connect(
-                self.pipes['Concat'].targets['main']
-            ).to(
-                self.pipes['X'].sources['x1']
-            )
 
             self.dask = pemi.pipes.dask.DaskFlow(self.connections)
 
@@ -483,4 +398,127 @@ class TestAa1Bb1ToXx1(unittest.TestCase):
 
         expected = ['a1 from APipe', 'b1 from BPipe']
         actual = list(pipe.pipes['X'].sources['x1'].df['msg'])
+        self.assertEqual(actual, expected)
+
+
+# Connecting from external source pipes
+class TestExternalSourcePipes(unittest.TestCase):
+    class FromAa1Pipe(pemi.Pipe):
+        def config(self):
+            self.source(
+                pemi.PdDataSubject,
+                name='from_a1',
+                schema=pemi.Schema(msg=StringField())
+            )
+
+            self.target(
+                pemi.PdDataSubject,
+                name='main',
+                schema=pemi.Schema(msg=StringField())
+            )
+
+            self.pipe(
+                name='A',
+                pipe=APipe()
+            )
+
+            self.connect('A', 'a1').to('self', 'from_a1')
+
+            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
+
+        def flow(self):
+            self.dask.flow()
+            self.targets['main'].df = self.sources['from_a1'].df
+
+
+    def test_connections(self):
+        pipe = self.FromAa1Pipe()
+        pipe.flow()
+
+        expected = 'a1 from APipe'
+        actual = pipe.targets['main'].df['msg'][0]
+        self.assertEqual(actual, expected)
+
+
+# Connecting to external target pipes
+class TestExternalTargetPipes(unittest.TestCase):
+    class ToXx1Pipe(pemi.Pipe):
+        def config(self):
+            self.target(
+                pemi.PdDataSubject,
+                name='main',
+                schema=pemi.Schema(msg=StringField())
+            )
+
+            self.pipe(
+                name='X',
+                pipe=XPipe()
+            )
+
+            self.connect('self', 'main').to('X', 'x1')
+
+
+            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
+
+        def flow(self):
+            self.targets['main'].df = pd.DataFrame({'msg': ['generated in self']})
+            self.dask.flow()
+
+
+    def test_connections(self):
+        pipe = self.ToXx1Pipe()
+        pipe.flow()
+
+        expected = 'generated in self'
+        actual = pipe.pipes['X'].sources['x1'].df['msg'][0]
+        self.assertEqual(actual, expected)
+
+
+# Connected from external source pipes and external target pipes
+class TestExternalSourceAndTargetPipes(unittest.TestCase):
+    class FromAa1ToXx1Pipe(pemi.Pipe):
+        def config(self):
+            self.source(
+                pemi.PdDataSubject,
+                name='from_a1',
+                schema=pemi.Schema(msg=StringField())
+            )
+
+            self.target(
+                pemi.PdDataSubject,
+                name='to_x1',
+                schema=pemi.Schema(msg=StringField())
+            )
+
+            self.pipe(
+                name='A',
+                pipe=APipe()
+            )
+
+            self.pipe(
+                name='X',
+                pipe=XPipe()
+            )
+
+            self.connect('A', 'a1').to('self', 'from_a1').group_as('from_sources')
+            self.connect('self', 'to_x1').to('X', 'x1').group_as('to_targets')
+
+            self.dask_sources = pemi.pipes.dask.DaskFlow(self.connections, group='from_sources')
+            self.dask_targets = pemi.pipes.dask.DaskFlow(self.connections, group='to_targets')
+
+        def flow(self):
+            self.dask_sources.flow()
+
+            self.targets['to_x1'].df = pd.DataFrame()
+            self.targets['to_x1'].df['msg'] = self.sources['from_a1'].df['msg'].apply(lambda v: '{} via self'.format(v))
+
+            self.dask_targets.flow()
+
+
+    def test_connections(self):
+        pipe = self.FromAa1ToXx1Pipe()
+        pipe.flow()
+
+        expected = 'a1 from APipe via self'
+        actual = pipe.pipes['X'].sources['x1'].df['msg'][0]
         self.assertEqual(actual, expected)

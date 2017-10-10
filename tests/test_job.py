@@ -12,10 +12,6 @@ import pemi.pipes.dask
 from pemi.data_subject import PdDataSubject
 from pemi.fields import *
 
-import logging
-pemi.log('pemi').setLevel(logging.WARN)
-
-
 import sys
 this = sys.modules[__name__]
 
@@ -126,17 +122,8 @@ class BlackBoxJob(pemi.Pipe):
         )
 
 
-        self.connect(
-            self.pipes['beers_file'].targets['main']
-        ).to(
-            self.pipes['black_box'].sources['beers_file']
-        )
-
-        self.connect(
-            self.pipes['black_box'].targets['beers_w_style_file']
-        ).to(
-            self.pipes['beers_w_style_file'].sources['main']
-        )
+        self.connect('beers_file', 'main').to('black_box', 'beers_file')
+        self.connect('black_box', 'beers_w_style_file').to('beers_w_style_file', 'main')
 
         self.dask = pemi.pipes.dask.DaskFlow(self.connections)
 

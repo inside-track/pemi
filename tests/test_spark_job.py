@@ -9,9 +9,6 @@ import pemi.testing
 from pemi.data_subject import SparkDataSubject
 from pemi.fields import *
 
-import logging
-pemi.log('pemi').setLevel(logging.WARN)
-
 import sys
 this = sys.modules[__name__]
 

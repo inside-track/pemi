@@ -10,27 +10,29 @@ class DagValidationError(Exception): pass
 class DaskPipe():
     'DaskPipe is just a wrapper around Pipe that allows us to use the Pipes in the context of Dask'
 
-    def __init__(self, pipe):
+    def __init__(self, pipe, is_parent):
         self.pipe = pipe
+        self.is_parent = is_parent
 
     def __call__(self, *args):
         pemi.log().info('DaskPipe flowing pipe {}'.format(self.pipe))
-        self.pipe.flow()
+        if not self.is_parent:
+            self.pipe.flow()
         return self
 
     def __str__(self):
         return self.pipe.name
 
 class DaskFlow():
-    def __init__(self, connections):
-        self.connections = connections
+    def __init__(self, connections, group=None):
+        self.connections = [conn for conn in connections if conn.group == group]
 
     def _validate_dag(self):
         targets = defaultdict(list)
         sources = defaultdict(list)
         for conn in self.connections:
-            to_str = '{}.sources[{}]'.format(conn.to_pipe.name, conn.to_subject.name)
-            from_str = '{}.targets[{}]'.format(conn.from_pipe.name, conn.from_subject.name)
+            to_str = '{}.sources[{}]'.format(conn.to_pipe_name, conn.to_subject_name)
+            from_str = '{}.targets[{}]'.format(conn.from_pipe_name, conn.from_subject_name)
             sources[from_str].append(to_str)
             targets[to_str].append(from_str)
 
@@ -52,12 +54,12 @@ class DaskFlow():
                     dag[node][1].extend(edge[1])
                 else:
                     dag[node] = edge
+
         return dag
 
     def flow(self):
-        all_nodes = list(self.dag().keys())
-        non_recursive_nodes = [node for node in all_nodes if node != 'self.targets']
-        return dask.get(self.dag(), non_recursive_nodes)
+        nodes = list(self.dag().keys())
+        return dask.get(self.dag(), list(self.dag().keys()))
 
     def graph(self):
         return dask.dot.dot_graph(self.dag(), rankdir='TB')
@@ -79,8 +81,8 @@ class DaskFlow():
 
     def _node_edge(self, conn):
         return {
-            '{}.targets'.format(conn.from_pipe.name): (DaskPipe(conn.from_pipe), []),
-            '{}.targets[{}]'.format(conn.from_pipe.name, conn.from_subject.name): (self._get_target(conn.from_subject.name), '{}.targets'.format(conn.from_pipe.name)),
-            '{}.sources[{}]'.format(conn.to_pipe.name, conn.to_subject.name): (self._connect_to(conn.to_pipe.sources[conn.to_subject.name], conn), '{}.targets[{}]'.format(conn.from_pipe.name, conn.from_subject.name)),
-            '{}.targets'.format(conn.to_pipe.name): (DaskPipe(conn.to_pipe), ['{}.sources[{}]'.format(conn.to_pipe.name, conn.to_subject.name)])
+            '{}.targets'.format(conn.from_pipe_name): (DaskPipe(conn.from_pipe, conn.from_self), []),
+            '{}.targets[{}]'.format(conn.from_pipe_name, conn.from_subject_name): (self._get_target(conn.from_subject_name), '{}.targets'.format(conn.from_pipe_name)),
+            '{}.sources[{}]'.format(conn.to_pipe_name, conn.to_subject_name): (self._connect_to(conn.to_pipe.sources[conn.to_subject_name], conn), '{}.targets[{}]'.format(conn.from_pipe_name, conn.from_subject_name)),
+            '{}.targets'.format(conn.to_pipe_name): (DaskPipe(conn.to_pipe, conn.to_self), ['{}.sources[{}]'.format(conn.to_pipe_name, conn.to_subject_name)])
         }
