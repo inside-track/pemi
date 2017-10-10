@@ -11,7 +11,6 @@ from pemi.data_subject import SaDataSubject
 from pemi.fields import *
 
 import logging
-pemi.log('pemi').setLevel(logging.WARN)
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
 import sys
@@ -185,22 +184,8 @@ class DenormalizeBeersPipe(pemi.Pipe):
             )
         )
 
-        self.pipe(
-            name='self',
-            pipe=self
-        )
-
-        self.connect(
-            self.pipes['dumb_sales'].targets['main']
-        ).to(
-            self.pipes['self'].sources['sales']
-        )
-
-        self.connect(
-            self.pipes['dumb_beers'].targets['main']
-        ).to(
-            self.pipes['self'].sources['beers']
-        )
+        self.connect('dumb_sales', 'main').to('self', 'sales')
+        self.connect('dumb_beers', 'main').to('self', 'beers')
 
         self.dask = pemi.pipes.dask.DaskFlow(self.connections)
 

@@ -1,17 +1,20 @@
+import re
 from collections import OrderedDict
 
 import pemi
 from pemi.data_subject import PdDataSubject
 
 class PipeConnection():
-    def __init__(self, parent, from_subject):
+    def __init__(self, parent, from_pipe_name, from_subject_name):
         self.parent = parent
-        self.from_pipe_name = from_subject.pipe.name
-        self.from_subject_name = from_subject.name
+        self.from_pipe_name = from_pipe_name
+        self.from_subject_name = from_subject_name
+        self.group = None
 
-    def to(self, to_subject):
-        self.to_pipe_name = to_subject.pipe.name
-        self.to_subject_name = to_subject.name
+
+    def to(self, to_pipe_name, to_subject_name):
+        self.to_pipe_name = to_pipe_name
+        self.to_subject_name = to_subject_name
         return self
 
     @property
@@ -30,8 +33,20 @@ class PipeConnection():
     def to_subject(self):
         return self.to_pipe.sources[self.to_subject_name]
 
+    @property
+    def from_self(self):
+        return self.parent is self.from_pipe
+
+    @property
+    def to_self(self):
+        return self.parent is self.to_pipe
+
     def connect(self):
         self.to_subject.connect_from(self.from_subject)
+
+    def group_as(self, name):
+        self.group = name
+        return self
 
     def __str__(self):
         return 'PipeConnection: {}.{} -> {}.{}'.format(
@@ -57,6 +72,10 @@ class Pipe():
         self.targets = OrderedDict()
         self.pipes = OrderedDict()
         self.connections = []
+
+        # TODOC: special case of "self" pipe
+        self.pipe('self', self)
+
         self.config()
 
     def config(self):
@@ -84,11 +103,23 @@ class Pipe():
         self.pipes[name] = pipe
 
 
-    def connect(self, connect_from):
-        conn = PipeConnection(self, connect_from)
+    def connect(self, from_pipe_name, from_subject_name):
+        conn = PipeConnection(self, from_pipe_name, from_subject_name)
 
         self.connections.append(conn)
         return conn
+
+    def connect_graph(self, graph, group_as=None):
+        re_conn = re.compile(r'\s*(\w+)\[(\w+)\]\s*->\s*(\w+)\[(\w+)\]\s*')
+        for conn_str in graph.split('\n'):
+            if conn_str.strip() == '':
+                continue
+
+            matches = re.match(re_conn, conn_str)
+            if matches:
+                self.connect(matches[1], matches[2]).to(matches[3], matches[4]).group_as(group_as)
+            else:
+                raise ValueError('Unable to parse connection in graph, must be of the form "pipe1[subject1] -> pipe2[subject2]": {}'.format(conn_str))
 
 
     def flow(self):
