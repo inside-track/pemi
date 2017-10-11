@@ -109,19 +109,6 @@ class Pipe():
         self.connections.append(conn)
         return conn
 
-    def connect_graph(self, graph, group_as=None):
-        re_conn = re.compile(r'\s*(\w+)\[(\w+)\]\s*->\s*(\w+)\[(\w+)\]\s*')
-        for conn_str in graph.split('\n'):
-            if conn_str.strip() == '':
-                continue
-
-            matches = re.match(re_conn, conn_str)
-            if matches:
-                self.connect(matches[1], matches[2]).to(matches[3], matches[4]).group_as(group_as)
-            else:
-                raise ValueError('Unable to parse connection in graph, must be of the form "pipe1[subject1] -> pipe2[subject2]": {}'.format(conn_str))
-
-
     def flow(self):
         raise NotImplementedError
 
