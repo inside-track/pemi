@@ -376,15 +376,9 @@ class TestAa1Bb1ToXx1(unittest.TestCase):
                 pipe=XPipe()
             )
 
-            # self.connect('A', 'a1').to('Concat', 'Aa1')
-            # self.connect('B', 'b1').to('Concat', 'Bb1')
-            # self.connect('Concat', 'main').to('X', 'x1')
-            self.connect_graph('''
-                A[a1]        -> Concat[Aa1]
-                B[b1]        -> Concat[Bb1]
-                Concat[main] -> X[x1]
-            ''')
-
+            self.connect('A', 'a1').to('Concat', 'Aa1')
+            self.connect('B', 'b1').to('Concat', 'Bb1')
+            self.connect('Concat', 'main').to('X', 'x1')
 
             self.dask = pemi.pipes.dask.DaskFlow(self.connections)
 
