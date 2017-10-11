@@ -74,7 +74,7 @@ class Pipe():
         self.connections = []
 
         # TODOC: special case of "self" pipe
-        self.pipe('self', self)
+        self.pipes['self'] = self
 
         self.config()
 
