@@ -4,7 +4,7 @@ import pandas as pd
 
 import pemi
 import pemi.testing
-import pemi.pipes.dask
+import pemi.connections
 import pemi.pipes.patterns
 from pemi.fields import *
 
@@ -97,10 +97,8 @@ class TestAa1ToXx1(unittest.TestCase):
 
             self.connect('A', 'a1').to('X', 'x1')
 
-            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
         def flow(self):
-            self.dask.flow()
+            self.connections.flow()
 
 
     def test_connections(self):
@@ -129,10 +127,8 @@ class TestAa1a2ToXx1x2(unittest.TestCase):
             self.connect('A', 'a1').to('X', 'x1')
             self.connect('A', 'a2').to('X', 'x2')
 
-            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
         def flow(self):
-            self.dask.flow()
+            self.connections.flow()
 
 
     def test_connections(self):
@@ -166,10 +162,8 @@ class TestAa1Bb1ToXx1x2(unittest.TestCase):
             self.connect('A', 'a1').to('X', 'x1')
             self.connect('B', 'b1').to('X', 'x2')
 
-            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
         def flow(self):
-            self.dask.flow()
+            self.connections.flow()
 
 
     def test_connections(self):
@@ -202,10 +196,8 @@ class TestAa1a2ToXx1Yy1(unittest.TestCase):
             self.connect('A', 'a1').to('X', 'x1')
             self.connect('A', 'a2').to('Y', 'y1')
 
-            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
         def flow(self):
-            self.dask.flow()
+            self.connections.flow()
 
 
     def test_connections(self):
@@ -245,10 +237,8 @@ class TestAa1ToXx1Yy1(unittest.TestCase):
             self.connect('Fork', 'fork0').to('X', 'x1')
             self.connect('Fork', 'fork1').to('Y', 'y1')
 
-            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
         def flow(self):
-            self.dask.flow()
+            self.connections.flow()
 
 
     class Aa1ToXx1Yy1NoForkPipe(pemi.Pipe):
@@ -271,10 +261,8 @@ class TestAa1ToXx1Yy1(unittest.TestCase):
             self.connect('A', 'a1').to('X', 'x1')
             self.connect('A', 'a1').to('Y', 'y1')
 
-            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
         def flow(self):
-            self.dask.flow()
+            self.connections.flow()
 
 
     def test_connections(self):
@@ -287,7 +275,7 @@ class TestAa1ToXx1Yy1(unittest.TestCase):
 
     def test_fails_without_a_fork(self):
         pipe = self.Aa1ToXx1Yy1NoForkPipe()
-        self.assertRaises(pemi.pipes.dask.DagValidationError, pipe.flow)
+        self.assertRaises(pemi.connections.DagValidationError, pipe.flow)
 
 
 # One-to-one pipes, many-to-one subjects (via Concat)
@@ -313,10 +301,8 @@ class TestAa1a2ToXx1(unittest.TestCase):
             self.connect('A', 'a2').to('Concat', 'Aa2')
             self.connect('Concat', 'main').to('X', 'x1')
 
-            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
         def flow(self):
-            self.dask.flow()
+            self.connections.flow()
 
 
     class Aa1a2ToXx1NoConcatPipe(pemi.Pipe):
@@ -334,10 +320,8 @@ class TestAa1a2ToXx1(unittest.TestCase):
             self.connect('A', 'a1').to('X', 'x1')
             self.connect('A', 'a2').to('X', 'x1')
 
-            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
         def flow(self):
-            self.dask.flow()
+            self.connections.flow()
 
     def test_connections(self):
         pipe = self.Aa1a2ToXx1Pipe()
@@ -349,7 +333,7 @@ class TestAa1a2ToXx1(unittest.TestCase):
 
     def test_fails_without_concat(self):
         pipe = self.Aa1a2ToXx1NoConcatPipe()
-        self.assertRaises(pemi.pipes.dask.DagValidationError, pipe.flow)
+        self.assertRaises(pemi.connections.DagValidationError, pipe.flow)
 
 
 # Many-to-one pipes, many-to-one subjects (via Concat)
@@ -380,10 +364,8 @@ class TestAa1Bb1ToXx1(unittest.TestCase):
             self.connect('B', 'b1').to('Concat', 'Bb1')
             self.connect('Concat', 'main').to('X', 'x1')
 
-            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
         def flow(self):
-            self.dask.flow()
+            self.connections.flow()
 
 
     def test_connections(self):
@@ -418,10 +400,8 @@ class TestExternalSourcePipes(unittest.TestCase):
 
             self.connect('A', 'a1').to('self', 'from_a1')
 
-            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
         def flow(self):
-            self.dask.flow()
+            self.connections.flow()
             self.targets['main'].df = self.sources['from_a1'].df
 
 
@@ -451,12 +431,9 @@ class TestExternalTargetPipes(unittest.TestCase):
 
             self.connect('self', 'main').to('X', 'x1')
 
-
-            self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
         def flow(self):
             self.targets['main'].df = pd.DataFrame({'msg': ['generated in self']})
-            self.dask.flow()
+            self.connections.flow()
 
 
     def test_connections(self):
@@ -497,16 +474,13 @@ class TestExternalSourceAndTargetPipes(unittest.TestCase):
             self.connect('A', 'a1').to('self', 'from_a1').group_as('from_sources')
             self.connect('self', 'to_x1').to('X', 'x1').group_as('to_targets')
 
-            self.dask_sources = pemi.pipes.dask.DaskFlow(self.connections, group='from_sources')
-            self.dask_targets = pemi.pipes.dask.DaskFlow(self.connections, group='to_targets')
-
         def flow(self):
-            self.dask_sources.flow()
+            self.connections.group('from_sources').flow()
 
             self.targets['to_x1'].df = pd.DataFrame()
             self.targets['to_x1'].df['msg'] = self.sources['from_a1'].df['msg'].apply(lambda v: '{} via self'.format(v))
 
-            self.dask_targets.flow()
+            self.connections.group('to_targets').flow()
 
 
     def test_connections(self):

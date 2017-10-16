@@ -36,7 +36,7 @@ class RowHandler:
         self.errors.append(self.mapping_error(err, idx))
 
     def _raise(self, err, arg, idx):
-        pemi.log().error(self.mapping_error(err, idx))
+        pemi.log.error(self.mapping_error(err, idx))
         raise err
 
     def _recode(self, err, arg, idx):
@@ -45,12 +45,12 @@ class RowHandler:
 
     def _warn(self, err, arg, idx):
         self.catch_error(err, idx)
-        pemi.log().warning(self.mapping_error(err, idx))
+        pemi.log.warning(self.mapping_error(err, idx))
         return None
 
     def _exclude(self, err, arg, idx):
         self.catch_error(err, idx)
-        pemi.log().error(self.mapping_error(err, idx))
+        pemi.log.error(self.mapping_error(err, idx))
         return None
 
 

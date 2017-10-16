@@ -6,7 +6,6 @@ import sqlalchemy as sa
 
 import pemi
 import pemi.testing
-import pemi.pipes.dask
 from pemi.data_subject import SaDataSubject
 from pemi.fields import *
 
@@ -187,10 +186,8 @@ class DenormalizeBeersPipe(pemi.Pipe):
         self.connect('dumb_sales', 'main').to('self', 'sales')
         self.connect('dumb_beers', 'main').to('self', 'beers')
 
-        self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
     def flow(self):
-        self.dask.flow()
+        self.connections.flow()
 
         sa_beer_sales = self.targets['beer_sales']
         with sa_beer_sales.engine.connect() as conn:

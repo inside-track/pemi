@@ -8,7 +8,6 @@ from pandas.util.testing import assert_series_equal
 
 import pemi
 import pemi.testing
-import pemi.pipes.dask
 from pemi.data_subject import PdDataSubject
 from pemi.fields import *
 
@@ -125,10 +124,8 @@ class BlackBoxJob(pemi.Pipe):
         self.connect('beers_file', 'main').to('black_box', 'beers_file')
         self.connect('black_box', 'beers_w_style_file').to('beers_w_style_file', 'main')
 
-        self.dask = pemi.pipes.dask.DaskFlow(self.connections)
-
     def flow(self):
-        self.dask.flow()
+        self.connections.flow()
 
 
 class TestBlackBoxJobMappings(unittest.TestCase):
