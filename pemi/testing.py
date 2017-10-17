@@ -57,7 +57,7 @@ class Scenario():
 
 class MockPipe(pemi.Pipe):
     def flow(self):
-        pemi.log().debug('FLOWING mocked pipe: {}'.format(self))
+        pemi.log.debug('FLOWING mocked pipe: {}'.format(self))
         pass
 
 

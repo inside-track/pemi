@@ -1,2 +1,2 @@
 import pemi
-pemi.log('pemi').setLevel(pemi.logging.FATAL)
+pemi.log.setLevel(pemi.logging.FATAL)

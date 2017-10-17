@@ -4,9 +4,10 @@ Package containing core Pemi functionality
 from pemi.version import __version__ as version
 
 import logging
-logging.getLogger('pemi').setLevel(logging.WARN)
-def log(name='pemi'):
-    return logging.getLogger(name)
+log = logging.getLogger('pemi')
+log.setLevel(logging.WARN)
+
+work_dir = '.'
 
 import pemi.schema
 from pemi.schema import Schema

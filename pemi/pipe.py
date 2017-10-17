@@ -2,62 +2,8 @@ import re
 from collections import OrderedDict
 
 import pemi
+import pemi.connections
 from pemi.data_subject import PdDataSubject
-
-class PipeConnection():
-    def __init__(self, parent, from_pipe_name, from_subject_name):
-        self.parent = parent
-        self.from_pipe_name = from_pipe_name
-        self.from_subject_name = from_subject_name
-        self.group = None
-
-
-    def to(self, to_pipe_name, to_subject_name):
-        self.to_pipe_name = to_pipe_name
-        self.to_subject_name = to_subject_name
-        return self
-
-    @property
-    def from_pipe(self):
-        return self.parent.pipes[self.from_pipe_name]
-
-    @property
-    def to_pipe(self):
-        return self.parent.pipes[self.to_pipe_name]
-
-    @property
-    def from_subject(self):
-        return self.from_pipe.targets[self.from_subject_name]
-
-    @property
-    def to_subject(self):
-        return self.to_pipe.sources[self.to_subject_name]
-
-    @property
-    def from_self(self):
-        return self.parent is self.from_pipe
-
-    @property
-    def to_self(self):
-        return self.parent is self.to_pipe
-
-    def connect(self):
-        self.to_subject.connect_from(self.from_subject)
-
-    def group_as(self, name):
-        self.group = name
-        return self
-
-    def __str__(self):
-        return 'PipeConnection: {}.{} -> {}.{}'.format(
-            self.from_pipe,
-            self.from_subject,
-            self.to_pipe,
-            self.to_subject
-        )
-
-    def __repr__(self):
-        return '<{}>'.format(self.__str__())
 
 
 class Pipe():
@@ -71,7 +17,7 @@ class Pipe():
         self.sources = OrderedDict()
         self.targets = OrderedDict()
         self.pipes = OrderedDict()
-        self.connections = []
+        self.connections = pemi.connections.PipeConnections()
 
         # TODOC: special case of "self" pipe
         self.pipes['self'] = self
@@ -104,7 +50,7 @@ class Pipe():
 
 
     def connect(self, from_pipe_name, from_subject_name):
-        conn = PipeConnection(self, from_pipe_name, from_subject_name)
+        conn = pemi.connections.PipeConnection(self, from_pipe_name, from_subject_name)
 
         self.connections.append(conn)
         return conn
