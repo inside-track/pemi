@@ -14,15 +14,15 @@ def default_column_normalizer(name):
 
 
 class LocalCsvFileSourcePipe(SourcePipe):
-    def __init__(self, **params):
-        super().__init__(**params)
+    def config(self):
+        super().config()
 
-        self.schema = params['schema']
-        self.paths = params['paths']
-        self.csv_opts = self._build_csv_opts(params.get('csv_opts', {}))
+        self.schema = self.params['schema']
+        self.paths = self.params['paths']
+        self.csv_opts = self._build_csv_opts(self.params.get('csv_opts', {}))
 
         #TODO: Tests for this
-        normalize_columns = params.get('normalize_columns', True)
+        normalize_columns = self.params.get('normalize_columns', True)
         if callable(normalize_columns):
             self.column_normalizer = normalize_columns
         elif normalize_columns:
@@ -76,12 +76,13 @@ class LocalCsvFileSourcePipe(SourcePipe):
 
 
 class LocalCsvFileTargetPipe(TargetPipe):
-    def __init__(self, **params):
-        super().__init__(**params)
+    def config(self):
+        super().config()
 
-        self.schema = params['schema']
-        self.path = params['path']
-        self.csv_opts = self._build_csv_opts(params.get('csv_opts', {}))
+        self.schema = self.params['schema']
+        self.path = self.params['path']
+        self.csv_opts = self._build_csv_opts(self.params.get('csv_opts', {}))
+
 
     def encode(self):
         return self.sources['main'].df
