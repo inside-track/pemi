@@ -8,12 +8,22 @@ class SourcePipe(pemi.Pipe):
     A source pipe extracts data from some external source, and parses
     it into a data structure that can be used by subsequent pipes.
     '''
+    def config(self):
+        self.schema = self.params['schema']
 
-    def __init__(self, subject_class=PdDataSubject, **params):
-        super().__init__(**params)
+        self.target(
+            pemi.PdDataSubject,
+            name='main',
+            schema=self.schema
+        )
 
-        self.target(subject_class, name='main')
-        self.target(subject_class, name='errors')
+        self.target(
+            pemi.PdDataSubject,
+            name='errors',
+            # TODO: Merge this with standard error fields
+            schema=self.schema
+        )
+
 
     def extract(self):
         #e.g., S3SourceExtractor.extract()
@@ -26,8 +36,7 @@ class SourcePipe(pemi.Pipe):
         return parsed_data
 
     def flow(self):
-        self.targets['main'].data = self.parse(self.extract())
-        return self.targets['main'].data
+        self.parse(self.extract())
 
 
 class TargetPipe(pemi.Pipe):
@@ -36,11 +45,20 @@ class TargetPipe(pemi.Pipe):
     understand by some external target, and then loads the data into that external target.
     '''
 
-    def __init__(self, subject_class=PdDataSubject, **params):
-        super().__init__(**params)
+    def config(self):
+        self.schema = self.params['schema']
 
-        self.source(subject_class, name='main')
-        self.target(subject_class, name='load_response')
+        self.source(
+            pemi.PdDataSubject,
+            name='main',
+            schema=self.schema
+        )
+
+        self.target(
+            pemi.PdDataSubject,
+            name='response'
+        )
+
 
     def encode(self):
         #e.g., CsvTargetEncoder.encode()
@@ -53,7 +71,7 @@ class TargetPipe(pemi.Pipe):
         return results_from_load_operation
 
     def flow(self):
-        return self.load(self.encode())
+        self.load(self.encode())
 
 
 class ForkPipe(pemi.Pipe):
