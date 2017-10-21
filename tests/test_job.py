@@ -30,7 +30,9 @@ this.schemas = {
 }
 
 class RemoteSourcePipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.target(
             PdDataSubject,
             name='main',
@@ -44,7 +46,9 @@ class RemoteSourcePipe(pemi.Pipe):
 
 
 class RemoteTargetPipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.source(
             PdDataSubject,
             name='main',
@@ -57,7 +61,9 @@ class RemoteTargetPipe(pemi.Pipe):
 
 
 class BlackBoxPipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.source(
             PdDataSubject,
             name='beers_file',
@@ -104,7 +110,9 @@ class BlackBoxPipe(pemi.Pipe):
         self.targets['dropped_duplicates'].df = dupes_df
 
 class BlackBoxJob(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.pipe(
             name='beers_file',
             pipe=RemoteSourcePipe()

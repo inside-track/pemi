@@ -6,10 +6,11 @@ import pemi.pd_mapper
 import pemi.pipes.patterns
 
 class SaSqlSourcePipe(pemi.pipes.patterns.SourcePipe):
-    def config(self):
-        super().config()
-        self.sql = self.params['sql']
-        self.engine = self.params['engine']
+    def __init__(self, *, sql, engine, **params):
+        super().__init__(**params)
+
+        self.sql = sql
+        self.engine = engine
         self.field_maps = pemi.pd_mapper.schema_maps(self.schema)
 
     def extract(self):

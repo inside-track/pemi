@@ -8,8 +8,10 @@ class SourcePipe(pemi.Pipe):
     A source pipe extracts data from some external source, and parses
     it into a data structure that can be used by subsequent pipes.
     '''
-    def config(self):
-        self.schema = self.params['schema']
+    def __init__(self, *, schema, **params):
+        super().__init__(**params)
+
+        self.schema = schema
 
         self.target(
             pemi.PdDataSubject,
@@ -23,7 +25,6 @@ class SourcePipe(pemi.Pipe):
             # TODO: Merge this with standard error fields
             schema=self.schema
         )
-
 
     def extract(self):
         #e.g., S3SourceExtractor.extract()
@@ -45,8 +46,10 @@ class TargetPipe(pemi.Pipe):
     understand by some external target, and then loads the data into that external target.
     '''
 
-    def config(self):
-        self.schema = self.params['schema']
+    def __init__(self, *, schema, **params):
+        super().__init__(**params)
+
+        self.schema = schema
 
         self.source(
             pemi.PdDataSubject,
@@ -58,7 +61,6 @@ class TargetPipe(pemi.Pipe):
             pemi.PdDataSubject,
             name='response'
         )
-
 
     def encode(self):
         #e.g., CsvTargetEncoder.encode()
@@ -76,7 +78,7 @@ class TargetPipe(pemi.Pipe):
 
 class ForkPipe(pemi.Pipe):
     ''' A fork pipe accepts a single source and delivers it to multiple named targets '''
-    def __init__(self, subject_class=pemi.PdDataSubject, forks=[], **params):
+    def __init__(self, *, subject_class=pemi.PdDataSubject, forks=[], **params):
         super().__init__(**params)
 
         self.source(subject_class, name='main')
@@ -110,8 +112,11 @@ class ConcatPipe(pemi.Pipe):
         raise NotImplementedError
 
 class PdConcatPipe(ConcatPipe):
-    def flow(self):
-        opts = self.params.get('concat_opts', {})
+    def __init__(self, *, concat_opts={}, **params):
+        super().__init__(**params)
+        self.concat_opts = concat_opts
 
+
+    def flow(self):
         source_dfs = [source.df for source in self.sources.values()]
-        self.targets['main'].df = pd.concat(source_dfs, **opts)
+        self.targets['main'].df = pd.concat(source_dfs, **self.concat_opts)

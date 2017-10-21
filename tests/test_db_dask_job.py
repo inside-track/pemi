@@ -81,14 +81,13 @@ with sa.create_engine(this.params['sa_conn_str']).connect() as conn:
 # This is a really dumb pipe.  It just copies a table to dumb_table.  It's meant to demo
 # how queries can be run in parallel via Dask.
 class DumbSaPipe(pemi.Pipe):
-    def __init__(self, **params):
-        self.schema = params['schema']
-        self.table = params['table']
-        self.sa_engine = sa.create_engine(params['engine_opts']['conn_str'])
-
+    def __init__(self, *, schema, table, engine_opts, **params):
         super().__init__(**params)
 
-    def config(self):
+        self.schema = schema
+        self.table = table
+        self.sa_engine = sa.create_engine(engine_opts['conn_str'])
+
         self.source(
             SaDataSubject,
             name='main',
@@ -119,7 +118,9 @@ class DumbSaPipe(pemi.Pipe):
 
 
 class DenormalizeBeersPipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         sa_engine = sa.create_engine(this.params['sa_conn_str'])
 
         self.source(

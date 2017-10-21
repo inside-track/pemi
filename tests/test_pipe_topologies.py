@@ -9,7 +9,9 @@ import pemi.pipes.patterns
 from pemi.fields import *
 
 class APipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.target(
             pemi.PdDataSubject,
             name='a1',
@@ -27,7 +29,9 @@ class APipe(pemi.Pipe):
         self.targets['a2'].df = pd.DataFrame({'msg': ['a2 from APipe']})
 
 class BPipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.target(
             pemi.PdDataSubject,
             name='b1',
@@ -45,7 +49,9 @@ class BPipe(pemi.Pipe):
         self.targets['b2'].df = pd.DataFrame({'msg': ['b2 from BPipe']})
 
 class XPipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.source(
             pemi.PdDataSubject,
             name='x1',
@@ -62,7 +68,9 @@ class XPipe(pemi.Pipe):
         pass
 
 class YPipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.source(
             pemi.PdDataSubject,
             name='y1',
@@ -84,7 +92,9 @@ class YPipe(pemi.Pipe):
 # One-to-one pipe & subjects
 class TestAa1ToXx1(unittest.TestCase):
     class Aa1ToXx1Pipe(pemi.Pipe):
-        def config(self):
+        def __init__(self, **params):
+            super().__init__(**params)
+
             self.pipe(
                 name='A',
                 pipe=APipe()
@@ -113,7 +123,9 @@ class TestAa1ToXx1(unittest.TestCase):
 # One-to-one pipe & subjects, with multiple subjects
 class TestAa1a2ToXx1x2(unittest.TestCase):
     class Aa1a2ToXx1x2Pipe(pemi.Pipe):
-        def config(self):
+        def __init__(self, **params):
+            super().__init__(**params)
+
             self.pipe(
                 name='A',
                 pipe=APipe()
@@ -143,7 +155,9 @@ class TestAa1a2ToXx1x2(unittest.TestCase):
 # Many-to-one pipes, one-to-one subjects
 class TestAa1Bb1ToXx1x2(unittest.TestCase):
     class Aa1Bb1ToXx1x2Pipe(pemi.Pipe):
-        def config(self):
+        def __init__(self, **params):
+            super().__init__(**params)
+
             self.pipe(
                 name='A',
                 pipe=APipe()
@@ -177,7 +191,9 @@ class TestAa1Bb1ToXx1x2(unittest.TestCase):
 # One-to-many pipes, one-to-one subjects
 class TestAa1a2ToXx1Yy1(unittest.TestCase):
     class Aa1a2ToXx1Yy1Pipe(pemi.Pipe):
-        def config(self):
+        def __init__(self, **params):
+            super().__init__(**params)
+
             self.pipe(
                 name='A',
                 pipe=APipe()
@@ -209,10 +225,13 @@ class TestAa1a2ToXx1Yy1(unittest.TestCase):
         self.assertEqual(actual, expected)
 
 
+
 # One-to-many pipes, one-to-many subjects (via Fork)
 class TestAa1ToXx1Yy1(unittest.TestCase):
     class Aa1ToXx1Yy1Pipe(pemi.Pipe):
-        def config(self):
+        def __init__(self, **params):
+            super().__init__(**params)
+
             self.pipe(
                 name='A',
                 pipe=APipe()
@@ -242,7 +261,9 @@ class TestAa1ToXx1Yy1(unittest.TestCase):
 
 
     class Aa1ToXx1Yy1NoForkPipe(pemi.Pipe):
-        def config(self):
+        def __init__(self, **params):
+            super().__init__(**params)
+
             self.pipe(
                 name='A',
                 pipe=APipe()
@@ -281,7 +302,9 @@ class TestAa1ToXx1Yy1(unittest.TestCase):
 # One-to-one pipes, many-to-one subjects (via Concat)
 class TestAa1a2ToXx1(unittest.TestCase):
     class Aa1a2ToXx1Pipe(pemi.Pipe):
-        def config(self):
+        def __init__(self, **params):
+            super().__init__(**params)
+
             self.pipe(
                 name='A',
                 pipe=APipe()
@@ -306,7 +329,9 @@ class TestAa1a2ToXx1(unittest.TestCase):
 
 
     class Aa1a2ToXx1NoConcatPipe(pemi.Pipe):
-        def config(self):
+        def __init__(self, **params):
+            super().__init__(**params)
+
             self.pipe(
                 name='A',
                 pipe=APipe()
@@ -339,7 +364,9 @@ class TestAa1a2ToXx1(unittest.TestCase):
 # Many-to-one pipes, many-to-one subjects (via Concat)
 class TestAa1Bb1ToXx1(unittest.TestCase):
     class Aa1Bb1ToXx1Pipe(pemi.Pipe):
-        def config(self):
+        def __init__(self, **params):
+            super().__init__(**params)
+
             self.pipe(
                 name='A',
                 pipe=APipe()
@@ -380,7 +407,9 @@ class TestAa1Bb1ToXx1(unittest.TestCase):
 # Connecting from external source pipes
 class TestExternalSourcePipes(unittest.TestCase):
     class FromAa1Pipe(pemi.Pipe):
-        def config(self):
+        def __init__(self, **params):
+            super().__init__(**params)
+
             self.source(
                 pemi.PdDataSubject,
                 name='from_a1',
@@ -417,7 +446,9 @@ class TestExternalSourcePipes(unittest.TestCase):
 # Connecting to external target pipes
 class TestExternalTargetPipes(unittest.TestCase):
     class ToXx1Pipe(pemi.Pipe):
-        def config(self):
+        def __init__(self, **params):
+            super().__init__(**params)
+
             self.target(
                 pemi.PdDataSubject,
                 name='main',
@@ -448,7 +479,9 @@ class TestExternalTargetPipes(unittest.TestCase):
 # Connected from external source pipes and external target pipes
 class TestExternalSourceAndTargetPipes(unittest.TestCase):
     class FromAa1ToXx1Pipe(pemi.Pipe):
-        def config(self):
+        def __init__(self, **params):
+            super().__init__(**params)
+
             self.source(
                 pemi.PdDataSubject,
                 name='from_a1',
