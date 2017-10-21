@@ -9,9 +9,6 @@ import pemi.testing
 from pemi.data_subject import SparkDataSubject
 from pemi.fields import *
 
-import logging
-pemi.log('pemi').setLevel(logging.WARN)
-
 import sys
 this = sys.modules[__name__]
 
@@ -25,7 +22,9 @@ spark = pyspark.sql.SparkSession \
 
 
 class DenormalizeBeersPipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.source(
             SparkDataSubject,
             name='sales',
@@ -91,6 +90,8 @@ class DenormalizeBeersPipe(pemi.Pipe):
 
 
 class TestDenormalizeBeersPipe(unittest.TestCase):
+    spark = True
+
     def setUp(self):
         self.pipe = DenormalizeBeersPipe()
 

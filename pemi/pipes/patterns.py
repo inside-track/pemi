@@ -1,3 +1,5 @@
+import pandas as pd
+
 import pemi
 from pemi.data_subject import PdDataSubject
 
@@ -6,12 +8,23 @@ class SourcePipe(pemi.Pipe):
     A source pipe extracts data from some external source, and parses
     it into a data structure that can be used by subsequent pipes.
     '''
-
-    def __init__(self, subject_class=PdDataSubject, **params):
+    def __init__(self, *, schema, **params):
         super().__init__(**params)
 
-        self.target(subject_class, name='main')
-        self.target(subject_class, name='errors')
+        self.schema = schema
+
+        self.target(
+            pemi.PdDataSubject,
+            name='main',
+            schema=self.schema
+        )
+
+        self.target(
+            pemi.PdDataSubject,
+            name='errors',
+            # TODO: Merge this with standard error fields
+            schema=self.schema
+        )
 
     def extract(self):
         #e.g., S3SourceExtractor.extract()
@@ -24,8 +37,7 @@ class SourcePipe(pemi.Pipe):
         return parsed_data
 
     def flow(self):
-        self.targets['main'].data = self.parse(self.extract())
-        return self.targets['main'].data
+        self.parse(self.extract())
 
 
 class TargetPipe(pemi.Pipe):
@@ -34,11 +46,21 @@ class TargetPipe(pemi.Pipe):
     understand by some external target, and then loads the data into that external target.
     '''
 
-    def __init__(self, subject_class=PdDataSubject, **params):
+    def __init__(self, *, schema, **params):
         super().__init__(**params)
 
-        self.source(subject_class, name='main')
-        self.target(subject_class, name='load_response')
+        self.schema = schema
+
+        self.source(
+            pemi.PdDataSubject,
+            name='main',
+            schema=self.schema
+        )
+
+        self.target(
+            pemi.PdDataSubject,
+            name='response'
+        )
 
     def encode(self):
         #e.g., CsvTargetEncoder.encode()
@@ -51,4 +73,50 @@ class TargetPipe(pemi.Pipe):
         return results_from_load_operation
 
     def flow(self):
-        return self.load(self.encode())
+        self.load(self.encode())
+
+
+class ForkPipe(pemi.Pipe):
+    ''' A fork pipe accepts a single source and delivers it to multiple named targets '''
+    def __init__(self, *, subject_class=pemi.PdDataSubject, forks=[], **params):
+        super().__init__(**params)
+
+        self.source(subject_class, name='main')
+        for fork in forks:
+            self.target(subject_class, name=fork)
+
+    def fork(self, source, target):
+        raise NotImplementedError
+
+    def flow(self):
+        raise NotImplementedError
+
+
+class PdForkPipe(ForkPipe):
+    def flow(self):
+        for target in self.targets.values():
+            target.df = self.sources['main'].df
+
+
+class ConcatPipe(pemi.Pipe):
+    ''' A concat pipe accepts multiple sources and combines them into a single target '''
+    def __init__(self, subject_class=pemi.PdDataSubject, sources=[], **params):
+        super().__init__(**params)
+        self.named_sources = sources
+
+        for source in sources:
+            self.source(subject_class, name=source)
+        self.target(subject_class, name='main')
+
+    def flow(self):
+        raise NotImplementedError
+
+class PdConcatPipe(ConcatPipe):
+    def __init__(self, *, concat_opts={}, **params):
+        super().__init__(**params)
+        self.concat_opts = concat_opts
+
+
+    def flow(self):
+        source_dfs = [source.df for source in self.sources.values()]
+        self.targets['main'].df = pd.concat(source_dfs, **self.concat_opts)

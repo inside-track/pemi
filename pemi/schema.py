@@ -14,19 +14,16 @@ class Schema:
         return self.fields[key]
 
     def keys(self):
-        return self.fields.keys()
+        return list(self.fields.keys())
 
     def values(self):
-        return self.fields.values()
+        return list(self.fields.values())
 
     def items(self):
         return self.fields.items()
 
     def coercions(self):
         return {f.name: f.coerce for f in self.fields.values()}
-
-    def string_coercions(self):
-        return {f.name: str for f in self.fields.values()}
 
     def __str__(self):
         return "\n".join(['{} -> {}'.format(name, meta.__str__()) for name, meta in self.fields.items()])

@@ -1,6 +1,7 @@
 import pandas as pd
 
 import pemi
+import pemi.transforms
 
 __all__ = [
     'RowHandler',
@@ -35,7 +36,7 @@ class RowHandler:
         self.errors.append(self.mapping_error(err, idx))
 
     def _raise(self, err, arg, idx):
-        pemi.log().error(self.mapping_error(err, idx))
+        pemi.log.error(self.mapping_error(err, idx))
         raise err
 
     def _recode(self, err, arg, idx):
@@ -44,22 +45,23 @@ class RowHandler:
 
     def _warn(self, err, arg, idx):
         self.catch_error(err, idx)
-        pemi.log().warning(self.mapping_error(err, idx))
+        pemi.log.warning(self.mapping_error(err, idx))
         return None
 
     def _exclude(self, err, arg, idx):
         self.catch_error(err, idx)
-        pemi.log().error(self.mapping_error(err, idx))
+        pemi.log.error(self.mapping_error(err, idx))
         return None
 
 
 class PdMapper():
     def __init__(self, source_df, mapped_df=None, maps=[]):
         self.source_df = source_df
-        if mapped_df == None:
+        if mapped_df is None:
             self.mapped_df = pd.DataFrame(index=self.source_df.index)
         else:
             self.mapped_df = mapped_df
+
         self.errors_df = pd.DataFrame([])
         self.maps = maps
 
@@ -109,6 +111,10 @@ class PdMap():
             self.apply = getattr(self, '_apply_copy')
         elif len(self.sources) == 1 and len(self.targets) == 1:
             self.apply = getattr(self, '_apply_one_to_one')
+        elif len(self.sources) == 1 and len(self.targets) == 0:
+            self.apply = getattr(self, '_apply_one_to_zero')
+        elif len(self.sources) == 0 and len(self.targets) == 1:
+            self.apply = getattr(self, '_apply_zero_to_one')
         elif len(self.targets) == 1:
             self.apply = getattr(self, '_apply_many_to_one')
         else:
@@ -119,6 +125,9 @@ class PdMap():
 
     def _transform_one_to_one(self, row):
         return self.handler.apply(self._transform, row[self.source], row.name)
+
+    def _transform_zero_to_one(self, row):
+        return self.handler.apply(self._transform, row['__none__'], row.name)
 
     def _transform_many_to_one(self, row):
         return self.handler.apply(self._transform, row, row.name)
@@ -131,6 +140,14 @@ class PdMap():
 
     def _apply_one_to_one(self):
         self.mapped_df[self.target] = self.source_df[[self.source]].apply(self._transform_one_to_one, axis=1)
+
+    def _apply_zero_to_one(self):
+        empty_df = pd.DataFrame([], index=self.source_df.index)
+        empty_df['__none__'] = None
+        self.mapped_df[self.target] = empty_df.apply(self._transform_zero_to_one, axis=1)
+
+    def _apply_one_to_zero(self):
+        self.source_df[[self.source]].apply(self._transform_one_to_one, axis=1)
 
     def _apply_many_to_one(self):
         self.mapped_df[self.target] = self.source_df[self.sources].apply(self._transform_many_to_one, axis=1)
@@ -147,6 +164,23 @@ class PdMap():
         self.error_df = error_df
         self.apply()
         return self
+
+def schema_maps(schema):
+    field_maps = []
+    for name, field in schema.items():
+        fm = PdMap(source=name, target=name,
+                   transform=field.coerce,
+                   handler=RowHandler('exclude')
+        )
+        field_maps.append(fm)
+
+        if field.metadata.get('allow_null', True) == False:
+            fm = PdMap(source=name, target=name,
+                       transform=pemi.transforms.validate_no_null(field),
+                       handler=RowHandler('exclude')
+            )
+            field_maps.append(fm)
+    return field_maps
 
 
 if __name__ == '__main__':

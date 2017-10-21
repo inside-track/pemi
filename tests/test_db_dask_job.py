@@ -6,12 +6,10 @@ import sqlalchemy as sa
 
 import pemi
 import pemi.testing
-import pemi.pipes.dask
 from pemi.data_subject import SaDataSubject
 from pemi.fields import *
 
 import logging
-pemi.log('pemi').setLevel(logging.WARN)
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
 import sys
@@ -83,14 +81,13 @@ with sa.create_engine(this.params['sa_conn_str']).connect() as conn:
 # This is a really dumb pipe.  It just copies a table to dumb_table.  It's meant to demo
 # how queries can be run in parallel via Dask.
 class DumbSaPipe(pemi.Pipe):
-    def __init__(self, **params):
-        self.schema = params['schema']
-        self.table = params['table']
-        self.sa_engine = sa.create_engine(params['engine_opts']['conn_str'])
-
+    def __init__(self, *, schema, table, engine_opts, **params):
         super().__init__(**params)
 
-    def config(self):
+        self.schema = schema
+        self.table = table
+        self.sa_engine = sa.create_engine(engine_opts['conn_str'])
+
         self.source(
             SaDataSubject,
             name='main',
@@ -121,7 +118,9 @@ class DumbSaPipe(pemi.Pipe):
 
 
 class DenormalizeBeersPipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         sa_engine = sa.create_engine(this.params['sa_conn_str'])
 
         self.source(
@@ -185,27 +184,11 @@ class DenormalizeBeersPipe(pemi.Pipe):
             )
         )
 
-        self.pipe(
-            name='self',
-            pipe=self
-        )
-
-        self.connect(
-            self.pipes['dumb_sales'].targets['main']
-        ).to(
-            self.pipes['self'].sources['sales']
-        )
-
-        self.connect(
-            self.pipes['dumb_beers'].targets['main']
-        ).to(
-            self.pipes['self'].sources['beers']
-        )
-
-        self.dask = pemi.pipes.dask.DaskFlow(self.connections)
+        self.connect('dumb_sales', 'main').to('self', 'sales')
+        self.connect('dumb_beers', 'main').to('self', 'beers')
 
     def flow(self):
-        self.dask.flow()
+        self.connections.flow()
 
         sa_beer_sales = self.targets['beer_sales']
         with sa_beer_sales.engine.connect() as conn:

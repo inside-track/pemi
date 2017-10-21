@@ -110,6 +110,57 @@ class TestCardinalities(unittest.TestCase):
         pemi.testing.assert_frame_equal(result_df, expected_df)
 
 
+    def test_one_to_zero_map(self):
+        '''
+        One-to-zero mapping
+        '''
+
+        def recorder(values):
+            def _recorder(value):
+                values.append(value)
+            return _recorder
+
+        saved = []
+        mapper = PdMapper(self.df, maps=[
+            PdMap(source='num', transform=recorder(saved)),
+        ]).apply()
+
+        self.assertEqual(saved, [1,2,3])
+
+
+    def test_many_to_zero_map(self):
+        '''
+        Many-to-zero mapping
+        '''
+
+        def recorder(values):
+            def _recorder(row):
+                values.append('-'.join([str(v) for v in row.values]))
+            return _recorder
+
+        saved = []
+        mapper = PdMapper(self.df, maps=[
+            PdMap(source=['num', 'name'], transform=recorder(saved)),
+        ]).apply()
+
+        self.assertEqual(saved, ['1-one','2-two','3-three'])
+
+
+    def test_zero_to_one_map(self):
+        '''
+        Zero-to-one mapping
+        '''
+        mapper = PdMapper(self.df, maps=[
+            PdMap(target='my_constant', transform=lambda v: 5)
+        ]).apply()
+
+        result_df = mapper.mapped_df
+        expected_df = pd.DataFrame({'my_constant': [5,5,5]})
+
+        pemi.testing.assert_frame_equal(result_df, expected_df)
+
+
+
 class TestHandlerModes(unittest.TestCase):
     def setUp(self):
         self.df = pd.DataFrame(
@@ -289,3 +340,34 @@ class TestHandlerModes(unittest.TestCase):
             columns = ['split_num', 'split_name']
         )
         pemi.testing.assert_frame_equal(mapped_df, expected_mapped_df)
+
+
+class TestPassthrough(unittest.TestCase):
+    def setUp(self):
+        self.df = pd.DataFrame(
+            {
+                'field1': [1,2,3],
+                'field2': [1,2,3],
+                'field3': [1,2,3],
+                'field4': [1,2,3]
+            }
+        )
+
+    def test_fields_can_be_passed_through(self):
+        mapper = PdMapper(self.df, mapped_df=self.df.copy(), maps=[
+            PdMap(source='field3', target='field3', transform=lambda v: v + 10),
+            PdMap(source='field2', target='field2p', transform=lambda v: v + 10)
+        ]).apply()
+
+        expected_mapped_df = pd.DataFrame(
+            {
+                'field1': [1,2,3],
+                'field2': [1,2,3],
+                'field3': [11,12,13],
+                'field4': [1,2,3],
+                'field2p': [11,12,13]
+            },
+            columns = ['field1', 'field2', 'field3', 'field4', 'field2p']
+        )
+
+        pemi.testing.assert_frame_equal(mapper.mapped_df, expected_mapped_df)

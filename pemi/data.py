@@ -62,7 +62,7 @@ class Table:
 
     def _build_from_markdown(self):
         cleaned = self._clean_markdown()
-        str_df = pd.read_csv(io.StringIO(cleaned), sep='|', converters=self.schema.string_coercions())
+        str_df = pd.read_csv(io.StringIO(cleaned), sep='|', converters={k:str for k in self.schema.keys()})
 
         df = pd.DataFrame()
         for header in list(str_df):

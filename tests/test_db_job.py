@@ -10,7 +10,6 @@ from pemi.data_subject import SaDataSubject
 from pemi.fields import *
 
 import logging
-pemi.log('pemi').setLevel(logging.WARN)
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
 import sys
@@ -52,7 +51,9 @@ with sa.create_engine(this.params['sa_conn_str']).connect() as conn:
 
 
 class DenormalizeBeersPipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         sa_engine = sa.create_engine(this.params['sa_conn_str'])
 
         self.source(

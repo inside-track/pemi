@@ -8,13 +8,8 @@ from pandas.util.testing import assert_series_equal
 
 import pemi
 import pemi.testing
-import pemi.pipes.dask
 from pemi.data_subject import PdDataSubject
 from pemi.fields import *
-
-import logging
-pemi.log('pemi').setLevel(logging.WARN)
-
 
 import sys
 this = sys.modules[__name__]
@@ -35,7 +30,9 @@ this.schemas = {
 }
 
 class RemoteSourcePipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.target(
             PdDataSubject,
             name='main',
@@ -49,7 +46,9 @@ class RemoteSourcePipe(pemi.Pipe):
 
 
 class RemoteTargetPipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.source(
             PdDataSubject,
             name='main',
@@ -62,7 +61,9 @@ class RemoteTargetPipe(pemi.Pipe):
 
 
 class BlackBoxPipe(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.source(
             PdDataSubject,
             name='beers_file',
@@ -109,7 +110,9 @@ class BlackBoxPipe(pemi.Pipe):
         self.targets['dropped_duplicates'].df = dupes_df
 
 class BlackBoxJob(pemi.Pipe):
-    def config(self):
+    def __init__(self, **params):
+        super().__init__(**params)
+
         self.pipe(
             name='beers_file',
             pipe=RemoteSourcePipe()
@@ -126,22 +129,11 @@ class BlackBoxJob(pemi.Pipe):
         )
 
 
-        self.connect(
-            self.pipes['beers_file'].targets['main']
-        ).to(
-            self.pipes['black_box'].sources['beers_file']
-        )
-
-        self.connect(
-            self.pipes['black_box'].targets['beers_w_style_file']
-        ).to(
-            self.pipes['beers_w_style_file'].sources['main']
-        )
-
-        self.dask = pemi.pipes.dask.DaskFlow(self.connections)
+        self.connect('beers_file', 'main').to('black_box', 'beers_file')
+        self.connect('black_box', 'beers_w_style_file').to('beers_w_style_file', 'main')
 
     def flow(self):
-        self.dask.flow()
+        self.connections.flow()
 
 
 class TestBlackBoxJobMappings(unittest.TestCase):
@@ -179,7 +171,7 @@ class TestBlackBoxJobMappings(unittest.TestCase):
         self.scenario.when(
             self.rules.when_source_conforms_to_schema()
         ).then(
-            *self.rules.then_fields_are_copied({
+            self.rules.then_fields_are_copied({
                 'id': 'id',
                 'name': 'name',
                 'abv': 'abv'
@@ -383,7 +375,7 @@ class TestBlackBoxPipe(unittest.TestCase):
         self.scenario.when(
             self.rules.when_source_conforms_to_schema()
         ).then(
-            *self.rules.then_fields_are_copied({
+            self.rules.then_fields_are_copied({
                 'id': 'id',
                 'name': 'name',
                 'abv': 'abv'
