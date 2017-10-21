@@ -11,7 +11,7 @@ class Pipe():
     A pipe is a parameterized collection of sources and targets which can be executed (flow).
     '''
 
-    def __init__(self, name=None, **params):
+    def __init__(self, *, name=None, **params):
         self.name = name
         self.params = params
         self.sources = OrderedDict()
@@ -21,12 +21,6 @@ class Pipe():
 
         # TODOC: special case of "self" pipe
         self.pipes['self'] = self
-
-        self.config()
-
-    def config(self):
-        'Override this to configure attributes of specific pipes (sources, targets, connections, etc)'
-        pass
 
     def source(self, subject_class, name, schema=pemi.Schema(), **kwargs):
         self.sources[name] = subject_class(
