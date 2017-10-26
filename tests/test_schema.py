@@ -76,3 +76,22 @@ class TestSchema(unittest.TestCase):
             s2f3
         )
         self.assertEqual(merged, expected)
+
+    def test_schema_subset(self):
+        '''
+        Given a list, generates a new schema containing just the fields in the list
+        '''
+
+        schema = pemi.Schema(
+            f1 = StringField(),
+            f2 = StringField(),
+            f3 = StringField()
+        )
+
+        actual = schema[['f1','f3']]
+        expected = pemi.Schema(
+            f1 = StringField(),
+            f3 = StringField()
+        )
+
+        self.assertEqual(actual, expected)
