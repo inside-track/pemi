@@ -97,7 +97,7 @@ class PipeConnections():
 
     def graph(self):
         #TODO: Make my own graph that simplifies some of the dask boilerplate
-        self.dask_graph()
+        return self.dask_graph()
 
     def dask_graph(self):
         return dask.dot.dot_graph(self.dask_dag(), rankdir='TB')
