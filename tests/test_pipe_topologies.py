@@ -5,7 +5,7 @@ import pandas as pd
 import pemi
 import pemi.testing
 import pemi.connections
-import pemi.pipes.patterns
+import pemi.pipes.pd
 from pemi.fields import *
 
 class APipe(pemi.Pipe):
@@ -239,7 +239,7 @@ class TestAa1ToXx1Yy1(unittest.TestCase):
 
             self.pipe(
                 name='Fork',
-                pipe=pemi.pipes.patterns.PdForkPipe(forks=['fork0', 'fork1'])
+                pipe=pemi.pipes.pd.PdForkPipe(forks=['fork0', 'fork1'])
             )
 
             self.pipe(
@@ -312,7 +312,7 @@ class TestAa1a2ToXx1(unittest.TestCase):
 
             self.pipe(
                 name='Concat',
-                pipe=pemi.pipes.patterns.PdConcatPipe(sources=['Aa1', 'Aa2'])
+                pipe=pemi.pipes.pd.PdConcatPipe(sources=['Aa1', 'Aa2'])
             )
 
             self.pipe(
@@ -379,7 +379,7 @@ class TestAa1Bb1ToXx1(unittest.TestCase):
 
             self.pipe(
                 name='Concat',
-                pipe=pemi.pipes.patterns.PdConcatPipe(sources=['Aa1', 'Bb1'])
+                pipe=pemi.pipes.pd.PdConcatPipe(sources=['Aa1', 'Bb1'])
             )
 
             self.pipe(
