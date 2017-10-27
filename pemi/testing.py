@@ -269,3 +269,17 @@ class Rules():
             The target '{}' does not have any of the following fields: '{}'
         '''.format(target_subject, "','".join(field_names))
         return _then_target_does_not_have_fields
+
+
+    def then_target_is_empty(self, target_subject=None):
+        target_subject = self._find_target(target_subject)
+
+        def _then_target_is_empty():
+            nrecords = len(target_subject.__test_data__)
+            if nrecords != 0:
+                raise AssertionError('Excpecting target to be empty, found {} records'.format(nrecords))
+
+        _then_target_is_empty.__doc__='''
+            The target '{}' is empty
+        '''.format(target_subject)
+        return _then_target_is_empty
