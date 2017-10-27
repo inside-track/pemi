@@ -92,12 +92,6 @@ class ForkPipe(pemi.Pipe):
         raise NotImplementedError
 
 
-class PdForkPipe(ForkPipe):
-    def flow(self):
-        for target in self.targets.values():
-            target.df = self.sources['main'].df
-
-
 class ConcatPipe(pemi.Pipe):
     ''' A concat pipe accepts multiple sources and combines them into a single target '''
     def __init__(self, subject_class=pemi.PdDataSubject, sources=[], **params):
@@ -110,13 +104,3 @@ class ConcatPipe(pemi.Pipe):
 
     def flow(self):
         raise NotImplementedError
-
-class PdConcatPipe(ConcatPipe):
-    def __init__(self, *, concat_opts={}, **params):
-        super().__init__(**params)
-        self.concat_opts = concat_opts
-
-
-    def flow(self):
-        source_dfs = [source.df for source in self.sources.values()]
-        self.targets['main'].df = pd.concat(source_dfs, **self.concat_opts)

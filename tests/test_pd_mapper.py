@@ -220,6 +220,39 @@ class TestHandlerModes(unittest.TestCase):
         pemi.testing.pemi.testing.assert_frame_equal(errors_df[expected_errors_df.columns], expected_errors_df)
 
 
+    def test_ignore_mode(self):
+        '''
+        The ignore handler replaces errors with None
+        '''
+        mapper = PdMapper(self.df, maps=[
+            PdMap(source='num', target='translated', transform=translate, handler=RowHandler('ignore'))
+        ]).apply()
+
+        mapped_df = mapper.mapped_df
+
+        expected_mapped_df = pd.DataFrame(
+            {
+                'translated': ['UNO',None,'TRES',None]
+            }
+        )
+
+        pemi.testing.assert_frame_equal(mapped_df, expected_mapped_df)
+
+
+    def test_ignore_mode_catch(self):
+        '''
+        The ignore handler does not put data in the errors dataframe
+        '''
+        mapper = PdMapper(self.df, maps=[
+            PdMap(source='num', target='translated', transform=translate, handler=RowHandler('ignore'))
+        ]).apply()
+
+        errors_df = mapper.errors_df
+
+        expected_errors_df = pd.DataFrame([])
+        pemi.testing.pemi.testing.assert_frame_equal(errors_df[expected_errors_df.columns], expected_errors_df)
+
+
     def test_exclude_mode(self):
         '''
         Errors are excluded from the mapped dataframe

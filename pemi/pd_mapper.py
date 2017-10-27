@@ -12,10 +12,11 @@ __all__ = [
 
 class RowHandler:
     def __init__(self, mode='raise', recode=None):
-        # Warn - Errors get returned as None, but they still go into the errors datadaset
-        # Exclude - The entire record is excluded from the results, put into the errors dataset
-        # Recode - Alternate transform applied, records still go into the errors dataset
-        # Raise - Full stop, all subsequent processing halts
+        # ignore - Errors get returned as None and they don't go into the errors datadaset
+        # warn - Errors get returned as None, but they still go into the errors datadaset
+        # exclude - The entire record is excluded from the results, put into the errors dataset
+        # recode - Alternate transform applied, records still go into the errors dataset
+        # raise - Full stop, all subsequent processing halts
 
         self.mode = mode
         self.recode = recode
@@ -46,6 +47,9 @@ class RowHandler:
     def _warn(self, err, arg, idx):
         self.catch_error(err, idx)
         pemi.log.warning(self.mapping_error(err, idx))
+        return None
+
+    def _ignore(self, err, arg, idx):
         return None
 
     def _exclude(self, err, arg, idx):
