@@ -42,3 +42,12 @@ class TestIsBlank(unittest.TestCase):
 
     def test_false(self):
         self.assertEqual(pemi.transforms.isblank(False), False)
+
+class TestConcatenate(unittest.TestCase):
+    def test_it_concatenates(self):
+        row = pd.Series(['ab', 'c', 'd'])
+        self.assertEqual(pemi.transforms.concatenate()(row), 'abcd')
+
+    def test_it_concatenates_w_delimiter(self):
+        row = pd.Series(['ab', 'c', 'd'])
+        self.assertEqual(pemi.transforms.concatenate('-')(row), 'ab-c-d')
