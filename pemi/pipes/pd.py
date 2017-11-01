@@ -21,7 +21,7 @@ class PdConcatPipe(pemi.pipes.patterns.ConcatPipe):
         self.targets['main'].df = pd.concat(source_dfs, **self.concat_opts)
 
 class PdLookupJoinPipe(pemi.Pipe):
-    def __init__(self, main_key, lookup_key, suffixes=('', '_lkp'), missing_handler=None, indicator='_indicator_', **kwargs):
+    def __init__(self, main_key, lookup_key, suffixes=('', '_lkp'), missing_handler=None, indicator='_indicator_', lookup_prefix='', **kwargs):
         super().__init__(**kwargs)
 
         self.main_key = main_key
@@ -29,6 +29,7 @@ class PdLookupJoinPipe(pemi.Pipe):
         self.suffixes = suffixes
         self.missing_handler = missing_handler or RowHandler('exclude')
         self.indicator = indicator
+        self.lookup_prefix = lookup_prefix
 
         self.source(
             pemi.PdDataSubject,
@@ -52,7 +53,13 @@ class PdLookupJoinPipe(pemi.Pipe):
 
 
     def flow(self):
-        uniq_lkp_df = self.sources['lookup'].df.sort_values(
+        lkp_df = self.sources['lookup'].df
+        lkp_df.rename(
+            columns={col: self.lookup_prefix + col for col in lkp_df.columns if not col in self.lookup_key},
+            inplace=True
+        )
+
+        uniq_lkp_df = lkp_df.sort_values(
             self.lookup_key
         ).groupby(
             self.lookup_key

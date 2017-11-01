@@ -149,3 +149,32 @@ class TestPdLookupJoinPipe(unittest.TestCase):
                 target_subject = pipe.targets['errors']
             )
         ).run()
+
+    def test_it_prefixes_lookup_fields(self):
+        pipe = pemi.pipes.pd.PdLookupJoinPipe(
+            main_key = ['key'],
+            lookup_key = ['lkey'],
+            lookup_prefix='existing_'
+        )
+
+        rules = self.rules(pipe)
+        scenario = self.scenario(pipe, rules)
+
+        expected = pemi.data.Table(
+            '''
+            | key | words | lkey | existing_values | existing_words |
+            | -   | -     | -    | -               | -              |
+            | k1  | words | k1   | one             | I              |
+            | k1  | words | k1   | one             | I              |
+            | k3  | more  | k3   | three           | dead           |
+            | k4  | even  | k4   | four            | people         |
+            | k4  | more  | k4   | four            | people         |
+            '''
+        )
+
+        scenario.then(
+            rules.then_target_matches_example(
+                expected,
+                target_subject = pipe.targets['main']
+            )
+        ).run()
