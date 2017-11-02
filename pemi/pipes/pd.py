@@ -21,7 +21,12 @@ class PdConcatPipe(pemi.pipes.patterns.ConcatPipe):
         self.targets['main'].df = pd.concat(source_dfs, **self.concat_opts)
 
 class PdLookupJoinPipe(pemi.Pipe):
-    def __init__(self, main_key, lookup_key, suffixes=('', '_lkp'), missing_handler=None, indicator='_indicator_', lookup_prefix='', **kwargs):
+    def __init__(self, main_key, lookup_key,
+                 suffixes=('', '_lkp'),
+                 missing_handler=None,
+                 indicator=None,
+                 lookup_prefix='',
+                 **kwargs):
         super().__init__(**kwargs)
 
         self.main_key = main_key
@@ -72,19 +77,24 @@ class PdLookupJoinPipe(pemi.Pipe):
             right_on = self.lookup_key,
             how='left',
             suffixes=self.suffixes,
-            indicator=self.indicator
+            indicator='__indicator__'
         )
 
         def raise_on_mismatch(row):
-            if row[self.indicator] == 'left_only':
+            if row['__indicator__'] == 'left_only':
                 raise KeyError('Lookup key "{}" not found'.format(dict(row[self.main_key])))
             return row
 
 
         mapper = PdMapper(merged_df, mapped_df=merged_df, maps=[
-            PdMap(source=[*self.main_key, self.indicator], transform=raise_on_mismatch, handler=self.missing_handler)
+            PdMap(source=[*self.main_key, '__indicator__'], transform=raise_on_mismatch, handler=self.missing_handler)
         ]).apply()
 
-        del mapper.mapped_df[self.indicator]
+        if not self.indicator:
+            del mapper.mapped_df['__indicator__']
+        else:
+            indicator_map = lambda v: True if v == 'both' else False
+            mapper.mapped_df[self.indicator] = mapper.mapped_df['__indicator__'].apply(indicator_map).astype('bool')
+
         self.targets['main'].df = mapper.mapped_df
         self.targets['errors'].df = mapper.errors_df

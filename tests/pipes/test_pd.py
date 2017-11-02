@@ -178,3 +178,34 @@ class TestPdLookupJoinPipe(unittest.TestCase):
                 target_subject = pipe.targets['main']
             )
         ).run()
+
+    def test_it_adds_an_indicator(self):
+        pipe = pemi.pipes.pd.PdLookupJoinPipe(
+            main_key = ['key'],
+            lookup_key = ['lkey'],
+            missing_handler = RowHandler('ignore'),
+            indicator = 'lkp_found'
+        )
+
+        rules = self.rules(pipe)
+        scenario = self.scenario(pipe, rules)
+
+        expected = pemi.data.Table(
+            '''
+            | key | words | lkp_found |
+            | -   | -     | -         |
+            | k1  | words | True      |
+            | k1  | words | True      |
+            | k3  | more  | True      |
+            | k7  | words | False     |
+            | k4  | even  | True      |
+            | k4  | more  | True      |
+            '''
+        )
+
+        scenario.then(
+            rules.then_target_matches_example(
+                expected,
+                target_subject = pipe.targets['main']
+            )
+        ).run()
