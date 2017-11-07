@@ -12,7 +12,7 @@ class Schema:
 
     def __getitem__(self, key):
         if isinstance(key, list):
-            return Schema(**{k:v for k,v in self.items() if k in key})
+            return Schema(**{self[k].name: self[k] for k in key})
         else:
             return self.fields[key]
 
