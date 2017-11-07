@@ -207,7 +207,8 @@ class Rules():
 
         def _then_target_field_has_value():
             target_data = target_subject.__test_data__
-            pd.testing.assert_series_equal(target_data[field_name], pd.Series([field_value] * len(target_data)), check_names=False)
+            expected_data = pd.Series([field_value] * len(target_data), index=target_data.index)
+            pd.testing.assert_series_equal(target_data[field_name], expected_data, check_names=False)
 
         _then_target_field_has_value.__doc__ = '''
             The target field '{}' has the value "{}"
