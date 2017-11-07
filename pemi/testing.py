@@ -139,7 +139,8 @@ class Rules():
                 expected = expected.sort_values(by).reset_index(drop=True)
                 actual = actual.sort_values(by).reset_index(drop=True)
 
-            pd.testing.assert_series_equal(expected[source_field], actual[target_field])
+            pd.testing.assert_series_equal(expected[source_field], actual[target_field],
+                                           check_dtype=False, check_names=False)
 
 
         _then_field_is_copied.__doc__ = '''
@@ -152,6 +153,8 @@ class Rules():
         )
         return _then_field_is_copied
 
+# TODO: Drop this... pytest can parameterize it
+#       If we really want a good mapping
     def then_fields_are_copied(self, mapping, source_subject=None, target_subject=None, by=None):
         def _then_fields_are_copied():
             for source_field, target_field in mapping.items():
@@ -161,7 +164,7 @@ class Rules():
                     source_field=source_field,
                     target_field=target_field,
                     by=by
-                )
+                )()
 
         mapping_doc = "\n".join(["'{}' -> '{}'".format(s,t) for s,t in mapping.items()])
 
@@ -283,3 +286,16 @@ class Rules():
             The target '{}' is empty
         '''.format(target_subject)
         return _then_target_is_empty
+
+    def then_target_has_n_records(self, expected_n, target_subject=None):
+        target_subject = self._find_target(target_subject)
+
+        def _then_target_has_n_records():
+            nrecords = len(target_subject.__test_data__)
+            if nrecords != expected_n:
+                raise AssertionError('Excpecting target to have {} records, found {} records'.format(expected_n, nrecords))
+
+        _then_target_has_n_records.__doc__='''
+            The target '{}' has {} records
+        '''.format(target_subject, expected_n)
+        return _then_target_has_n_records
