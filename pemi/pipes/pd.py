@@ -2,6 +2,7 @@ import pandas as pd
 
 import pemi
 import pemi.pipes.patterns
+import pemi.transforms
 from pemi.pd_mapper import *
 
 class PdForkPipe(pemi.pipes.patterns.ForkPipe):
@@ -63,6 +64,9 @@ class PdLookupJoinPipe(pemi.Pipe):
             columns={col: self.lookup_prefix + col for col in lkp_df.columns if not col in self.lookup_key},
             inplace=True
         )
+
+        missing_keys = lkp_df[self.lookup_key].apply(lambda v: v.apply(pemi.transforms.isblank).any(), axis=1)
+        lkp_df = lkp_df[~missing_keys]
 
         uniq_lkp_df = lkp_df.sort_values(
             self.lookup_key
