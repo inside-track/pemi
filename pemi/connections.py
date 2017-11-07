@@ -103,7 +103,7 @@ class PipeConnections():
         return dask.dot.dot_graph(self.dask_dag(), rankdir='TB')
 
     def dask_dag(self):
-        self._validate_dag()
+        self.validate_dag()
         dag = {}
         for conn in self.connections:
             for node, edge in self._node_edge(conn).items():
@@ -115,7 +115,7 @@ class PipeConnections():
         return dag
 
 
-    def _validate_dag(self):
+    def validate_dag(self):
         targets = defaultdict(list)
         sources = defaultdict(list)
         for conn in self.connections:
@@ -123,6 +123,15 @@ class PipeConnections():
             from_str = '{}.targets[{}]'.format(conn.from_pipe_name, conn.from_subject_name)
             sources[from_str].append(to_str)
             targets[to_str].append(from_str)
+
+            if not(conn.from_pipe_name in conn.parent.pipes):
+                raise DagValidationError("Pipe '{}' not defined in parent pipe '{}'".format(conn.from_pipe_name, conn.parent.name))
+            if not(conn.to_pipe_name in conn.parent.pipes):
+                raise DagValidationError("Pipe '{}' not defined in parent pipe '{}'".format(conn.to_pipe_name, conn.parent.name))
+            if not(conn.from_subject_name in conn.parent.pipes[conn.from_pipe_name].targets):
+                raise DagValidationError("Pipe '{}' has no target named '{}'".format(conn.from_pipe_name, conn.from_subject_name))
+            if not(conn.to_subject_name in conn.parent.pipes[conn.to_pipe_name].sources):
+                raise DagValidationError("Pipe '{}' has no source named '{}'".format(conn.from_pipe_name, conn.from_subject_name))
 
         target_dupes = {k:v for k,v in targets.items() if len(v) > 1}
         if len(target_dupes) > 0:
