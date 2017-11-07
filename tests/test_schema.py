@@ -108,3 +108,27 @@ class TestSchema(unittest.TestCase):
         )
 
         self.assertRaises(KeyError, lambda: schema[['f1', 'f4']])
+
+    def test_schema_rename(self):
+        '''
+        Given a dict map, returns a new schema with renamed fields
+        '''
+
+        schema = pemi.Schema(
+            f1 = StringField(),
+            f2 = StringField(),
+            f3 = StringField()
+        )
+
+        actual = schema.rename({
+            'f1': 'new_f1',
+            'f3': 'new_f3'
+        })
+
+        expected = pemi.Schema(
+            new_f1 = StringField(),
+            f2     = StringField(),
+            new_f3 = StringField()
+        )
+
+        self.assertEqual(actual, expected)
