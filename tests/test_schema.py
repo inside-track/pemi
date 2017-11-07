@@ -95,3 +95,16 @@ class TestSchema(unittest.TestCase):
         )
 
         self.assertEqual(actual, expected)
+
+    def test_schema_subset_error(self):
+        '''
+        Given a list, raises an error if a field name is not found
+        '''
+
+        schema = pemi.Schema(
+            f1 = StringField(),
+            f2 = StringField(),
+            f3 = StringField()
+        )
+
+        self.assertRaises(KeyError, lambda: schema[['f1', 'f4']])
