@@ -1,6 +1,7 @@
 import unittest
 
 import pandas as pd
+import numpy as np
 
 import pemi
 import pemi.data
@@ -295,3 +296,35 @@ class TestPdLookupJoinPipeOnBlanks(unittest.TestCase):
             )
         )
         scenario.run()
+
+
+class TestPdConcatPipe(unittest.TestCase):
+    def test_it_concatenates_sources(self):
+        pipe = pemi.pipes.pd.PdConcatPipe(sources=['s1', 's2'])
+        pipe.sources['s1'].df = pd.DataFrame({
+            'origin': ['s1','s1','s1'],
+            'f1': [1,2,3]
+        })
+
+        pipe.sources['s2'].df = pd.DataFrame({
+            'origin': ['s2', 's2'],
+            'f2': [1,2]
+        })
+
+        pipe.flow()
+        expected_df = pd.DataFrame({
+            'origin': ['s1', 's1', 's1', 's2', 's2'],
+            'f1': [1,2,3, np.nan, np.nan],
+            'f2': [np.nan, np.nan, np.nan, 1, 2]
+        }, index = [0,1,2,0,1])
+        actual_df = pipe.targets['main'].df
+        pemi.testing.assert_frame_equal(actual_df, expected_df)
+
+    def test_given_no_data(self):
+        'It returns an empty dataframe'
+        pipe = pemi.pipes.pd.PdConcatPipe(sources=['s1', 's2'])
+        pipe.flow()
+
+        expected_df = pd.DataFrame()
+        actual_df = pipe.targets['main'].df
+        pemi.testing.assert_frame_equal(actual_df, expected_df)

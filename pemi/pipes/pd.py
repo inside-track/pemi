@@ -18,8 +18,11 @@ class PdConcatPipe(pemi.pipes.patterns.ConcatPipe):
 
 
     def flow(self):
-        source_dfs = [source.df for source in self.sources.values()]
-        self.targets['main'].df = pd.concat(source_dfs, **self.concat_opts)
+        source_dfs = [source.df for source in self.sources.values() if not(source.df is None)]
+        if len(source_dfs) == 0:
+            self.targets['main'].df = pd.DataFrame()
+        else:
+            self.targets['main'].df = pd.concat(source_dfs, **self.concat_opts)
 
 class PdLookupJoinPipe(pemi.Pipe):
     def __init__(self, main_key, lookup_key,
