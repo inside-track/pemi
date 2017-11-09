@@ -209,3 +209,89 @@ class TestPdLookupJoinPipe(unittest.TestCase):
                 target_subject = pipe.targets['main']
             )
         ).run()
+
+class TestPdLookupJoinPipeOnBlanks(unittest.TestCase):
+    def rules(self, pipe):
+        return pemi.testing.Rules(
+            source_subjects=[
+                pipe.sources['main'],
+                pipe.sources['lookup']
+            ],
+            target_subjects=[
+                pipe.targets['main'],
+                pipe.targets['errors']
+            ]
+        )
+
+    def scenario(self, pipe, rules):
+        return pemi.testing.Scenario(
+            runner = pipe.flow,
+            source_subjects=[
+                pipe.sources['main'],
+                pipe.sources['lookup']
+            ],
+            target_subjects=[
+                pipe.targets['main'],
+                pipe.targets['errors']
+            ]
+        )
+
+    def test_it_does_not_use_blanks_as_keys(self):
+        ex_main = pemi.data.Table(
+            '''
+            | key | data |
+            | -   | -    |
+            | one | a    |
+            |     | b    |
+            | two | c    |
+            ''',
+            schema=pemi.Schema(
+                key=StringField()
+            )
+        )
+
+        ex_lookup = pemi.data.Table(
+            '''
+            | key | value     |
+            | -   | -         |
+            | one | ONE       |
+            | two | TWO       |
+            |     | NOT THREE |
+            |     | NOT FOUR  |
+            ''',
+            schema=pemi.Schema(
+                key=StringField()
+            )
+        )
+
+        expected = pemi.data.Table(
+            '''
+            | key | value     |
+            | -   | -         |
+            | one | ONE       |
+            | two | TWO       |
+            '''
+        )
+
+        pipe = pemi.pipes.pd.PdLookupJoinPipe(
+            main_key = ['key'],
+            lookup_key = ['key']
+        )
+
+        rules = self.rules(pipe)
+        scenario = self.scenario(pipe, rules)
+
+
+        scenario.when(
+            rules.when_example_for_source(
+                ex_main, source_subject=pipe.sources['main']
+            ),
+            rules.when_example_for_source(
+                ex_lookup, source_subject=pipe.sources['lookup']
+            ),
+        ).then(
+            rules.then_target_matches_example(
+                expected, target_subject=pipe.targets['main']
+            )
+        )
+        scenario.run()
