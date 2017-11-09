@@ -8,7 +8,7 @@ from pemi.pd_mapper import *
 class PdForkPipe(pemi.pipes.patterns.ForkPipe):
     def flow(self):
         for target in self.targets.values():
-            target.df = self.sources['main'].df
+            target.df = self.sources['main'].df.copy()
 
 
 class PdConcatPipe(pemi.pipes.patterns.ConcatPipe):
@@ -63,10 +63,11 @@ class PdLookupJoinPipe(pemi.Pipe):
 
     def flow(self):
         lkp_df = self.sources['lookup'].df
-        lkp_df.rename(
-            columns={col: self.lookup_prefix + col for col in lkp_df.columns if not col in self.lookup_key},
-            inplace=True
-        )
+
+        if self.lookup_prefix != '':
+          lkp_df = lkp_df.rename(
+              columns={col: self.lookup_prefix + col for col in lkp_df.columns if not col in self.lookup_key},
+          )
 
         missing_keys = lkp_df[self.lookup_key].apply(lambda v: v.apply(pemi.transforms.isblank).any(), axis=1)
         lkp_df = lkp_df[~missing_keys]
