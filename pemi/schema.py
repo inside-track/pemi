@@ -11,7 +11,10 @@ class Schema:
             self.fields[name] = field
 
     def __getitem__(self, key):
-        return self.fields[key]
+        if isinstance(key, list):
+            return Schema(**{self[k].name: self[k] for k in key})
+        else:
+            return self.fields[key]
 
     def keys(self):
         return list(self.fields.keys())
@@ -31,9 +34,6 @@ class Schema:
     def __eq__(self, other):
         return self.fields == other.fields
 
-
-
-
     def merge(self, other):
         merged_fields = {**self.fields, **other.fields}
 
@@ -52,3 +52,10 @@ class Schema:
             merged_fields[name] = type(field)(**merged_field_metadata)
 
         return Schema(**merged_fields)
+
+    def rename(self, mapper):
+        new_fields = []
+        for f in self.fields.values():
+            new_field = type(f)(mapper.get(f.name, f.name), **f.metadata)
+            new_fields.append(new_field)
+        return Schema(*new_fields)
