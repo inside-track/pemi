@@ -11,7 +11,7 @@ class Pipe():
     A pipe is a parameterized collection of sources and targets which can be executed (flow).
     '''
 
-    def __init__(self, *, name=None, **params):
+    def __init__(self, *, name='self', **params):
         self.name = name
         self.params = params
         self.sources = OrderedDict()
