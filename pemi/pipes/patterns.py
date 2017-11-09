@@ -59,6 +59,11 @@ class TargetPipe(pemi.Pipe):
 
         self.target(
             pemi.PdDataSubject,
+            name='errors'
+        )
+
+        self.target(
+            pemi.PdDataSubject,
             name='response'
         )
 
