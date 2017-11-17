@@ -105,6 +105,24 @@ class TestLocalCsvFileSourcePipe(unittest.TestCase):
         expected_df = pd.concat([df_1, df_2])
         assert_frame_equal(pipe.targets['main'].df, expected_df)
 
+    def test_it_optionally_adds_a_filename(self):
+        pipe = pemi.pipes.csv.LocalCsvFileSourcePipe(
+            schema=pemi.Schema(
+                filename = StringField(),
+                id       = StringField(),
+                name     = StringField()
+            ),
+            paths=[
+                Path(__file__).parent / Path('fixtures') / Path('id_name_1.csv'),
+                Path(__file__).parent / Path('fixtures') / Path('id_name_2.csv')
+            ],
+            filename_field='filename'
+        )
+        pipe.flow()
+
+        filenames = pipe.targets['main'].df['filename'].unique()
+        self.assertEqual(set(filenames), set(('id_name_1.csv', 'id_name_2.csv')))
+
 
 class TestLocalCsvFileTargetPipe(unittest.TestCase):
     def test_it_writes_a_csv(self):
