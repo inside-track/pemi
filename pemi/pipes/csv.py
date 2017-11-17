@@ -1,3 +1,4 @@
+import os
 import re
 
 import pandas as pd
@@ -14,10 +15,12 @@ def default_column_normalizer(name):
 
 
 class LocalCsvFileSourcePipe(SourcePipe):
-    def __init__(self, *, paths, csv_opts={}, normalize_columns=True, **params):
+    def __init__(self, *, paths, csv_opts={}, filename_field=None, filename_full_path=False, normalize_columns=True, **params):
         super().__init__(**params)
 
         self.paths = paths
+        self.filename_field = filename_field
+        self.filename_full_path = filename_full_path
         self.csv_opts = self._build_csv_opts(csv_opts)
 
         #TODO: Tests for this
@@ -52,11 +55,13 @@ class LocalCsvFileSourcePipe(SourcePipe):
         return self.targets['main'].df
 
     def _build_csv_opts(self, user_csv_opts):
-        normalizer = lambda x: column_normalizer(x) in self.schema.keys()
+        file_fieldnames = [k for k in self.schema.keys() if k != self.filename_field]
+
+        normalizer = lambda x: column_normalizer(x) in file_fieldnames
 
         mandatory_opts = {
             'converters': {idx:str for idx in range(10000)}, # Assumes we'll never get a csv with more than 10000 columns
-            'usecols':    lambda col: self.column_normalizer(col) in self.schema.keys()
+            'usecols':    lambda col: self.column_normalizer(col) in file_fieldnames
         }
 
         default_opts = {
@@ -69,6 +74,12 @@ class LocalCsvFileSourcePipe(SourcePipe):
     def _parse_one(self, filepath):
         raw_df = pd.read_csv(filepath, **self.csv_opts)
         raw_df.columns = [self.column_normalizer(col) for col in raw_df.columns]
+
+        if self.filename_field:
+            if self.filename_full_path:
+                raw_df[self.filename_field] = filepath
+            else:
+                raw_df[self.filename_field] = os.path.basename(filepath)
         mapper = pemi.pd_mapper.PdMapper(raw_df, maps = self.field_maps).apply()
         return mapper
 
