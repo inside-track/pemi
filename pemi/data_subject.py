@@ -7,6 +7,8 @@ __all__ = [
     'SparkDataSubject'
 ]
 
+class MissingFieldsError(Exception): pass
+
 # TODOC: Note that to_pd and from_pd are only strictly needed for testing
 class DataSubject():
     '''
@@ -36,15 +38,19 @@ class DataSubject():
 
     def connect_from(self, other):
         raise NotImplementedError
+        self.validate_schema()
+
+    def validate_schema(self):
+        return True
 
 
 class PdDataSubject(DataSubject):
     def __init__(self, df=None, **kwargs):
         super().__init__(**kwargs)
+
+        if df is None:
+            df = pd.DataFrame(columns=self.schema.keys())
         self.df = df
-
-        #TODO: if df=None, then build an empty one that conforms to the schema???
-
 
     def to_pd(self):
         return self.df
@@ -54,12 +60,16 @@ class PdDataSubject(DataSubject):
 
     def connect_from(self, other):
         self.df = other.df
+        self.validate_schema()
 
+    def validate_schema(self):
+        'Verify that the dataframe contains all of the columns specified in the schema'
+        missing = set(self.schema.keys()) - set(self.df.columns)
 
-#TODO
-class DictDataSubject(DataSubject):
-    pass
-
+        if len(missing) == 0:
+            return True
+        else:
+            raise MissingFieldsError('DataFrame missing expected fields: {}'.format(missing))
 
 class SaDataSubject(DataSubject):
     def __init__(self, engine, table, **kwargs):
@@ -87,6 +97,7 @@ class SaDataSubject(DataSubject):
 
     def connect_from(self, other):
         self.engine.dispose()
+        self.validate_schema()
 
 
 
@@ -110,3 +121,4 @@ class SparkDataSubject(DataSubject):
     def connect_from(self, other):
         self.spark = other.spark.builder.getOrCreate()
         self.df = other.df
+        self.validate_schema()
