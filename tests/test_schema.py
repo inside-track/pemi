@@ -132,3 +132,24 @@ class TestSchema(unittest.TestCase):
         )
 
         self.assertEqual(actual, expected)
+
+    def test_select(self):
+        '''
+        Given a metadata selector function, returns a subset of fields as a new schema
+        '''
+
+        schema = pemi.Schema(
+            f1 = StringField(awesome=True),
+            f2 = StringField(),
+            f3 = StringField(awesome=True),
+            f4 = StringField(awesome=False),
+        )
+
+        actual = schema.select(lambda m: m.get('awesome', False))
+
+        expected = pemi.Schema(
+            f1 = StringField(awesome=True),
+            f3 = StringField(awesome=True)
+        )
+
+        self.assertEqual(actual, expected)

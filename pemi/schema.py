@@ -59,3 +59,7 @@ class Schema:
             new_field = type(f)(mapper.get(f.name, f.name), **f.metadata)
             new_fields.append(new_field)
         return Schema(*new_fields)
+
+    def select(self, func):
+        'Returns a new schema with the fields selected via a function (func) of the field metadata'
+        return Schema(**{name:field for name,field in self.items() if func(field.metadata)})
