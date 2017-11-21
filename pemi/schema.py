@@ -61,5 +61,5 @@ class Schema:
         return Schema(*new_fields)
 
     def select(self, func):
-        'Returns a new schema with the fields selected via a function (func) of the field metadata'
-        return Schema(**{name:field for name,field in self.items() if func(field.metadata)})
+        'Returns a new schema with the fields selected via a function (func) of the field'
+        return Schema(**{name:field for name,field in self.items() if func(field)})
