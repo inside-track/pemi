@@ -328,3 +328,47 @@ class TestPdConcatPipe(unittest.TestCase):
         expected_df = pd.DataFrame()
         actual_df = pipe.targets['main'].df
         pemi.testing.assert_frame_equal(actual_df, expected_df)
+
+
+class TestPdFieldValueForkPipe(unittest.TestCase):
+    def setUp(self):
+        self.pipe = pemi.pipes.pd.PdFieldValueForkPipe(
+            field='target',
+            forks=['create', 'update']
+        )
+
+        df = pd.DataFrame({
+            'target': ['create', 'update', 'update', 'else1', 'create', 'else2'],
+            'values': [1,2,3,4,5,6]
+        })
+
+        self.pipe.sources['main'].df = df
+        self.pipe.flow()
+
+
+    def test_it_forks_data_to_create(self):
+        expected_df = pd.DataFrame({
+            'target': ['create', 'create'],
+            'values': [1,5]
+        }, index=[0,4])
+        actual_df = self.pipe.targets['create'].df
+        pemi.testing.assert_frame_equal(actual_df, expected_df)
+
+
+    def test_it_forks_data_to_update(self):
+        expected_df = pd.DataFrame({
+            'target': ['update', 'update'],
+            'values': [2,3]
+        }, index=[1,2])
+        actual_df = self.pipe.targets['update'].df
+        pemi.testing.assert_frame_equal(actual_df, expected_df)
+
+
+
+    def test_it_puts_unknown_values_in_remainder(self):
+        expected_df = pd.DataFrame({
+            'target': ['else1', 'else2'],
+            'values': [4,6]
+        }, index=[3,5])
+        actual_df = self.pipe.targets['remainder'].df
+        pemi.testing.assert_frame_equal(actual_df, expected_df)
