@@ -48,8 +48,8 @@ class PdDataSubject(DataSubject):
     def __init__(self, df=None, **kwargs):
         super().__init__(**kwargs)
 
-        if df is None:
-            df = pd.DataFrame(columns=self.schema.keys())
+        if df is None or df.shape == (0,0):
+            df = self._empty_df()
         self.df = df
 
     def to_pd(self):
@@ -59,7 +59,10 @@ class PdDataSubject(DataSubject):
         self.df = df
 
     def connect_from(self, other):
-        self.df = other.df
+        if other.df is None or other.df.shape == (0,0):
+            self.df = self._empty_df()
+        else:
+            self.df = other.df
         self.validate_schema()
 
     def validate_schema(self):
@@ -70,6 +73,9 @@ class PdDataSubject(DataSubject):
             return True
         else:
             raise MissingFieldsError('DataFrame missing expected fields: {}'.format(missing))
+
+    def _empty_df(self):
+        return pd.DataFrame(columns=self.schema.keys())
 
 class SaDataSubject(DataSubject):
     def __init__(self, engine, table, **kwargs):

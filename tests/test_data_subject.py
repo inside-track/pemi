@@ -32,3 +32,14 @@ class TestPdDataSubject(unittest.TestCase):
         })
 
         self.assertRaises(pemi.data_subject.MissingFieldsError, lambda: ds2.connect_from(ds1))
+
+    def test_it_creates_an_empty_df_with_schema_when_connected_to_empty(self):
+        ds1 = pemi.PdDataSubject()
+
+        ds2 = pemi.PdDataSubject(schema=pemi.Schema(
+            f1=StringField(),
+            f3=StringField()
+        ))
+
+        ds2.connect_from(ds1)
+        assert_frame_equal(ds2.df, pd.DataFrame(columns=['f1','f3']))
