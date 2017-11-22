@@ -135,7 +135,8 @@ class PdFieldValueForkPipe(pemi.Pipe):
         grouped = self.sources['main'].df.groupby(self.field)
 
         for fork in self.forks:
-            self.targets[fork].df = grouped.get_group(fork)
+            if fork in grouped.groups:
+                self.targets[fork].df = grouped.get_group(fork)
 
         remainder = set(grouped.groups.keys()) - set(self.forks)
         if len(remainder) > 0:
