@@ -106,3 +106,37 @@ class PdLookupJoinPipe(pemi.Pipe):
 
         self.targets['main'].df = mapper.mapped_df
         self.targets['errors'].df = mapper.errors_df
+
+
+class PdFieldValueForkPipe(pemi.Pipe):
+    def __init__(self, field, forks, **kwargs):
+        super().__init__(**kwargs)
+
+        self.field = field
+        self.forks = forks
+
+        self.source(
+            pemi.PdDataSubject,
+            name='main'
+        )
+
+        for fork in self.forks:
+            self.target(
+                pemi.PdDataSubject,
+                name=fork
+            )
+
+        self.target(
+            pemi.PdDataSubject,
+            name='remainder'
+        )
+
+    def flow(self):
+        grouped = self.sources['main'].df.groupby(self.field)
+
+        for fork in self.forks:
+            self.targets[fork].df = grouped.get_group(fork)
+
+        remainder = set(grouped.groups.keys()) - set(self.forks)
+        if len(remainder) > 0:
+            self.targets['remainder'].df = pd.concat([grouped.get_group(r) for r in remainder]).sort_index()

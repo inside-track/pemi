@@ -31,6 +31,9 @@ class Schema:
     def __str__(self):
         return "\n".join(['{} -> {}'.format(name, meta.__str__()) for name, meta in self.fields.items()])
 
+    def __repr__(self):
+        return '<{}({}):\n{}\n>'.format(self.__class__.__name__, id(self), self.__str__())
+
     def __eq__(self, other):
         return self.fields == other.fields
 
