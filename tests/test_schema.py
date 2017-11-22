@@ -145,7 +145,7 @@ class TestSchema(unittest.TestCase):
             f4 = StringField(awesome=False),
         )
 
-        actual = schema.select(lambda m: m.get('awesome', False))
+        actual = schema.select(lambda m: m.metadata.get('awesome', False))
 
         expected = pemi.Schema(
             f1 = StringField(awesome=True),
