@@ -330,3 +330,22 @@ class TestDecimalField(unittest.TestCase):
 
         coerced = field.coerce('3.55')
         self.assertEqual(coerced, decimal.Decimal('3.6'))
+
+class TestJsonField(unittest.TestCase):
+    def test_convert_to_json(self):
+        '''
+        String values should be converted into python objects
+        '''
+
+        field = JsonField()
+        coerced = field.coerce('{"a": "alpha"}')
+        self.assertEqual(coerced, {'a': 'alpha'})
+
+    def test_convert_to_json_when_already_parsed(self):
+        '''
+        If the json string has already been parsed, return the parsed value
+        '''
+
+        field = JsonField()
+        coerced = field.coerce({"a": "alpha"})
+        self.assertEqual(coerced, {'a': 'alpha'})
