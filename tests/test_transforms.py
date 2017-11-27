@@ -51,3 +51,12 @@ class TestConcatenate(unittest.TestCase):
     def test_it_concatenates_w_delimiter(self):
         row = pd.Series(['ab', 'c', 'd'])
         self.assertEqual(pemi.transforms.concatenate('-')(row), 'ab-c-d')
+
+class TestNvl(unittest.TestCase):
+    def test_it_picks_the_first_non_blank(self):
+        row = pd.Series([None, '', 'three', 'four', None])
+        self.assertEqual(pemi.transforms.nvl()(row), 'three')
+
+    def test_it_uses_a_default_if_all_are_blank(self):
+        row = pd.Series([None, '', np.nan, None])
+        self.assertEqual(pemi.transforms.nvl('ALL BLANK')(row), 'ALL BLANK')
