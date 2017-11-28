@@ -334,7 +334,7 @@ class TestPdFieldValueForkPipe(unittest.TestCase):
     def setUp(self):
         self.pipe = pemi.pipes.pd.PdFieldValueForkPipe(
             field='target',
-            forks=['create', 'update']
+            forks=['create', 'update', 'empty']
         )
 
         df = pd.DataFrame({
