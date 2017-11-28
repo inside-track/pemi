@@ -211,6 +211,52 @@ class TestPdLookupJoinPipe(unittest.TestCase):
             )
         ).run()
 
+    def test_it_works_when_lookup_is_empty(self):
+        pipe = pemi.pipes.pd.PdLookupJoinPipe(
+            main_key = ['key'],
+            lookup_key = ['lkey'],
+            missing_handler = RowHandler('ignore')
+        )
+
+        rules = self.rules(pipe)
+        scenario = self.scenario(pipe, rules)
+
+        ex_lookup = pemi.data.Table(
+            '''
+            | lkey | values | words  |
+            | -    | -      | -      |
+            ''',
+            schema=pemi.Schema(
+                lkey=StringField(),
+                values=StringField(),
+                words=StringField()
+            )
+        )
+
+        expected = pemi.data.Table(
+            '''
+            | key | words |
+            | -   | -     |
+            | k1  | words |
+            | k1  | words |
+            | k3  | more  |
+            | k7  | words |
+            | k4  | even  |
+            | k4  | more  |
+            '''
+        )
+
+        scenario.when(
+            rules.when_example_for_source(ex_lookup, source_subject=pipe.sources['lookup'])
+        ).then(
+            rules.then_target_matches_example(
+                expected,
+                target_subject = pipe.targets['main']
+            )
+        ).run()
+
+
+
 class TestPdLookupJoinPipeOnBlanks(unittest.TestCase):
     def rules(self, pipe):
         return pemi.testing.Rules(
@@ -327,4 +373,48 @@ class TestPdConcatPipe(unittest.TestCase):
 
         expected_df = pd.DataFrame()
         actual_df = pipe.targets['main'].df
+        pemi.testing.assert_frame_equal(actual_df, expected_df)
+
+
+class TestPdFieldValueForkPipe(unittest.TestCase):
+    def setUp(self):
+        self.pipe = pemi.pipes.pd.PdFieldValueForkPipe(
+            field='target',
+            forks=['create', 'update', 'empty']
+        )
+
+        df = pd.DataFrame({
+            'target': ['create', 'update', 'update', 'else1', 'create', 'else2'],
+            'values': [1,2,3,4,5,6]
+        })
+
+        self.pipe.sources['main'].df = df
+        self.pipe.flow()
+
+
+    def test_it_forks_data_to_create(self):
+        expected_df = pd.DataFrame({
+            'target': ['create', 'create'],
+            'values': [1,5]
+        }, index=[0,4])
+        actual_df = self.pipe.targets['create'].df
+        pemi.testing.assert_frame_equal(actual_df, expected_df)
+
+
+    def test_it_forks_data_to_update(self):
+        expected_df = pd.DataFrame({
+            'target': ['update', 'update'],
+            'values': [2,3]
+        }, index=[1,2])
+        actual_df = self.pipe.targets['update'].df
+        pemi.testing.assert_frame_equal(actual_df, expected_df)
+
+
+
+    def test_it_puts_unknown_values_in_remainder(self):
+        expected_df = pd.DataFrame({
+            'target': ['else1', 'else2'],
+            'values': [4,6]
+        }, index=[3,5])
+        actual_df = self.pipe.targets['remainder'].df
         pemi.testing.assert_frame_equal(actual_df, expected_df)

@@ -31,6 +31,9 @@ class Schema:
     def __str__(self):
         return "\n".join(['{} -> {}'.format(name, meta.__str__()) for name, meta in self.fields.items()])
 
+    def __repr__(self):
+        return '<{}({}):\n{}\n>'.format(self.__class__.__name__, id(self), self.__str__())
+
     def __eq__(self, other):
         return self.fields == other.fields
 
@@ -59,3 +62,7 @@ class Schema:
             new_field = type(f)(mapper.get(f.name, f.name), **f.metadata)
             new_fields.append(new_field)
         return Schema(*new_fields)
+
+    def select(self, func):
+        'Returns a new schema with the fields selected via a function (func) of the field'
+        return Schema(**{name:field for name,field in self.items() if func(field)})

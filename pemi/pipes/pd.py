@@ -70,7 +70,10 @@ class PdLookupJoinPipe(pemi.Pipe):
           )
 
         missing_keys = lkp_df[self.lookup_key].apply(lambda v: v.apply(pemi.transforms.isblank).any(), axis=1)
+
         lkp_df = lkp_df[~missing_keys]
+        if lkp_df.shape == (0,0):
+            lkp_df = pd.DataFrame(columns=self.sources['lookup'].df.columns)
 
         uniq_lkp_df = lkp_df.sort_values(
             self.lookup_key
@@ -106,3 +109,38 @@ class PdLookupJoinPipe(pemi.Pipe):
 
         self.targets['main'].df = mapper.mapped_df
         self.targets['errors'].df = mapper.errors_df
+
+
+class PdFieldValueForkPipe(pemi.Pipe):
+    def __init__(self, field, forks, **kwargs):
+        super().__init__(**kwargs)
+
+        self.field = field
+        self.forks = forks
+
+        self.source(
+            pemi.PdDataSubject,
+            name='main'
+        )
+
+        for fork in self.forks:
+            self.target(
+                pemi.PdDataSubject,
+                name=fork
+            )
+
+        self.target(
+            pemi.PdDataSubject,
+            name='remainder'
+        )
+
+    def flow(self):
+        grouped = self.sources['main'].df.groupby(self.field)
+
+        for fork in self.forks:
+            if fork in grouped.groups:
+                self.targets[fork].df = grouped.get_group(fork)
+
+        remainder = set(grouped.groups.keys()) - set(self.forks)
+        if len(remainder) > 0:
+            self.targets['remainder'].df = pd.concat([grouped.get_group(r) for r in remainder]).sort_index()
