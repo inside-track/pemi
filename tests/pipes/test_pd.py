@@ -211,6 +211,52 @@ class TestPdLookupJoinPipe(unittest.TestCase):
             )
         ).run()
 
+    def test_it_works_when_lookup_is_empty(self):
+        pipe = pemi.pipes.pd.PdLookupJoinPipe(
+            main_key = ['key'],
+            lookup_key = ['lkey'],
+            missing_handler = RowHandler('ignore')
+        )
+
+        rules = self.rules(pipe)
+        scenario = self.scenario(pipe, rules)
+
+        ex_lookup = pemi.data.Table(
+            '''
+            | lkey | values | words  |
+            | -    | -      | -      |
+            ''',
+            schema=pemi.Schema(
+                lkey=StringField(),
+                values=StringField(),
+                words=StringField()
+            )
+        )
+
+        expected = pemi.data.Table(
+            '''
+            | key | words |
+            | -   | -     |
+            | k1  | words |
+            | k1  | words |
+            | k3  | more  |
+            | k7  | words |
+            | k4  | even  |
+            | k4  | more  |
+            '''
+        )
+
+        scenario.when(
+            rules.when_example_for_source(ex_lookup, source_subject=pipe.sources['lookup'])
+        ).then(
+            rules.then_target_matches_example(
+                expected,
+                target_subject = pipe.targets['main']
+            )
+        ).run()
+
+
+
 class TestPdLookupJoinPipeOnBlanks(unittest.TestCase):
     def rules(self, pipe):
         return pemi.testing.Rules(

@@ -70,7 +70,10 @@ class PdLookupJoinPipe(pemi.Pipe):
           )
 
         missing_keys = lkp_df[self.lookup_key].apply(lambda v: v.apply(pemi.transforms.isblank).any(), axis=1)
+
         lkp_df = lkp_df[~missing_keys]
+        if lkp_df.shape == (0,0):
+            lkp_df = pd.DataFrame(columns=self.sources['lookup'].df.columns)
 
         uniq_lkp_df = lkp_df.sort_values(
             self.lookup_key
