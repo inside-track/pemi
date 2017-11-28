@@ -1,6 +1,7 @@
 import decimal
 import datetime
 import dateutil
+import json
 
 __all__ = [
     'StringField',
@@ -9,7 +10,8 @@ __all__ = [
     'DateField',
     'DateTimeField',
     'BooleanField',
-    'DecimalField'
+    'DecimalField',
+    'JsonField'
 ]
 
 
@@ -202,3 +204,14 @@ class DecimalField(Field):
                 ))
 
         return dec
+
+class JsonField(Field):
+    @convert_exception
+    def coerce(self, value):
+        if not value:
+            return self.null
+
+        try:
+            return json.loads(value)
+        except TypeError:
+            return value

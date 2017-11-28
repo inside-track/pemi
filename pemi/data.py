@@ -20,7 +20,8 @@ default_fakers = {
     DateTimeField: fake.date_time,
     FloatField:    fake.pyfloat,
     DecimalField:  fake.pydecimal,
-    BooleanField:  fake.pybool
+    BooleanField:  fake.pybool,
+    JsonField:     lambda: fake.pydict(5, True, 'str', 'int', 'date')
 }
 
 
