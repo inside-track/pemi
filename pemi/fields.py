@@ -47,7 +47,7 @@ class Field():
         raise NotImplementedError
 
     def __str__(self):
-        return self.__dict__.__str__()
+        return '<{} {}>'.format(self.__class__.__name__, self.__dict__.__str__())
 
     def __eq__(self, other):
         return type(self) == type(other) and self.metadata == other.metadata

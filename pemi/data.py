@@ -26,11 +26,12 @@ default_fakers = {
 
 
 class Table:
-    def __init__(self, markdown=None, nrows=10, schema=pemi.Schema(), fake_with={}):
+    def __init__(self, markdown=None, nrows=10, schema=pemi.Schema(), fake_with=None, coerce_with=None):
         self.markdown = markdown
         self.schema = schema
         self.nrows = nrows
-        self.fake_with = fake_with
+        self.fake_with = fake_with or {}
+        self.coerce_with = coerce_with or {}
 
         if self.markdown:
             self.defined_fields = list(self._build_from_markdown().columns)
@@ -67,7 +68,9 @@ class Table:
 
         df = pd.DataFrame()
         for header in list(str_df):
-            if header in self.schema.keys():
+            if header in self.coerce_with:
+                df[header] = str_df[header].apply(self.coerce_with[header])
+            elif header in self.schema.keys():
                 df[header] = str_df[header].apply(self.schema[header].coerce)
             else:
                 df[header] = str_df[header]

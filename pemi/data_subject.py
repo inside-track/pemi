@@ -1,5 +1,8 @@
+import json
+
 import pemi
 import pandas as pd
+from pemi.fields import *
 
 __all__ = [
     'PdDataSubject',
@@ -98,8 +101,13 @@ class SaDataSubject(DataSubject):
         to_sql_opts['if_exists'] = to_sql_opts.get('if_exists', 'append')
         to_sql_opts['index'] = to_sql_opts.get('index', False)
 
+        df_to_sql = df.copy()
+        for f in self.schema.values():
+            if isinstance(f, JsonField):
+                df_to_sql[f.name] = df_to_sql[f.name].apply(lambda v: json.dumps(v))
+
         with self.engine.connect() as conn:
-            df.to_sql(self.table, conn, **to_sql_opts)
+            df_to_sql.to_sql(self.table, conn, **to_sql_opts)
 
     def connect_from(self, other):
         self.engine.dispose()
