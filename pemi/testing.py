@@ -200,15 +200,13 @@ class Rules():
         '''.format(source_subject, doc_values)
         return _when_source_field_has_value_like
 
-
-
     def then_target_field_has_value(self, field_name, field_value, target_subject=None):
         target_subject = self._find_target(target_subject)
 
         def _then_target_field_has_value():
             target_data = target_subject.__test_data__
             expected_data = pd.Series([field_value] * len(target_data), index=target_data.index)
-            pd.testing.assert_series_equal(target_data[field_name], expected_data, check_names=False)
+            pd.testing.assert_series_equal(target_data[field_name], expected_data, check_names=False, check_dtype=False)
 
         _then_target_field_has_value.__doc__ = '''
             The target field '{}' has the value "{}"

@@ -127,3 +127,27 @@ class TestTableConvertMarkdown(unittest.TestCase):
 
         ids = [id for id in given_table.df['id'] if not math.isnan(id)]
         self.assertEqual(len(ids), len(set(ids)))
+
+    def test_custom_coercions(self):
+        actual = pemi.data.Table(
+            '''
+            | something     | awesome       |
+            | -             | -             |
+            | I am NOT here | I am NOT here |
+            | Here I am     | Here I am not |
+            ''',
+            coerce_with={
+                'something': lambda v: v.replace('NOT ', '')
+            }
+        )
+
+        expected = pemi.data.Table(
+            '''
+            | something | awesome       |
+            | -         | -             |
+            | I am here | I am NOT here |
+            | Here I am | Here I am not |
+            '''
+        )
+
+        assert_frame_equal(actual.df, expected.df)
