@@ -112,17 +112,17 @@ class PdMap():
         self.kwargs = kwargs
 
         if len(self.sources) == 1 and len(self.targets) == 1 and self.transform == None:
-            self.apply = getattr(self, '_apply_copy')
+            self._apply = getattr(self, '_apply_copy')
         elif len(self.sources) == 1 and len(self.targets) == 1:
-            self.apply = getattr(self, '_apply_one_to_one')
+            self._apply = getattr(self, '_apply_one_to_one')
         elif len(self.sources) == 1 and len(self.targets) == 0:
-            self.apply = getattr(self, '_apply_one_to_zero')
+            self._apply = getattr(self, '_apply_one_to_zero')
         elif len(self.sources) == 0 and len(self.targets) == 1:
-            self.apply = getattr(self, '_apply_zero_to_one')
+            self._apply = getattr(self, '_apply_zero_to_one')
         elif len(self.targets) == 1:
-            self.apply = getattr(self, '_apply_many_to_one')
+            self._apply = getattr(self, '_apply_many_to_one')
         else:
-            self.apply = getattr(self, '_apply_many_to_many')
+            self._apply = getattr(self, '_apply_many_to_many')
 
     def _transform(self, arg):
         return self.transform(arg)
@@ -138,6 +138,13 @@ class PdMap():
 
     def _transform_many_to_many(self, row):
         return self.handler.apply(self._transform, row, row.name)
+
+    def apply(self):
+        if len(self.source_df) > 0:
+            self._apply()
+        else:
+            for t in self.targets:
+                self.mapped_df[t] = None
 
     def _apply_copy(self):
         self.mapped_df[self.target] = self.source_df[self.source].copy()
