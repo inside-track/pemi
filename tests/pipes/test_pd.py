@@ -409,12 +409,15 @@ class TestPdFieldValueForkPipe(unittest.TestCase):
         actual_df = self.pipe.targets['update'].df
         pemi.testing.assert_frame_equal(actual_df, expected_df)
 
-
-
     def test_it_puts_unknown_values_in_remainder(self):
         expected_df = pd.DataFrame({
             'target': ['else1', 'else2'],
             'values': [4,6]
         }, index=[3,5])
         actual_df = self.pipe.targets['remainder'].df
+        pemi.testing.assert_frame_equal(actual_df, expected_df)
+
+    def test_it_creates_an_empty_dataframe_with_the_right_columns(self):
+        expected_df = pd.DataFrame(columns=['target', 'values'])
+        actual_df = self.pipe.targets['empty'].df
         pemi.testing.assert_frame_equal(actual_df, expected_df)
