@@ -140,6 +140,8 @@ class PdFieldValueForkPipe(pemi.Pipe):
         for fork in self.forks:
             if fork in grouped.groups:
                 self.targets[fork].df = grouped.get_group(fork)
+            else:
+                self.targets[fork].df = pd.DataFrame(columns=self.sources['main'].df.columns)
 
         remainder = set(grouped.groups.keys()) - set(self.forks)
         if len(remainder) > 0:
