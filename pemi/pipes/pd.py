@@ -62,6 +62,9 @@ class PdLookupJoinPipe(pemi.Pipe):
 
 
     def flow(self):
+        pemi.log.debug('PdLookupJoinPipe - main source columns: {}'.format(self.sources['main'].df.columns))
+        pemi.log.debug('PdLookupJoinPipe - main lookup columns: {}'.format(self.sources['lookup'].df.columns))
+
         lkp_df = self.sources['lookup'].df
 
         if self.lookup_prefix != '':
@@ -109,6 +112,9 @@ class PdLookupJoinPipe(pemi.Pipe):
 
         self.targets['main'].df = mapper.mapped_df
         self.targets['errors'].df = mapper.errors_df
+
+        pemi.log.debug('PdLookupJoinPipe - main target columns: {}'.format(self.targets['main'].df.columns))
+
 
 
 class PdFieldValueForkPipe(pemi.Pipe):
