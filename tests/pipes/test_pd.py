@@ -180,6 +180,57 @@ class TestPdLookupJoinPipe(unittest.TestCase):
             )
         ).run()
 
+    def test_it_prefixes_lookup_fields_when_lookup_is_empty(self):
+        pipe = pemi.pipes.pd.PdLookupJoinPipe(
+            main_key = ['key'],
+            lookup_key = ['lkey'],
+            lookup_prefix='existing_',
+            missing_handler=RowHandler('ignore')
+        )
+
+        rules = self.rules(pipe)
+        scenario = self.scenario(pipe, rules)
+
+
+        lookup = pemi.data.Table(
+            '''
+            | lkey | values | words  |
+            | -    | -      | -      |
+            ''',
+            schema=pemi.Schema(
+                lkey=StringField(),
+                values=StringField(),
+                words=StringField()
+            )
+        )
+
+        expected = pemi.data.Table(
+            '''
+            | key | words | lkey | existing_values | existing_words |
+            | -   | -     | -    | -               | -              |
+            | k1  | words |      |                 |                |
+            | k1  | words |      |                 |                |
+            | k3  | more  |      |                 |                |
+            | k7  | words |      |                 |                |
+            | k4  | even  |      |                 |                |
+            | k4  | more  |      |                 |                |
+            ''',
+            schema=pemi.Schema(
+                values=StringField(),
+                words=StringField()
+            )
+        )
+
+        scenario.when(
+            rules.when_example_for_source(lookup, source_subject=pipe.sources['lookup'])
+        ).then(
+            rules.then_target_matches_example(
+                expected,
+                target_subject = pipe.targets['main']
+            )
+        ).run()
+
+
     def test_it_adds_an_indicator(self):
         pipe = pemi.pipes.pd.PdLookupJoinPipe(
             main_key = ['key'],
@@ -342,6 +393,7 @@ class TestPdLookupJoinPipeOnBlanks(unittest.TestCase):
             )
         )
         scenario.run()
+
 
 
 class TestPdConcatPipe(unittest.TestCase):

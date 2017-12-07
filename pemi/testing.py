@@ -240,7 +240,7 @@ class Rules():
                 expected = expected.reset_index(drop=True)
                 actual = actual.reset_index(drop=True)
 
-            assert_frame_equal(actual, expected, check_names=False)
+            assert_frame_equal(actual, expected, check_names=False, check_dtype=False)
 
         _then_target_matches_example.__doc__ = '''
             The target '{}' matches the example:

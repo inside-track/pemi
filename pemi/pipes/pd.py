@@ -68,15 +68,13 @@ class PdLookupJoinPipe(pemi.Pipe):
         lkp_df = self.sources['lookup'].df
 
         if self.lookup_prefix != '':
-          lkp_df = lkp_df.rename(
-              columns={col: self.lookup_prefix + col for col in lkp_df.columns if not col in self.lookup_key},
-          )
+            lkp_df = lkp_df.rename(
+                columns={col: self.lookup_prefix + col for col in lkp_df.columns if not col in self.lookup_key},
+            )
 
         missing_keys = lkp_df[self.lookup_key].apply(lambda v: v.apply(pemi.transforms.isblank).any(), axis=1)
-
-        lkp_df = lkp_df[~missing_keys]
-        if lkp_df.shape == (0,0):
-            lkp_df = pd.DataFrame(columns=self.sources['lookup'].df.columns)
+        if len(missing_keys) > 0:
+            lkp_df = lkp_df[~missing_keys]
 
         uniq_lkp_df = lkp_df.sort_values(
             self.lookup_key
@@ -145,7 +143,7 @@ class PdFieldValueForkPipe(pemi.Pipe):
 
         for fork in self.forks:
             if fork in grouped.groups:
-                self.targets[fork].df = grouped.get_group(fork)
+                self.targets[fork].df = grouped.get_group(fork).copy()
             else:
                 self.targets[fork].df = pd.DataFrame(columns=self.sources['main'].df.columns)
 
