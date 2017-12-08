@@ -70,6 +70,21 @@ class TestCardinalities(unittest.TestCase):
 
         pemi.testing.assert_frame_equal(result_df, expected_df)
 
+    def test_many_to_one_map_empty(self):
+        '''
+        Many-to-one mapping with empty data
+        '''
+        df = pd.DataFrame(columns=['col1', 'col2'])
+
+        mapper = PdMapper(df, maps=[
+            PdMap(source=('col1', 'col2'), target='col3', transform=lambda row: row['col2'])
+        ]).apply()
+
+        result_df = mapper.mapped_df
+        expected_df = pd.DataFrame(columns=['col3'])
+
+        pemi.testing.assert_frame_equal(result_df, expected_df, check_dtype=False)
+
     def test_one_to_many_map(self):
         '''
         One-to-many mapping

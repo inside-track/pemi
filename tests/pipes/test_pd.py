@@ -180,6 +180,57 @@ class TestPdLookupJoinPipe(unittest.TestCase):
             )
         ).run()
 
+    def test_it_prefixes_lookup_fields_when_lookup_is_empty(self):
+        pipe = pemi.pipes.pd.PdLookupJoinPipe(
+            main_key = ['key'],
+            lookup_key = ['lkey'],
+            lookup_prefix='existing_',
+            missing_handler=RowHandler('ignore')
+        )
+
+        rules = self.rules(pipe)
+        scenario = self.scenario(pipe, rules)
+
+
+        lookup = pemi.data.Table(
+            '''
+            | lkey | values | words  |
+            | -    | -      | -      |
+            ''',
+            schema=pemi.Schema(
+                lkey=StringField(),
+                values=StringField(),
+                words=StringField()
+            )
+        )
+
+        expected = pemi.data.Table(
+            '''
+            | key | words | lkey | existing_values | existing_words |
+            | -   | -     | -    | -               | -              |
+            | k1  | words |      |                 |                |
+            | k1  | words |      |                 |                |
+            | k3  | more  |      |                 |                |
+            | k7  | words |      |                 |                |
+            | k4  | even  |      |                 |                |
+            | k4  | more  |      |                 |                |
+            ''',
+            schema=pemi.Schema(
+                values=StringField(),
+                words=StringField()
+            )
+        )
+
+        scenario.when(
+            rules.when_example_for_source(lookup, source_subject=pipe.sources['lookup'])
+        ).then(
+            rules.then_target_matches_example(
+                expected,
+                target_subject = pipe.targets['main']
+            )
+        ).run()
+
+
     def test_it_adds_an_indicator(self):
         pipe = pemi.pipes.pd.PdLookupJoinPipe(
             main_key = ['key'],
@@ -344,6 +395,7 @@ class TestPdLookupJoinPipeOnBlanks(unittest.TestCase):
         scenario.run()
 
 
+
 class TestPdConcatPipe(unittest.TestCase):
     def test_it_concatenates_sources(self):
         pipe = pemi.pipes.pd.PdConcatPipe(sources=['s1', 's2'])
@@ -409,12 +461,15 @@ class TestPdFieldValueForkPipe(unittest.TestCase):
         actual_df = self.pipe.targets['update'].df
         pemi.testing.assert_frame_equal(actual_df, expected_df)
 
-
-
     def test_it_puts_unknown_values_in_remainder(self):
         expected_df = pd.DataFrame({
             'target': ['else1', 'else2'],
             'values': [4,6]
         }, index=[3,5])
         actual_df = self.pipe.targets['remainder'].df
+        pemi.testing.assert_frame_equal(actual_df, expected_df)
+
+    def test_it_creates_an_empty_dataframe_with_the_right_columns(self):
+        expected_df = pd.DataFrame(columns=['target', 'values'])
+        actual_df = self.pipe.targets['empty'].df
         pemi.testing.assert_frame_equal(actual_df, expected_df)
