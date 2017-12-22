@@ -50,7 +50,7 @@ class Field():
         return '<{} {}>'.format(self.__class__.__name__, self.__dict__.__str__())
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.metadata == other.metadata
+        return type(self) == type(other) and self.metadata == other.metadata and self.name == other.name
 
 
 class StringField(Field):
