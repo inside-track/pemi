@@ -1,5 +1,6 @@
 import re
 import pickle
+import copy
 from collections import OrderedDict
 
 import pemi
@@ -55,12 +56,16 @@ class Pipe():
         picklepipe = picklepipe or Pipe()
 
         for name, source in self.sources.items():
-            picklepipe.source(source.__class__, name=name)
-            picklepipe.sources[name] = source
+            psource = copy.copy(source)
+            psource.pipe = picklepipe
+            picklepipe.source(psource.__class__, name=name)
+            picklepipe.sources[name] = psource
 
         for name, target in self.targets.items():
-            picklepipe.target(target.__class__, name=name)
-            picklepipe.targets[name] = target
+            ptarget = copy.copy(target)
+            ptarget.pipe = picklepipe
+            picklepipe.target(ptarget.__class__, name=name)
+            picklepipe.targets[name] = ptarget
 
         for name, nestedpipe in self.pipes.items():
             if nestedpipe == self: continue
@@ -72,13 +77,16 @@ class Pipe():
         return pickle.dumps(picklepipe)
 
 
+
     def from_pickle(self, picklepipe=None):
         picklepipe = pickle.loads(picklepipe)
 
         for name, source in picklepipe.sources.items():
+            source.pipe = self
             self.sources[name] = source
 
         for name, target in picklepipe.targets.items():
+            target.pipe = self
             self.targets[name] = target
 
         for name, nestedpicklepipe in picklepipe.pipes.items():
