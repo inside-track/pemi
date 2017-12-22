@@ -87,3 +87,32 @@ class TestPickling(unittest.TestCase):
         assert_frame_equal(job.pipes['concat'].sources['s2'].df, unpickled_job.pipes['concat'].sources['s2'].df)
         assert_frame_equal(job.pipes['concat'].targets['main'].df, unpickled_job.pipes['concat'].targets['main'].df)
         assert_frame_equal(job.pipes['t1'].sources['main'].df, unpickled_job.pipes['t1'].sources['main'].df)
+
+    def test_it_pickles_when_pipe_has_unpickleable_things(self):
+        class NotPickleablePipe(JobPipe):
+            def __init__(self, **params):
+                super().__init__(**params)
+                self.pipe(
+                    name='s1',
+                    pipe=SomeSourcePipe(addone=lambda v: v + 1)
+                )
+
+        job = NotPickleablePipe()
+        job.flow()
+
+        pickled = job.to_pickle()
+        unpickled_job = NotPickleablePipe().from_pickle(pickled)
+
+        self.assertEqual(unpickled_job.pipes['s1'].params['addone'](3), 4)
+
+    def test_unpickled_references_original_pipes(self):
+        job = JobPipe()
+        job.flow()
+
+        pickled = job.to_pickle()
+        unpickled_job = JobPipe().from_pickle(pickled)
+
+        self.assertEqual(
+            unpickled_job.pipes['s1'].targets['main'].pipe.__class__,
+            job.pipes['s1'].targets['main'].pipe.__class__
+        )
