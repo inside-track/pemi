@@ -50,6 +50,8 @@ RUN echo 'source /usr/share/bash-completion/bash_completion' >> /etc/bash.bashrc
 RUN echo 'export HISTFILE=$HOME/.bash_history/history' >> $HOME/.bashrc
 
 # App
+ENV LC_ALL C.UTF-8
+ENV LANG C.UTF-8
 ENV PYTHONUNBUFFERED 1
 WORKDIR /app
 COPY ./requirements.txt requirements.txt
