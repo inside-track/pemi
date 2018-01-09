@@ -1,6 +1,5 @@
 invoke
-pandas>=0.20,<0.21
-nose2
+pandas==0.22
 dask
 graphviz
 faker
@@ -9,3 +8,4 @@ psycopg2
 jupyter
 jupyterlab
 pyspark
+pytest

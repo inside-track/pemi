@@ -3,6 +3,8 @@ import datetime
 import dateutil
 import json
 
+import pemi.transforms
+
 __all__ = [
     'StringField',
     'IntegerField',
@@ -60,7 +62,7 @@ class StringField(Field):
 
     @convert_exception
     def coerce(self, value):
-        if not value:
+        if pemi.transforms.isblank(value):
             return self.null
         else:
             return str(value)
@@ -73,7 +75,7 @@ class IntegerField(Field):
 
     @convert_exception
     def coerce(self, value):
-        if not value:
+        if pemi.transforms.isblank(value):
             return self.null
         elif self.coerce_float:
             return int(float(value))
@@ -84,7 +86,7 @@ class IntegerField(Field):
 class FloatField(Field):
     @convert_exception
     def coerce(self, value):
-        if not value:
+        if pemi.transforms.isblank(value):
             return self.null
         else:
             return float(value)
@@ -99,7 +101,7 @@ class DateField(Field):
 
     @convert_exception
     def coerce(self, value):
-        if not value:
+        if pemi.transforms.isblank(value):
             return self.null
         else:
             return self.parse(value)
@@ -123,7 +125,7 @@ class DateTimeField(Field):
 
     @convert_exception
     def coerce(self, value):
-        if not value:
+        if pemi.transforms.isblank(value):
             return self.null
         else:
             return self.parse(value)
@@ -150,7 +152,7 @@ class BooleanField(Field):
     def coerce(self, value):
         if isinstance(value, bool):
             return value
-        elif not value:
+        elif pemi.transforms.isblank(value):
             return self.null
         else:
             return self.parse(value)
@@ -176,7 +178,7 @@ class DecimalField(Field):
 
     @convert_exception
     def coerce(self, value):
-        if not value:
+        if pemi.transforms.isblank(value):
             return self.null
         else:
             return self.parse(value)
@@ -208,7 +210,7 @@ class DecimalField(Field):
 class JsonField(Field):
     @convert_exception
     def coerce(self, value):
-        if not value:
+        if pemi.transforms.isblank(value):
             return self.null
 
         try:

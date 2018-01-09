@@ -1,6 +1,7 @@
 import os
 import unittest
 
+import pytest
 import pandas as pd
 import sqlalchemy as sa
 
@@ -225,6 +226,7 @@ class TestDenormalizeBeersPipe(unittest.TestCase):
             )
         )
         return self.scenario.run()
+
 
 if __name__ == '__main__':
     job = DenormalizeBeersPipe()
