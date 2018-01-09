@@ -24,12 +24,14 @@ class PdConcatPipe(pemi.pipes.patterns.ConcatPipe):
         else:
             self.targets['main'].df = pd.concat(source_dfs, **self.concat_opts)
 
+# TODOC: Note that RowHandler('recode') will not work here
 class PdLookupJoinPipe(pemi.Pipe):
     def __init__(self, main_key, lookup_key,
                  suffixes=('', '_lkp'),
                  missing_handler=None,
                  indicator=None,
                  lookup_prefix='',
+                 fillna=None,
                  **kwargs):
         super().__init__(**kwargs)
 
@@ -39,6 +41,7 @@ class PdLookupJoinPipe(pemi.Pipe):
         self.missing_handler = missing_handler or RowHandler('exclude')
         self.indicator = indicator
         self.lookup_prefix = lookup_prefix
+        self.fillna = fillna
 
         self.source(
             pemi.PdDataSubject,
@@ -107,6 +110,9 @@ class PdLookupJoinPipe(pemi.Pipe):
         else:
             indicator_map = lambda v: True if v == 'both' else False
             mapper.mapped_df[self.indicator] = mapper.mapped_df['__indicator__'].apply(indicator_map).astype('bool')
+
+        if self.fillna:
+            mapper.mapped_df.fillna(**self.fillna, inplace=True)
 
         self.targets['main'].df = mapper.mapped_df
         self.targets['errors'].df = mapper.errors_df
