@@ -1,28 +1,24 @@
 import os
 import unittest
 
+import pytest
+
 import pandas as pd
 import pyspark
 
 import pemi
-import pemi.testing
+import pemi.testing as pt
 from pemi.data_subject import SparkDataSubject
 from pemi.fields import *
+
+pytestmark = pytest.mark.spark
 
 import sys
 this = sys.modules[__name__]
 
 
-spark = pyspark.sql.SparkSession \
-    .builder \
-    .master("spark://spark-master:7077") \
-    .appName("PemiSpark") \
-    .config("spark.sql.warehouse.dir", "/tmp/data/spark-warehouse") \
-    .getOrCreate()
-
-
 class DenormalizeBeersPipe(pemi.Pipe):
-    def __init__(self, **params):
+    def __init__(self, spark_session, **params):
         super().__init__(**params)
 
         self.source(
@@ -33,7 +29,7 @@ class DenormalizeBeersPipe(pemi.Pipe):
                 sold_at  = DateField(format='%m/%d/%Y'),
                 quantity = IntegerField()
             ),
-            spark=spark
+            spark=spark_session
         )
 
         self.source(
@@ -46,7 +42,7 @@ class DenormalizeBeersPipe(pemi.Pipe):
                 abv   = FloatField(),
                 price = DecimalField(precision=16, scale=2)
             ),
-            spark=spark
+            spark=spark_session
         )
 
         self.target(
@@ -61,7 +57,7 @@ class DenormalizeBeersPipe(pemi.Pipe):
                 unit_price = DecimalField(precision=16, scale=2),
                 sell_price = DecimalField(precision=16, scale=2)
             ),
-            spark=spark
+            spark=spark_session
         )
 
     def flow(self):
@@ -88,109 +84,90 @@ class DenormalizeBeersPipe(pemi.Pipe):
         self.targets['beer_sales'].df.createOrReplaceTempView('beer_sales')
 
 
+class TestDenormalizeBeersPipe():
+    spark_session = pyspark.sql.SparkSession \
+        .builder \
+        .master("spark://spark-master:7077") \
+        .appName("PemiSpark") \
+        .config("spark.sql.warehouse.dir", "/tmp/data/spark-warehouse") \
+        .getOrCreate()
 
-class TestDenormalizeBeersPipe(unittest.TestCase):
-    spark = True
+    pipe = DenormalizeBeersPipe(spark_session)
 
-    def setUp(self):
-        self.pipe = DenormalizeBeersPipe()
+    def case_keys():
+        ids = list(range(1000))
+        for i in ids:
+            yield {
+                'sales': {'beer_id': i},
+                'beers': {'id': i},
+                'beer_sales': {'beer_id': i}
+            }
 
-        self.rules = pemi.testing.Rules(
-            source_subjects=[
-                self.pipe.sources['sales'],
-                self.pipe.sources['beers']
-            ],
-            target_subjects=[self.pipe.targets['beer_sales']]
-        )
+    scenario = pt.Scenario(
+        runner=pipe.flow,
+        case_keys = case_keys(),
+        sources = {
+            'sales': pipe.sources['sales'],
+            'beers': pipe.sources['beers']
+        },
+        targets =  {
+            'beer_sales': pipe.targets['beer_sales']
+        }
+    )
 
-        self.scenario = pemi.testing.Scenario(
-            runner=self.pipe.flow,
-            source_subjects=[
-                self.pipe.sources['sales'],
-                self.pipe.sources['beers']
-            ],
-            target_subjects=[self.pipe.targets['beer_sales']],
-            givens=self.rules.when_sources_conform_to_schemas()
-        )
-
-
-    def example_sales(self):
+    with scenario.case('it joins sales to beers') as case:
         sales_table = pemi.data.Table(
             '''
             | beer_id | sold_at    | quantity |
             | -       | -          | -        |
-            | 1       | 01/01/2017 | 3        |
-            | 2       | 01/02/2017 | 3        |
-            | 3       | 01/03/2017 | 5        |
-            | 4       | 01/04/2017 | 8        |
-            | 5       | 01/04/2017 | 6        |
-            | 1       | 01/06/2017 | 1        |
-            ''',
-            schema=self.pipe.sources['sales'].schema.merge(pemi.Schema(bumpkin=StringField())),
-            fake_with={
-                'beer_id': { 'valid': lambda: pemi.data.fake.random_int(1,4) },
-                'sold_at': { 'valid': lambda: pemi.data.fake.date_time_this_decade().date() },
-                'quantity': {'valid': lambda: pemi.data.fake.random_int(1,100) },
-                'bumpkin': { 'valid': lambda: pemi.data.fake.word(['bumpkin A', 'bumpkin B', 'bumpkin C']) }
-            }
+            | {b[1]}  | 01/01/2017 | 3        |
+            | {b[2]}  | 01/02/2017 | 3        |
+            | {b[3]}  | 01/03/2017 | 5        |
+            | {b[4]}  | 01/04/2017 | 8        |
+            | {b[5]}  | 01/04/2017 | 6        |
+            | {b[1]}  | 01/06/2017 | 1        |
+            '''.format(b = scenario.case_keys.cache('sales', 'beer_id')),
+            schema=pipe.sources['sales'].schema
         )
-        return sales_table
 
-
-    def example_beers(self):
         beers_table = pemi.data.Table(
             '''
-            | id | name          | style |
-            | -  | -             | -     |
-            | 1  | SpinCyle      | IPA   |
-            | 2  | OldStyle      | Pale  |
-            | 3  | Pipewrench    | IPA   |
-            | 4  | AbstRedRibbon | Lager |
-            ''',
-            schema=self.pipe.sources['beers'].schema,
+            | id     | name          | style |
+            | -      | -             | -     |
+            | {b[1]} | SpinCyle      | IPA   |
+            | {b[2]} | OldStyle      | Pale  |
+            | {b[3]} | Pipewrench    | IPA   |
+            | {b[4]} | AbstRedRibbon | Lager |
+            '''.format(b = scenario.case_keys.cache('beers', 'id')),
+            schema=pipe.sources['beers'].schema,
             fake_with={
                 'abv': {'valid': lambda: pemi.data.fake.pydecimal(2, 2, positive=True)},
                 'price': {'valid': lambda: pemi.data.fake.pydecimal(2, 2, positive=True)}
             }
         )
-        return beers_table
 
-    def example_beer_sales(self):
         beer_sales_table = pemi.data.Table(
             '''
             | beer_id | sold_at    | quantity | name          | style |
             | -       | -          | -        | -             | -     |
-            | 1       | 01/01/2017 | 3        | SpinCyle      | IPA   |
-            | 2       | 01/02/2017 | 3        | OldStyle      | Pale  |
-            | 3       | 01/03/2017 | 5        | Pipewrench    | IPA   |
-            | 4       | 01/04/2017 | 8        | AbstRedRibbon | Lager |
-            | 5       | 01/04/2017 | 6        |               |       |
-            | 1       | 01/06/2017 | 1        | SpinCyle      | IPA   |
-            ''',
-            schema=self.pipe.targets['beer_sales'].schema
+            | {b[1]}  | 01/01/2017 | 3        | SpinCyle      | IPA   |
+            | {b[2]}  | 01/02/2017 | 3        | OldStyle      | Pale  |
+            | {b[3]}  | 01/03/2017 | 5        | Pipewrench    | IPA   |
+            | {b[4]}  | 01/04/2017 | 8        | AbstRedRibbon | Lager |
+            | {b[5]}  | 01/04/2017 | 6        |               |       |
+            | {b[1]}  | 01/06/2017 | 1        | SpinCyle      | IPA   |
+            '''.format(b = scenario.case_keys.cache('beer_sales', 'beer_id')),
+            schema=pipe.targets['beer_sales'].schema
         )
-        return beer_sales_table
 
-
-    def test_it_joins_sales_to_beers(self):
-        self.scenario.when(
-            self.rules.when_example_for_source(
-                self.example_sales(),
-                source_subject=self.pipe.sources['sales']
-            ),
-            self.rules.when_example_for_source(
-                self.example_beers(),
-                source_subject=self.pipe.sources['beers']
-            )
+        case.when(
+            pt.when.example_for_source(scenario.sources['sales'], sales_table),
+            pt.when.example_for_source(scenario.sources['beers'], beers_table)
         ).then(
-            self.rules.then_target_matches_example(
-                self.example_beer_sales(),
-                target_subject=self.pipe.targets['beer_sales'],
-                by=['beer_id', 'sold_at']
-            )
+            pt.then.target_matches_example(scenario.targets['beer_sales'], beer_sales_table,
+                                           by=['beer_id', 'sold_at'])
         )
-        return self.scenario.run()
 
-if __name__ == '__main__':
-    job = DenormalizeBeersPipe()
-    job.flow()
+    @pytest.mark.scenario(scenario)
+    def test_scenario(self, case):
+        case.assert_case()

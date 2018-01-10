@@ -1,40 +1,41 @@
-import unittest
 import datetime
 import decimal
+
+import pytest
 
 import pemi.fields
 from pemi.fields import *
 
-class TestField(unittest.TestCase):
+class TestField():
     def test_it_accepts_metadata(self):
         '''
         Users can define custom metadata to add to fields
         '''
         field = pemi.fields.Field(bill='S. Preston', ted='Theodore Logan')
-        self.assertEqual(field.metadata['bill'], 'S. Preston')
+        assert field.metadata['bill'] == 'S. Preston'
 
     def test_it_defaults_to_none_for_null(self):
         '''
         The null representation for a field is None by default
         '''
         field = pemi.fields.Field()
-        self.assertEqual(field.metadata['null'], None)
+        assert field.metadata['null'] is None
 
     def test_null_can_be_overridden(self):
         '''
         The null representation for a field can be overridden
         '''
         field = pemi.fields.Field(null='#N/A')
-        self.assertEqual(field.null, '#N/A')
+        assert field.null == '#N/A'
 
-class TestStringField(unittest.TestCase):
+class TestStringField():
     def test_convert_a_string(self):
         '''
         It takes a string and outputs a string
         '''
         field = StringField()
         coerced = field.coerce('bodacious')
-        self.assertEqual(coerced, 'bodacious')
+        assert coerced == 'bodacious'
 
     def test_it_stringifies_non_strings(self):
         '''
@@ -42,7 +43,7 @@ class TestStringField(unittest.TestCase):
         '''
         field = StringField()
         coerced = field.coerce(3.14)
-        self.assertEqual(coerced, '3.14')
+        assert coerced == '3.14'
 
     def test_use_empty_string_as_null(self):
         '''
@@ -50,7 +51,7 @@ class TestStringField(unittest.TestCase):
         '''
         field = StringField(required=False)
         coerced = field.coerce(None)
-        self.assertEqual(coerced, '')
+        assert coerced == ''
 
     def test_change_definition_of_null(self):
         '''
@@ -58,12 +59,12 @@ class TestStringField(unittest.TestCase):
         '''
         field = StringField(required=False, null=None)
         coerced = field.coerce(None)
-        self.assertEqual(coerced, None)
+        assert coerced is None
 
 
 
 
-class TestIntegerField(unittest.TestCase):
+class TestIntegerField():
     def test_convert_to_integers(self):
         '''
         String values should be converted into integers
@@ -71,7 +72,7 @@ class TestIntegerField(unittest.TestCase):
 
         field = IntegerField()
         coerced = field.coerce('42')
-        self.assertEqual(coerced, 42)
+        assert coerced == 42
 
     def test_it_fails_to_convert_floats(self):
         '''
@@ -79,7 +80,8 @@ class TestIntegerField(unittest.TestCase):
         '''
 
         field = IntegerField()
-        self.assertRaises(pemi.fields.CoercionError, field.coerce, '42.3')
+        with pytest.raises(pemi.fields.CoercionError):
+            field.coerce('42.3')
 
     def test_it_optionally_converts_floats(self):
         '''
@@ -88,10 +90,10 @@ class TestIntegerField(unittest.TestCase):
 
         field = IntegerField(coerce_float=True)
         coerced = field.coerce('42.3')
-        self.assertEqual(coerced, 42)
+        assert coerced == 42
 
 
-class TestFloatField(unittest.TestCase):
+class TestFloatField():
     def test_convert_to_float(self):
         '''
         String values should be converted into floats
@@ -99,17 +101,17 @@ class TestFloatField(unittest.TestCase):
 
         field = FloatField()
         coerced = field.coerce('42.3')
-        self.assertEqual(coerced, 42.3)
+        assert coerced == 42.3
 
 
-class TestDateField(unittest.TestCase):
+class TestDateField():
     def test_convert_to_date(self):
         '''
         String values should convert to Python dates
         '''
         field = DateField()
         coerced = field.coerce('2016-02-14')
-        self.assertEqual(coerced, datetime.date(2016,2,14))
+        assert coerced == datetime.date(2016,2,14)
 
     def test_custom_format(self):
         '''
@@ -117,7 +119,7 @@ class TestDateField(unittest.TestCase):
         '''
         field = DateField(format='%d/%m/%Y')
         coerced = field.coerce('14/02/2016')
-        self.assertEqual(coerced, datetime.date(2016,2,14))
+        assert coerced == datetime.date(2016,2,14)
 
     def test_convert_from_date(self):
         '''
@@ -125,7 +127,7 @@ class TestDateField(unittest.TestCase):
         '''
         field = DateField()
         coerced = field.coerce(datetime.date(2016,2,14))
-        self.assertEqual(coerced, datetime.date(2016,2,14))
+        assert coerced == datetime.date(2016,2,14)
 
     def test_convert_from_datetime(self):
         '''
@@ -133,7 +135,7 @@ class TestDateField(unittest.TestCase):
         '''
         field = DateField()
         coerced = field.coerce(datetime.datetime(2016,2,14,1,2,3))
-        self.assertEqual(coerced, datetime.date(2016,2,14))
+        assert coerced == datetime.date(2016,2,14)
 
     def test_convert_invalid_date(self):
         '''
@@ -141,7 +143,8 @@ class TestDateField(unittest.TestCase):
         '''
         field = DateField()
         coerce = lambda: field.coerce('2/14/2016')
-        self.assertRaises(pemi.fields.CoercionError, coerce)
+        with pytest.raises(pemi.fields.CoercionError):
+            coerce()
 
     def test_convert_inferred_date(self):
         '''
@@ -149,7 +152,7 @@ class TestDateField(unittest.TestCase):
         '''
         field = DateField(infer_format=True)
         coerced = field.coerce('14/02/2016')
-        self.assertEqual(coerced, datetime.date(2016,2,14))
+        assert coerced == datetime.date(2016,2,14)
 
     def test_convert_invalid_inferred_date(self):
         '''
@@ -157,17 +160,18 @@ class TestDateField(unittest.TestCase):
         '''
         field = DateField(infer_format=True)
         coerce = lambda: field.coerce('2/14:2016')
-        self.assertRaises(pemi.fields.CoercionError, coerce)
+        with pytest.raises(pemi.fields.CoercionError):
+            coerce()
 
 
-class TestDateTimeField(unittest.TestCase):
+class TestDateTimeField():
     def test_convert_to_datetime(self):
         '''
         String values should convert to Python datetimes
         '''
         field = DateTimeField()
         coerced = field.coerce('2016-02-14 04:33:00')
-        self.assertEqual(coerced, datetime.datetime(2016,2,14,4,33,0))
+        assert coerced == datetime.datetime(2016,2,14,4,33,0)
 
     def test_custom_format(self):
         '''
@@ -175,7 +179,7 @@ class TestDateTimeField(unittest.TestCase):
         '''
         field = DateTimeField(format='%d/%m/%Y%H%M%S')
         coerced = field.coerce('14/02/2016043300')
-        self.assertEqual(coerced, datetime.datetime(2016,2,14,4,33,0))
+        assert coerced == datetime.datetime(2016,2,14,4,33,0)
 
     def test_convert_from_date(self):
         '''
@@ -183,7 +187,7 @@ class TestDateTimeField(unittest.TestCase):
         '''
         field = DateTimeField()
         coerced = field.coerce(datetime.date(2016,2,14))
-        self.assertEqual(coerced, datetime.datetime(2016,2,14,0,0,0))
+        assert coerced == datetime.datetime(2016,2,14,0,0,0)
 
     def test_convert_from_datetime(self):
         '''
@@ -191,7 +195,7 @@ class TestDateTimeField(unittest.TestCase):
         '''
         field = DateTimeField()
         coerced = field.coerce(datetime.datetime(2016,2,14,4,33,0))
-        self.assertEqual(coerced, datetime.datetime(2016,2,14,4,33,0))
+        assert coerced == datetime.datetime(2016,2,14,4,33,0)
 
     def test_convert_invalid_datetime(self):
         '''
@@ -199,7 +203,8 @@ class TestDateTimeField(unittest.TestCase):
         '''
         field = DateTimeField()
         coerce = lambda: field.coerce('2/14/2016043300')
-        self.assertRaises(pemi.fields.CoercionError, coerce)
+        with pytest.raises(pemi.fields.CoercionError):
+            coerce()
 
     def test_convert_inferred_datetime(self):
         '''
@@ -207,7 +212,7 @@ class TestDateTimeField(unittest.TestCase):
         '''
         field = DateTimeField(infer_format=True)
         coerced = field.coerce('14/02/2016 04:33:00')
-        self.assertEqual(coerced, datetime.datetime(2016,2,14,4,33,0))
+        assert coerced == datetime.datetime(2016,2,14,4,33,0)
 
     def test_convert_invalid_inferred_datetime(self):
         '''
@@ -215,17 +220,18 @@ class TestDateTimeField(unittest.TestCase):
         '''
         field = DateTimeField(infer_format=True)
         coerce = lambda: field.coerce('2/14:2016043300')
-        self.assertRaises(pemi.fields.CoercionError, coerce)
+        with pytest.raises(pemi.fields.CoercionError):
+            coerce()
 
 
-class TestBooleanField(unittest.TestCase):
+class TestBooleanField():
     def test_convert_to_true(self):
         '''
         Convert a truthy string value to True
         '''
         field = BooleanField()
         coerced = field.coerce('y')
-        self.assertEqual(coerced, True)
+        assert coerced is True
 
     def test_convert_to_false(self):
         '''
@@ -233,7 +239,7 @@ class TestBooleanField(unittest.TestCase):
         '''
         field = BooleanField()
         coerced = field.coerce('0')
-        self.assertEqual(coerced, False)
+        assert coerced is False
 
     def test_empty_is_ok(self):
         '''
@@ -241,14 +247,15 @@ class TestBooleanField(unittest.TestCase):
         '''
         field = BooleanField()
         coerced = field.coerce('')
-        self.assertEqual(coerced, None)
+        assert coerced is None
 
     def test_raise_unknown(self):
         '''
         Raise a conversion error if the truthiness is unknown
         '''
         field = BooleanField()
-        self.assertRaises(pemi.fields.CoercionError, field.coerce, 'non-heinous')
+        with pytest.raises(pemi.fields.CoercionError):
+            field.coerce('non-heinous')
 
     def test_unknown_is_null_option(self):
         '''
@@ -256,7 +263,7 @@ class TestBooleanField(unittest.TestCase):
         '''
         field = BooleanField(unknown_truthiness=None)
         coerced = field.coerce('non-non-heinous')
-        self.assertEqual(coerced, None)
+        assert coerced is None
 
     def test_unknown_is_false_option(self):
         '''
@@ -264,7 +271,7 @@ class TestBooleanField(unittest.TestCase):
         '''
         field = BooleanField(unknown_truthiness=False)
         coerced = field.coerce('non-non-non-heinous')
-        self.assertEqual(coerced, False)
+        assert coerced is False
 
     def test_custom_true(self):
         '''
@@ -272,10 +279,10 @@ class TestBooleanField(unittest.TestCase):
         '''
         field = BooleanField(true_values=['oui', 't'])
         coerced = field.coerce('oui')
-        self.assertEqual(coerced, True)
+        assert coerced is True
 
         coerced = field.coerce('t')
-        self.assertEqual(coerced, True)
+        assert coerced is True
 
     def test_custom_false(self):
         '''
@@ -283,34 +290,36 @@ class TestBooleanField(unittest.TestCase):
         '''
         field = BooleanField(false_values=['non', 'f'])
         coerced = field.coerce('non')
-        self.assertEqual(coerced, False)
+        assert coerced is False
 
         coerced = field.coerce('f')
-        self.assertEqual(coerced, False)
+        assert coerced is False
 
 
-class TestDecimalField(unittest.TestCase):
+class TestDecimalField():
     def test_convert_to_decimal(self):
         '''
         String values should convert to a decimal given an expected precision and scale
         '''
         field = DecimalField(precision=6, scale=5)
         coerced = field.coerce('3.14159')
-        self.assertEqual(coerced, decimal.Decimal('3.14159'))
+        assert coerced == decimal.Decimal('3.14159')
 
     def test_raise_precision(self):
         '''
         Raise en error if the precision is too small for the string
         '''
         field = DecimalField(precision=5, scale=5)
-        self.assertRaises(pemi.fields.CoercionError, field.coerce, '3.14159')
+        with pytest.raises(pemi.fields.CoercionError):
+            field.coerce('3.14159')
 
     def test_raise_scale(self):
         '''
         Raise an error if the scale is too small for the string
         '''
         field = DecimalField(precision=6, scale=4)
-        self.assertRaises(pemi.fields.CoercionError, field.coerce, '3.14159')
+        with pytest.raises(pemi.fields.CoercionError):
+            field.coerce('3.14159')
 
     def test_does_not_raise_if_not_enforced(self):
         '''
@@ -318,7 +327,7 @@ class TestDecimalField(unittest.TestCase):
         '''
         field = DecimalField(precision=1, scale=1, enforce_decimal=False)
         coerced = field.coerce('3.14159')
-        self.assertEqual(coerced, decimal.Decimal('3.14159'))
+        assert coerced == decimal.Decimal('3.14159')
 
     def test_truncates_decimal(self):
         '''
@@ -326,12 +335,12 @@ class TestDecimalField(unittest.TestCase):
         '''
         field = DecimalField(precision=5, scale=1, truncate_decimal=True)
         coerced = field.coerce('3.45')
-        self.assertEqual(coerced, decimal.Decimal('3.4'))
+        assert coerced == decimal.Decimal('3.4')
 
         coerced = field.coerce('3.55')
-        self.assertEqual(coerced, decimal.Decimal('3.6'))
+        assert coerced == decimal.Decimal('3.6')
 
-class TestJsonField(unittest.TestCase):
+class TestJsonField():
     def test_convert_to_json(self):
         '''
         String values should be converted into python objects
@@ -339,7 +348,7 @@ class TestJsonField(unittest.TestCase):
 
         field = JsonField()
         coerced = field.coerce('{"a": "alpha"}')
-        self.assertEqual(coerced, {'a': 'alpha'})
+        assert coerced == {'a': 'alpha'}
 
     def test_convert_to_json_when_already_parsed(self):
         '''
@@ -348,4 +357,4 @@ class TestJsonField(unittest.TestCase):
 
         field = JsonField()
         coerced = field.coerce({"a": "alpha"})
-        self.assertEqual(coerced, {'a': 'alpha'})
+        assert coerced == {'a': 'alpha'}

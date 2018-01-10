@@ -1,13 +1,14 @@
-import unittest
 import re
 from collections import OrderedDict
+
+import pytest
 
 import pandas as pd
 from pandas.util.testing import assert_frame_equal
 from pandas.util.testing import assert_series_equal
 
 import pemi
-import pemi.testing
+import pemi.testing as pt
 from pemi.data_subject import PdDataSubject
 from pemi.fields import *
 
@@ -97,6 +98,8 @@ class BlackBoxPipe(pemi.Pipe):
 
     def flow(self):
         source_df = self.sources['beers_file'].df
+        # print(source_df)
+
 
         grouped = source_df.groupby(['id'], as_index=False)
         deduped_df = grouped.first()
@@ -108,6 +111,9 @@ class BlackBoxPipe(pemi.Pipe):
         target_fields = list(self.targets['beers_w_style_file'].schema.keys())
         self.targets['beers_w_style_file'].df = deduped_df[target_fields]
         self.targets['dropped_duplicates'].df = dupes_df
+
+        # print(self.targets['beers_w_style_file'].df)
+        # print(self.targets['dropped_duplicates'].df)
 
 class BlackBoxJob(pemi.Pipe):
     def __init__(self, **params):
@@ -136,263 +142,210 @@ class BlackBoxJob(pemi.Pipe):
         self.connections.flow()
 
 
-class TestBlackBoxJobMappings(unittest.TestCase):
-    def setUp(self):
-        self.pipe = BlackBoxJob()
+class TestBlackBoxJob():
+    pipe = BlackBoxJob()
 
-        self.pipe.pipes['beers_file'] = pemi.testing.mock_pipe(self.pipe.pipes['beers_file'])
-        self.pipe.pipes['beers_w_style_file'] = pemi.testing.mock_pipe(self.pipe.pipes['beers_w_style_file'])
+    pipe.pipes['beers_file'] = pt.mock_pipe(pipe.pipes['beers_file'])
+    pipe.pipes['beers_w_style_file'] = pt.mock_pipe(pipe.pipes['beers_w_style_file'])
 
-        self.rules = pemi.testing.Rules(
-            source_subjects=[self.pipe.pipes['beers_file'].targets['main']],
-            target_subjects=[self.pipe.pipes['beers_w_style_file'].sources['main']]
-        )
-
-        self.scenario = pemi.testing.Scenario(
-            runner=self.pipe.flow,
-            source_subjects=[self.pipe.pipes['beers_file'].targets['main']],
-            target_subjects=[self.pipe.pipes['beers_w_style_file'].sources['main']],
-            givens=[self.rules.when_source_conforms_to_schema()]
-        )
+    def case_keys():
+        ids = list(range(1000))
+        for i in ids:
+            yield {
+                'beers_file': {'id': i},
+                'beers_w_style_file': {'id': i},
+                'dropped_duplicates': {'id': i}
+            }
 
 
-    def test_it_copies_the_name_field(self):
-        'The name field is directly copied to the target'
+    scenario = pt.Scenario(
+        runner=pipe.flow,
+        case_keys=case_keys(),
+        sources={
+            'beers_file': pipe.pipes['beers_file'].targets['main']
+        },
+        targets={
+            'beers_w_style_file': pipe.pipes['beers_w_style_file'].sources['main'],
+            'dropped_duplicates': pipe.pipes['black_box'].targets['dropped_duplicates']
+        }
+    )
 
-        self.scenario.when(
+    def background(scenario):
+        return [
+            pt.when.source_conforms_to_schema(scenario.sources['beers_file']),
+            pt.when.source_has_keys(scenario.sources, scenario.case_keys, 'beers_file')
+        ]
+
+    with scenario.case('it copies the name field') as case:
+        case.when(
+            *background(scenario)
         ).then(
-            self.rules.then_field_is_copied('name', 'name', by='id')
+            pt.then.field_is_copied(scenario.sources['beers_file'], 'name',
+                                    scenario.targets['beers_w_style_file'], 'name',
+                                    by=['id'])
         )
-        return self.scenario.run()
 
-    def test_direct_copies(self):
-        'Fields that are directly copied to the target'
-
-        self.scenario.when(
-            self.rules.when_source_conforms_to_schema()
+    with scenario.case('fields that are directly copied to the target') as case:
+        case.when(
+            *background(scenario)
         ).then(
-            self.rules.then_fields_are_copied({
-                'id': 'id',
-                'name': 'name',
-                'abv': 'abv'
-            }, by='id')
+            pt.then.fields_are_copied(scenario.sources['beers_file'],
+                                      scenario.targets['beers_w_style_file'],
+                                      by=['id'],
+                                      mapping=[
+                                          ('id', 'id'),
+                                          ('name', 'name'),
+                                          ('abv', 'abv')
+                                      ]
+            )
         )
-        return self.scenario.run()
 
-    def test_it_uses_a_default_style(self):
-        'The style is set to unknown if can not be deduced'
-
-        self.scenario.when(
-            self.rules.when_source_field_has_value('name', 'Deduce This!')
+    with scenario.case('it uses a default style') as case:
+        case.when(
+            *background(scenario),
+            pt.when.source_field_has_value(scenario.sources['beers_file'], 'name', 'Deduce This!')
         ).then(
-            self.rules.then_target_field_has_value('style', 'Unknown Style')
-        )
-        return self.scenario.run()
-
-
-
-class TestBlackBoxJobExamples(unittest.TestCase):
-
-    def setUp(self):
-        self.pipe = BlackBoxJob()
-
-        self.pipe.pipes['beers_file'] = pemi.testing.mock_pipe(self.pipe.pipes['beers_file'])
-        self.pipe.pipes['beers_w_style_file'] = pemi.testing.mock_pipe(self.pipe.pipes['beers_w_style_file'])
-
-        self.source_subject = self.pipe.pipes['beers_file'].targets['main']
-        self.target_subject = self.pipe.pipes['beers_w_style_file'].sources['main']
-
-        self.rules = pemi.testing.Rules(
-            source_subjects=[self.pipe.pipes['beers_file'].targets['main']],
-            target_subjects=[self.pipe.pipes['beers_w_style_file'].sources['main']]
-        )
-
-        self.scenario = pemi.testing.Scenario(
-            runner=self.pipe.flow,
-            source_subjects=[self.pipe.pipes['beers_file'].targets['main']],
-            target_subjects=[self.pipe.pipes['beers_w_style_file'].sources['main']],
-            givens=[self.given_example_beers()]
+            pt.then.target_field_has_value(scenario.targets['beers_w_style_file'], 'style', 'Unknown Style')
         )
 
 
-    def example_beers(self):
-        return pemi.data.Table(
+    with scenario.case('it deduced style from name') as case:
+        example_beers = pemi.data.Table(
             '''
-            | id | name                     |
-            | -  | -                        |
-            | 1  | Fireside IPA             |
-            | 2  | Perfunctory Pale Ale     |
-            | 3  | Ginormous India Pale Ale |
-            ''',
-            schema=self.source_subject.schema
+            | id     | name                     |
+            | -      | -                        |
+            | {b[1]} | Fireside IPA             |
+            | {b[2]} | Perfunctory Pale Ale     |
+            | {b[3]} | Ginormous India Pale Ale |
+            '''.format(b = scenario.case_keys.cache('beers_file', 'id')),
+            schema=pipe.pipes['beers_file'].targets['main'].schema
         )
-
-
-    def given_example_beers(self):
-        'Some example beer names'
-        return self.rules.when_example_for_source(self.example_beers())
-
-
-    def test_it_deduces_style_from_name(self):
-        'The style is deduced from the name'
 
         expected_styles = pemi.data.Table(
             '''
-            | id | name                     | style |
-            | -  | -                        | -     |
-            | 1  | Fireside IPA             | IPA   |
-            | 2  | Perfunctory Pale Ale     | Pale  |
-            | 3  | Ginormous India Pale Ale | IPA   |
-            ''',
-            schema=self.target_subject.schema
+            | id     | name                     | style |
+            | -      | -                        | -     |
+            | {b[1]} | Fireside IPA             | IPA   |
+            | {b[2]} | Perfunctory Pale Ale     | Pale  |
+            | {b[3]} | Ginormous India Pale Ale | IPA   |
+            '''.format(b = scenario.case_keys.cache('beers_w_style_file', 'id')),
+            schema=pipe.pipes['beers_w_style_file'].sources['main'].schema
         )
 
-        self.scenario.when(
+        case.when(
+            pt.when.example_for_source(scenario.sources['beers_file'], example_beers)
         ).then(
-            self.rules.then_target_matches_example(expected_styles)
-        )
-        return self.scenario.run()
-
-
-
-class TestBlackBoxJobDuplicates(unittest.TestCase):
-
-    def setUp(self):
-        self.pipe = BlackBoxJob()
-
-        self.pipe.pipes['beers_file'] = pemi.testing.mock_pipe(self.pipe.pipes['beers_file'])
-        self.pipe.pipes['beers_w_style_file'] = pemi.testing.mock_pipe(self.pipe.pipes['beers_w_style_file'])
-
-        self.rules = pemi.testing.Rules(
-            source_subjects=[self.pipe.pipes['beers_file'].targets['main']],
-            target_subjects=[
-                self.pipe.pipes['beers_w_style_file'].sources['main'],
-                self.pipe.pipes['black_box'].targets['dropped_duplicates']
-            ],
+            pt.then.target_matches_example(scenario.targets['beers_w_style_file'], expected_styles)
         )
 
-        self.scenario = pemi.testing.Scenario(
-            runner=self.pipe.flow,
-            source_subjects=[self.pipe.pipes['beers_file'].targets['main']],
-            target_subjects=[
-                self.pipe.pipes['beers_w_style_file'].sources['main'],
-                self.pipe.pipes['black_box'].targets['dropped_duplicates']
-            ],
-            givens=[self.given_example_duplicates()]
-        )
-
-    def example_duplicates(self):
-        return pemi.data.Table(
+    with scenario.case('it drops and redirects duplicates') as case:
+        example_duplicates = pemi.data.Table(
             '''
-            | id | name                     |
-            | -  | -                        |
-            | 1  | Fireside IPA             |
-            | 2  | Perfunctory Pale Ale     |
-            | 2  | Excellent ESB            |
-            | 4  | Ginormous India Pale Ale |
-            ''',
-            schema=self.pipe.pipes['beers_file'].targets['main'].schema
+            | id     | name                     |
+            | -      | -                        |
+            | {b[1]} | Fireside IPA             |
+            | {b[2]} | Perfunctory Pale Ale     |
+            | {b[2]} | Excellent ESB            |
+            | {b[4]} | Ginormous India Pale Ale |
+            '''.format(b = scenario.case_keys.cache('beers_file', 'id')),
+            schema=pipe.pipes['beers_file'].targets['main'].schema
         )
 
-
-    def given_example_duplicates(self):
-        'Some example beers with duplicates'
-        return self.rules.when_example_for_source(self.example_duplicates())
-
-
-    def test_it_drops_duplicates(self):
-        duplicates_dropped = pemi.data.Table(
+        expected_styles = pemi.data.Table(
             '''
-            | id | name                     |
-            | -  | -                        |
-            | 1  | Fireside IPA             |
-            | 2  | Perfunctory Pale Ale     |
-            | 4  | Ginormous India Pale Ale |
-            ''',
-            schema=self.pipe.pipes['beers_w_style_file'].sources['main'].schema
+            | id     | name                     |
+            | -      | -                        |
+            | {b[1]} | Fireside IPA             |
+            | {b[2]} | Perfunctory Pale Ale     |
+            | {b[4]} | Ginormous India Pale Ale |
+            '''.format(b = scenario.case_keys.cache('beers_w_style_file', 'id')),
+            schema=pipe.pipes['beers_w_style_file'].sources['main'].schema
         )
 
-        self.scenario.when(
+        dropped_duplicates = pemi.data.Table(
+            '''
+            | id     | name                     |
+            | -      | -                        |
+            | {b[2]} | Excellent ESB            |
+            '''.format(b = scenario.case_keys.cache('dropped_duplicates', 'id')),
+            schema=pipe.pipes['black_box'].targets['dropped_duplicates'].schema
+        )
+
+
+        case.when(
+            pt.when.example_for_source(scenario.sources['beers_file'], example_duplicates)
         ).then(
-            self.rules.then_target_matches_example(
-                duplicates_dropped,
-                target_subject=self.pipe.pipes['beers_w_style_file'].sources['main']
-            )
-        )
-        return self.scenario.run()
-
-    def test_it_redirects_duplicates(self):
-        duplicates = pemi.data.Table(
-            '''
-            | id | name                     |
-            | -  | -                        |
-            | 2  | Excellent ESB            |
-            ''',
-            schema=self.pipe.pipes['beers_file'].targets['main'].schema
+            pt.then.target_matches_example(scenario.targets['beers_w_style_file'], expected_styles),
+            pt.then.target_matches_example(scenario.targets['dropped_duplicates'], dropped_duplicates)
         )
 
-        self.scenario.when(
-        ).then(
-            self.rules.then_target_matches_example(
-                duplicates,
-                target_subject=self.pipe.pipes['black_box'].targets['dropped_duplicates']
-            )
-        )
-        return self.scenario.run()
-
+    @pytest.mark.scenario(scenario)
+    def test_scenario(self, case):
+        case.assert_case()
 
 
 # We can also test just the core pipe that does the interesting stuff in isolation from
 # all of the sub pipes.  This may be simpler to test in most cases.
-class TestBlackBoxPipe(unittest.TestCase):
-    def setUp(self):
-        self.pipe = BlackBoxPipe()
+class TestBlackBoxPipe():
+    pipe = BlackBoxPipe()
 
-        self.rules = pemi.testing.Rules(
-            source_subjects=[self.pipe.sources['beers_file']],
-            target_subjects=[self.pipe.targets['beers_w_style_file']]
-        )
+    def case_keys():
+        ids = list(range(1000))
+        for i in ids:
+            yield {
+                'beers_file': {'id': i},
+                'beers_w_style_file': {'id': i}
+            }
 
-        self.scenario = pemi.testing.Scenario(
-            runner=self.pipe.flow,
-            source_subjects=[self.pipe.sources['beers_file']],
-            target_subjects=[self.pipe.targets['beers_w_style_file']],
-            givens=[self.rules.when_source_conforms_to_schema()]
-        )
+    scenario = pt.Scenario(
+        runner=pipe.flow,
+        case_keys=case_keys(),
+        sources={
+            'beers_file': pipe.sources['beers_file']
+        },
+        targets={
+            'beers_w_style_file': pipe.targets['beers_w_style_file']
+        }
+    )
 
-    def test_it_copies_the_name_field(self):
-        'The name field is directly copied to the target'
+    def background(scenario):
+        return [
+            pt.when.source_conforms_to_schema(scenario.sources['beers_file']),
+            pt.when.source_has_keys(scenario.sources, scenario.case_keys, 'beers_file')
+        ]
 
-        self.scenario.when(
+    with scenario.case('it copies the name field') as case:
+        case.when(
+            *background(scenario)
         ).then(
-            self.rules.then_field_is_copied('name', 'name', by='id')
+            pt.then.field_is_copied(scenario.sources['beers_file'], 'name',
+                                    scenario.targets['beers_w_style_file'], 'name',
+                                    by=['id'])
         )
-        return self.scenario.run()
 
-    def test_direct_copies(self):
-        'Fields that are directly copied to the target'
-
-        self.scenario.when(
-            self.rules.when_source_conforms_to_schema()
+    with scenario.case('fields that are directly copied to the target') as case:
+        case.when(
+            *background(scenario)
         ).then(
-            self.rules.then_fields_are_copied({
-                'id': 'id',
-                'name': 'name',
-                'abv': 'abv'
-            }, by='id')
+            pt.then.fields_are_copied(scenario.sources['beers_file'],
+                                      scenario.targets['beers_w_style_file'],
+                                      by=['id'],
+                                      mapping=[
+                                          ('id', 'id'),
+                                          ('name', 'name'),
+                                          ('abv', 'abv')
+                                      ]
+            )
         )
-        return self.scenario.run()
 
-    def test_it_uses_a_default_style(self):
-        'The style is set to unknown if can not be deduced'
-
-        self.scenario.when(
-            self.rules.when_source_field_has_value('name', 'Deduce This!')
+    with scenario.case('it uses a default style') as case:
+        case.when(
+            *background(scenario),
+            pt.when.source_field_has_value(scenario.sources['beers_file'], 'name', 'Deduce This!')
         ).then(
-            self.rules.then_target_field_has_value('style', 'Unknown Style')
+            pt.then.target_field_has_value(scenario.targets['beers_w_style_file'], 'style', 'Unknown Style')
         )
-        return self.scenario.run()
 
-
-if __name__ == '__main__':
-    pass
+    @pytest.mark.scenario(scenario)
+    def test_scenario(self, case):
+        case.assert_case()
