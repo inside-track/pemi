@@ -1,10 +1,10 @@
-import unittest
+import pytest
 
 import pemi
 from pemi.fields import *
 
 
-class TestSchema(unittest.TestCase):
+class TestSchema():
     def test_create_schema_from_list(self):
         '''
         Creating a schema from a list of fields
@@ -20,7 +20,7 @@ class TestSchema(unittest.TestCase):
             'name': f2,
             'sell_at': f3
         }
-        self.assertEqual(schema.fields, expected_fields)
+        assert schema.fields == expected_fields
 
     def test_create_schema_from_keywords(self):
         '''
@@ -41,7 +41,7 @@ class TestSchema(unittest.TestCase):
             'name': f2,
             'sell_at': f3
         }
-        self.assertEqual(schema.fields, expected_fields)
+        assert schema.fields == expected_fields
 
 
     def test_get_metadata_for_a_field(self):
@@ -53,7 +53,7 @@ class TestSchema(unittest.TestCase):
             DateField('sell_at', format='%m/%d/%Y')
         )
 
-        self.assertEqual(schema['sell_at'].metadata['format'], '%m/%d/%Y')
+        assert schema['sell_at'].metadata['format'] == '%m/%d/%Y'
 
 
     def test_schema_merge(self):
@@ -75,7 +75,7 @@ class TestSchema(unittest.TestCase):
             StringField('name', from_s1='yep', from_s2='certainly', whoami='s2'),
             s2f3
         )
-        self.assertEqual(merged, expected)
+        assert merged == expected
 
     def test_schema_subset(self):
         '''
@@ -94,7 +94,7 @@ class TestSchema(unittest.TestCase):
             f3 = StringField()
         )
 
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
     def test_schema_subset_error(self):
         '''
@@ -107,7 +107,8 @@ class TestSchema(unittest.TestCase):
             f3 = StringField()
         )
 
-        self.assertRaises(KeyError, lambda: schema[['f1', 'f4']])
+        with pytest.raises(KeyError):
+            schema[['f1', 'f4']]
 
     def test_schema_rename(self):
         '''
@@ -131,7 +132,7 @@ class TestSchema(unittest.TestCase):
             new_f3 = StringField()
         )
 
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
     def test_select(self):
         '''
@@ -152,4 +153,4 @@ class TestSchema(unittest.TestCase):
             f3 = StringField(awesome=True)
         )
 
-        self.assertEqual(actual, expected)
+        assert actual == expected

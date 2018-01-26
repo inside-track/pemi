@@ -22,6 +22,7 @@ class DataSubject():
 
     def __init__(self, schema=pemi.Schema(), data=None, name=None, pipe=None):
         self.schema = schema
+        #TODO: I think I can get rid of self.data
         self.data = data
         self.name = name
         self.pipe = pipe

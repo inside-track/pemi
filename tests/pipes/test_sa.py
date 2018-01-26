@@ -5,12 +5,20 @@ import pytest
 import sqlalchemy as sa
 
 import pemi
-import pemi.testing
+import pemi.testing as pt
 import pemi.pipes.sa
 from pemi.fields import *
 
-def truncate_sa_sources(pipe):
-    sa_sources = [source for source in pipe.sources.values() if isinstance(source, pemi.SaDataSubject)]
+sa_engine = sa.create_engine('postgresql://{user}:{password}@{host}/{dbname}'.format(
+    user=os.environ.get('POSTGRES_USER'),
+    password=os.environ.get('POSTGRES_PASSWORD'),
+    host=os.environ.get('POSTGRES_HOST'),
+    dbname=os.environ.get('POSTGRES_DB')
+))
+
+
+def truncate_sa_sources(scenario_sources):
+    sa_sources = [source.subject for source in scenario_sources if isinstance(source.subject, pemi.SaDataSubject)]
     for source in sa_sources:
         with source.engine.connect().begin() as trans:
             trans.connection.execute('TRUNCATE {}'.format(source.table))
@@ -18,7 +26,7 @@ def truncate_sa_sources(pipe):
 
 @pytest.fixture(scope='module')
 def db_schema_init():
-    with sa_engine().connect() as conn:
+    with sa_engine.connect() as conn:
         conn.execute(
             '''
             DROP TABLE IF EXISTS sales_fact;
@@ -32,114 +40,96 @@ def db_schema_init():
         )
 
 @pytest.fixture
-def db_clean_pipe(pipe, db_schema_init):
-    truncate_sa_sources(pipe)
+def db_case_clean(case, db_schema_init):
+    truncate_sa_sources(case.scenario.sources.values())
     yield
-    truncate_sa_sources(pipe)
+    truncate_sa_sources(case.scenario.sources.values())
 
 
-@pytest.fixture
-def sa_engine():
-    return sa.create_engine('postgresql://{user}:{password}@{host}/{dbname}'.format(
-        user=os.environ.get('POSTGRES_USER'),
-        password=os.environ.get('POSTGRES_PASSWORD'),
-        host=os.environ.get('POSTGRES_HOST'),
-        dbname=os.environ.get('POSTGRES_DB')
-    ))
-
-@pytest.fixture
-def sales_schema():
-    return pemi.Schema(
+class TestSaSqlSourcePipe():
+    sales_schema = pemi.Schema(
             beer_id  = IntegerField(),
             name     = StringField(),
             sold_at  = DateField(),
             quantity = IntegerField()
         )
 
-
-@pytest.mark.usefixtures('db_clean_pipe')
-class TestSaSqlSourcePipe():
-
-    @pytest.fixture
-    def pipe(self, sa_engine, sales_schema):
-        pipe = pemi.Pipe()
-        pipe.pipe(
-            name='sql_source',
-            pipe=pemi.pipes.sa.SaSqlSourcePipe(
-                engine=sa_engine,
-                schema=sales_schema,
-                sql='SELECT * FROM sales_fact;'
-            )
-        )
-
-        pipe.source(
-            pemi.SaDataSubject,
-            name='sales',
-            schema=sales_schema,
+    pipe = pemi.Pipe()
+    pipe.pipe(
+        name='sql_source',
+        pipe=pemi.pipes.sa.SaSqlSourcePipe(
             engine=sa_engine,
-            table='sales_fact'
+            schema=sales_schema,
+            sql='SELECT * FROM sales_fact;'
         )
-        return pipe
+    )
 
-    @pytest.fixture
-    def rules(self, pipe):
-        return pemi.testing.Rules(
-            source_subjects=[
-                pipe.sources['sales']
-            ],
-            target_subjects=[
-                pipe.pipes['sql_source'].targets['main']
-            ]
-        )
-
-    @pytest.fixture
-    def scenario(self, pipe, rules):
-        return pemi.testing.Scenario(
-            runner = pipe.pipes['sql_source'].flow,
-            source_subjects=[
-                pipe.sources['sales']
-            ],
-            target_subjects=[
-                pipe.pipes['sql_source'].targets['main']
-            ]
-        )
+    pipe.source(
+        pemi.SaDataSubject,
+        name='sales',
+        schema=sales_schema,
+        engine=sa_engine,
+        table='sales_fact'
+    )
 
 
-    def test_it_queries_data_stored(self, pipe, rules, scenario):
+    def case_keys():
+        ids = list(range(1000))
+        for i in ids:
+            yield {
+                'sales': {'beer_id': i},
+                'sql_source': {'beer_id': i}
+            }
+
+    scenario = pt.Scenario(
+        runner = pipe.pipes['sql_source'].flow,
+        case_keys = case_keys(),
+        sources = {
+            'sales': pipe.sources['sales']
+        },
+        targets = {
+            'sql_source': pipe.pipes['sql_source'].targets['main']
+        }
+    )
+
+    with scenario.case('it queries data stored') as case:
         ex_sales = pemi.data.Table(
             '''
             | beer_id | sold_at    | quantity |
             | -       | -          | -        |
-            | 1       | 2017-01-01 | 3        |
-            | 2       | 2017-01-02 | 2        |
-            | 3       | 2017-01-03 | 5        |
-            ''',
+            | {b[1]}  | 2017-01-01 | 3        |
+            | {b[2]}  | 2017-01-02 | 2        |
+            | {b[3]}  | 2017-01-03 | 5        |
+            '''.format(b = scenario.case_keys.cache('sales', 'beer_id')),
             schema=pipe.sources['sales'].schema
         )
 
-        scenario.when(
-            rules.when_example_for_source(ex_sales)
+        case.when(
+            pt.when.example_for_source(scenario.sources['sales'], ex_sales)
         ).then(
-            rules.then_target_matches_example(ex_sales)
+            pt.then.target_matches_example(scenario.targets['sql_source'], ex_sales)
         )
-        scenario.run()
 
-
-    def test_it_works_with_na(self, pipe, rules, scenario):
+    with scenario.case('it works with na') as case:
         ex_sales = pemi.data.Table(
             '''
             | beer_id | sold_at    | quantity |
             | -       | -          | -        |
-            | 1       | 2017-01-01 | 3        |
-            | 2       | 2017-01-02 |          |
-            | 3       | 2017-01-03 | 5        |
-            ''',
+            | {b[1]}  | 2017-01-01 | 3        |
+            | {b[2]}  | 2017-01-02 |          |
+            | {b[3]}  | 2017-01-03 | 5        |
+            '''.format(b = scenario.case_keys.cache('sales', 'beer_id')),
             schema=pipe.sources['sales'].schema
         )
 
-        scenario.when(
-            rules.when_example_for_source(ex_sales)
+        case.when(
+            pt.when.example_for_source(scenario.sources['sales'], ex_sales)
         ).then(
-            rules.then_target_matches_example(ex_sales)
+            pt.then.target_matches_example(scenario.targets['sql_source'], ex_sales)
         )
-        scenario.run()
+
+    #TODO: This is running truncate before/after every case.  It would be nice if it only did so once a scenario
+    @pytest.mark.usefixtures('db_case_clean')
+    @pytest.mark.scenario(scenario)
+    def test_scenario(self, case):
+        case.assert_case()
