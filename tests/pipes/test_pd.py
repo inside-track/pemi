@@ -1,29 +1,56 @@
-import unittest
-
 import pandas as pd
 import numpy as np
 import pytest
 
 import pemi
 import pemi.data
-import pemi.testing
+import pemi.testing as pt
 import pemi.pipes.pd
 from pemi.fields import *
 from pemi.pd_mapper import *
 
-class TestPdLookupJoinPipe(unittest.TestCase):
+class PdLookupJoinPipeScenarioFactory():
+    def __init__(self, pipe):
+        self.pipe = pipe
+        self.scenario = self._create_scenario(pipe)
+
+    @staticmethod
+    def case_keys():
+        ids = list(range(1000))
+        for i in ids:
+            yield {
+                'main_source': {'key': 'k{}'.format(i)},
+                'lookup': {'lkey': 'k{}'.format(i)},
+                'main_target': {'key': 'k{}'.format(i)},
+                'errors': {'key': 'k{}'.format(i)}
+            }
+
+    def _create_scenario(self, pipe):
+        return pt.Scenario(
+            runner = pipe.flow,
+            case_keys = self.case_keys(),
+            sources={
+                'main_source': pipe.sources['main'],
+                'lookup': pipe.sources['lookup']
+            },
+            targets={
+                'main_target': pipe.targets['main'],
+                'errors': pipe.targets['errors']
+            }
+        )
+
     def ex_main(self):
         return pemi.data.Table(
             '''
-            | key | words |
-            | -   | -     |
-            | k1  | words |
-            | k1  | words |
-            | k3  | more  |
-            | k7  | words |
-            | k4  | even  |
-            | k4  | more  |
-            ''',
+            | key    | words |
+            | -      | -     |
+            | {k[1]} | words |
+            | {k[1]} | words |
+            | {k[3]} | more  |
+            | {k[7]} | words |
+            | {k[4]} | even  |
+            | {k[4]} | more  |
+            '''.format(k = self.scenario.case_keys.cache('main_source', 'key')),
             schema=pemi.Schema(
                 key=StringField(),
                 words=StringField()
@@ -33,15 +60,15 @@ class TestPdLookupJoinPipe(unittest.TestCase):
     def ex_lookup(self):
         return pemi.data.Table(
             '''
-            | lkey | values | words  |
-            | -    | -      | -      |
-            | k1   | one    | I      |
-            | k4   | four   | people |
-            | k1   | ONE    | fnord  |
-            | k3   | three  | dead   |
-            | k4   | FOUR   | fnord  |
-            | k2   | two    | see    |
-            ''',
+            | lkey    | values | words  |
+            | -       | -      | -      |
+            | {k[1]}  | one    | I      |
+            | {k[4]}  | four   | people |
+            | {k[1]}  | ONE    | fnord  |
+            | {k[3]}  | three  | dead   |
+            | {k[4]}  | FOUR   | fnord  |
+            | {k[2]}  | two    | see    |
+            '''.format(k = self.scenario.case_keys.cache('lookup', 'lkey')),
             schema=pemi.Schema(
                 lkey=StringField(),
                 values=StringField(),
@@ -49,262 +76,82 @@ class TestPdLookupJoinPipe(unittest.TestCase):
             )
         )
 
-    def rules(self, pipe):
-        return pemi.testing.Rules(
-            source_subjects=[
-                pipe.sources['main'],
-                pipe.sources['lookup']
-            ],
-            target_subjects=[
-                pipe.targets['main'],
-                pipe.targets['errors']
-            ]
-        )
+    def background(self):
+        return [
+            pt.when.example_for_source(self.scenario.sources['main_source'], self.ex_main()),
+            pt.when.example_for_source(self.scenario.sources['lookup'], self.ex_lookup())
+        ]
 
-    def scenario(self, pipe, rules):
-        return pemi.testing.Scenario(
-            runner = pipe.flow,
-            source_subjects=[
-                pipe.sources['main'],
-                pipe.sources['lookup']
-            ],
-            target_subjects=[
-                pipe.targets['main'],
-                pipe.targets['errors']
-            ],
-            givens=[
-                rules.when_example_for_source(
-                    self.ex_main(),
-                    source_subject=pipe.sources['main']
-                ),
-                rules.when_example_for_source(
-                    self.ex_lookup(),
-                    source_subject=pipe.sources['lookup']
-                )
-            ]
-        )
 
-    def test_it_performs_the_lookup(self):
-        pipe = pemi.pipes.pd.PdLookupJoinPipe(
-            main_key = ['key'],
-            lookup_key = ['lkey']
-        )
+class TestPdLookupJoinPipeBase():
+    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+        main_key = ['key'],
+        lookup_key = ['lkey']
+    )
 
-        rules = self.rules(pipe)
-        scenario = self.scenario(pipe, rules)
+    factory = PdLookupJoinPipeScenarioFactory(pipe)
+    scenario = factory.scenario
 
+    with scenario.case('it performs the lookup') as case:
         expected = pemi.data.Table(
             '''
-            | key | words | lkey | values  | words_lkp |
-            | -   | -     | -    | -       | -         |
-            | k1  | words | k1   | one     | I         |
-            | k1  | words | k1   | one     | I         |
-            | k3  | more  | k3   | three   | dead      |
-            | k4  | even  | k4   | four    | people    |
-            | k4  | more  | k4   | four    | people    |
-            '''
-        )
-
-        scenario.then(
-            rules.then_target_matches_example(
-                expected,
-                target_subject = pipe.targets['main']
-            )
-        ).run()
-
-    def test_it_redirects_errors(self):
-        pipe = pemi.pipes.pd.PdLookupJoinPipe(
-            main_key = ['key'],
-            lookup_key = ['lkey']
-        )
-
-        rules = self.rules(pipe)
-        scenario = self.scenario(pipe, rules)
-
-        expected = pemi.data.Table(
-            '''
-            | key | words |
-            | -   | -     |
-            | k7  | words |
-            '''
-        )
-
-        scenario.then(
-            rules.then_target_matches_example(
-                expected,
-                target_subject = pipe.targets['errors']
-            )
-        ).run()
-
-    def test_it_does_not_redirect_errors(self):
-        pipe = pemi.pipes.pd.PdLookupJoinPipe(
-            main_key = ['key'],
-            lookup_key = ['lkey'],
-            missing_handler=RowHandler('ignore')
-        )
-
-        rules = self.rules(pipe)
-        scenario = self.scenario(pipe, rules)
-
-        scenario.then(
-            rules.then_target_is_empty(
-                target_subject = pipe.targets['errors']
-            )
-        ).run()
-
-
-    def test_it_fills_in_missing_values(self):
-        pipe = pemi.pipes.pd.PdLookupJoinPipe(
-            main_key = ['key'],
-            lookup_key = ['lkey'],
-            missing_handler=RowHandler('ignore'),
-            fillna={'value': 'EMPTY'}
-        )
-
-        rules = self.rules(pipe)
-        scenario = self.scenario(pipe, rules)
-
-        expected = pemi.data.Table(
-            '''
-            | key | words | lkey  | values  | words_lkp |
-            | -   | -     | -     | -       | -         |
-            | k1  | words | k1    | one     | I         |
-            | k1  | words | k1    | one     | I         |
-            | k3  | more  | k3    | three   | dead      |
-            | k7  | words | EMPTY | EMPTY   | EMPTY     |
-            | k4  | even  | k4    | four    | people    |
-            | k4  | more  | k4    | four    | people    |
-            '''
-        )
-
-        scenario.then(
-            rules.then_target_matches_example(
-                expected,
-                target_subject = pipe.targets['main']
-            )
-        ).run()
-
-    def test_it_prefixes_lookup_fields(self):
-        pipe = pemi.pipes.pd.PdLookupJoinPipe(
-            main_key = ['key'],
-            lookup_key = ['lkey'],
-            lookup_prefix='existing_'
-        )
-
-        rules = self.rules(pipe)
-        scenario = self.scenario(pipe, rules)
-
-        expected = pemi.data.Table(
-            '''
-            | key | words | lkey | existing_values | existing_words |
-            | -   | -     | -    | -               | -              |
-            | k1  | words | k1   | one             | I              |
-            | k1  | words | k1   | one             | I              |
-            | k3  | more  | k3   | three           | dead           |
-            | k4  | even  | k4   | four            | people         |
-            | k4  | more  | k4   | four            | people         |
-            '''
-        )
-
-        scenario.then(
-            rules.then_target_matches_example(
-                expected,
-                target_subject = pipe.targets['main']
-            )
-        ).run()
-
-    def test_it_prefixes_lookup_fields_when_lookup_is_empty(self):
-        pipe = pemi.pipes.pd.PdLookupJoinPipe(
-            main_key = ['key'],
-            lookup_key = ['lkey'],
-            lookup_prefix='existing_',
-            missing_handler=RowHandler('ignore')
-        )
-
-        rules = self.rules(pipe)
-        scenario = self.scenario(pipe, rules)
-
-
-        lookup = pemi.data.Table(
-            '''
-            | lkey | values | words  |
-            | -    | -      | -      |
-            ''',
-            schema=pemi.Schema(
-                lkey=StringField(),
-                values=StringField(),
-                words=StringField()
+            | key    | words | lkey     | values  | words_lkp |
+            | -      | -     | -        | -       | -         |
+            | {k[1]} | words | {lk[1]}  | one     | I         |
+            | {k[1]} | words | {lk[1]}  | one     | I         |
+            | {k[3]} | more  | {lk[3]}  | three   | dead      |
+            | {k[4]} | even  | {lk[4]}  | four    | people    |
+            | {k[4]} | more  | {lk[4]}  | four    | people    |
+            '''.format(
+                k = scenario.case_keys.cache('main_target', 'key'),
+                lk = scenario.case_keys.cache('lookup', 'lkey')
             )
         )
 
-        expected = pemi.data.Table(
-            '''
-            | key | words | lkey | existing_values | existing_words |
-            | -   | -     | -    | -               | -              |
-            | k1  | words |      |                 |                |
-            | k1  | words |      |                 |                |
-            | k3  | more  |      |                 |                |
-            | k7  | words |      |                 |                |
-            | k4  | even  |      |                 |                |
-            | k4  | more  |      |                 |                |
-            ''',
-            schema=pemi.Schema(
-                values=StringField(),
-                words=StringField()
-            )
-        )
-
-        scenario.when(
-            rules.when_example_for_source(lookup, source_subject=pipe.sources['lookup'])
+        case.when(
+            *factory.background()
         ).then(
-            rules.then_target_matches_example(
-                expected,
-                target_subject = pipe.targets['main']
-            )
-        ).run()
-
-
-    def test_it_adds_an_indicator(self):
-        pipe = pemi.pipes.pd.PdLookupJoinPipe(
-            main_key = ['key'],
-            lookup_key = ['lkey'],
-            missing_handler = RowHandler('ignore'),
-            indicator = 'lkp_found'
+            pt.then.target_matches_example(scenario.targets['main_target'], expected)
         )
 
-        rules = self.rules(pipe)
-        scenario = self.scenario(pipe, rules)
-
+    with scenario.case('it redirects errors') as case:
         expected = pemi.data.Table(
             '''
-            | key | words | lkp_found |
-            | -   | -     | -         |
-            | k1  | words | True      |
-            | k1  | words | True      |
-            | k3  | more  | True      |
-            | k7  | words | False     |
-            | k4  | even  | True      |
-            | k4  | more  | True      |
-            '''
+            | key    | words |
+            | -      | -     |
+            | {k[7]} | words |
+            '''.format(k = scenario.case_keys.cache('errors', 'key'))
         )
 
-        scenario.then(
-            rules.then_target_matches_example(
-                expected,
-                target_subject = pipe.targets['main']
-            )
-        ).run()
-
-    def test_it_works_when_lookup_is_empty(self):
-        pipe = pemi.pipes.pd.PdLookupJoinPipe(
-            main_key = ['key'],
-            lookup_key = ['lkey'],
-            missing_handler = RowHandler('ignore')
+        case.when(
+            *factory.background()
+        ).then(
+            pt.then.target_matches_example(scenario.targets['errors'], expected)
         )
 
-        rules = self.rules(pipe)
-        scenario = self.scenario(pipe, rules)
+    @pytest.mark.scenario(scenario)
+    def test_scenario(self, case):
+        case.assert_case()
 
+
+class TestPdLookupJoinPipeIgnoreHandler():
+    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+        main_key = ['key'],
+        lookup_key = ['lkey'],
+        missing_handler=RowHandler('ignore')
+    )
+
+    factory = PdLookupJoinPipeScenarioFactory(pipe)
+    scenario = factory.scenario
+
+    with scenario.case('it does not redirect errors') as case:
+        case.when(
+            *factory.background()
+        ).then(
+            pt.then.target_is_empty(scenario.targets['errors'])
+        )
+
+    with scenario.case('it works when the lookup is empty') as case:
         ex_lookup = pemi.data.Table(
             '''
             | lkey | values | words  |
@@ -319,65 +166,238 @@ class TestPdLookupJoinPipe(unittest.TestCase):
 
         expected = pemi.data.Table(
             '''
-            | key | words |
-            | -   | -     |
-            | k1  | words |
-            | k1  | words |
-            | k3  | more  |
-            | k7  | words |
-            | k4  | even  |
-            | k4  | more  |
-            '''
-        )
-
-        scenario.when(
-            rules.when_example_for_source(ex_lookup, source_subject=pipe.sources['lookup'])
-        ).then(
-            rules.then_target_matches_example(
-                expected,
-                target_subject = pipe.targets['main']
+            | key    | words |
+            | -      | -     |
+            | {k[1]} | words |
+            | {k[1]} | words |
+            | {k[3]} | more  |
+            | {k[7]} | words |
+            | {k[4]} | even  |
+            | {k[4]} | more  |
+            '''.format(
+                k = scenario.case_keys.cache('main_target', 'key')
             )
-        ).run()
-
-
-
-class TestPdLookupJoinPipeOnBlanks(unittest.TestCase):
-    def rules(self, pipe):
-        return pemi.testing.Rules(
-            source_subjects=[
-                pipe.sources['main'],
-                pipe.sources['lookup']
-            ],
-            target_subjects=[
-                pipe.targets['main'],
-                pipe.targets['errors']
-            ]
         )
 
-    def scenario(self, pipe, rules):
-        return pemi.testing.Scenario(
-            runner = pipe.flow,
-            source_subjects=[
-                pipe.sources['main'],
-                pipe.sources['lookup']
-            ],
-            target_subjects=[
-                pipe.targets['main'],
-                pipe.targets['errors']
-            ]
+        case.when(
+            *factory.background(),
+            pt.when.example_for_source(scenario.sources['lookup'], ex_lookup)
+        ).then(
+            pt.then.target_is_empty(scenario.targets['errors'])
         )
 
-    def test_it_does_not_use_blanks_as_keys(self):
-        ex_main = pemi.data.Table(
+
+    @pytest.mark.scenario(scenario)
+    def test_scenario(self, case):
+        case.assert_case()
+
+class TestPdLookupJoinPipeFillNa():
+    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+        main_key = ['key'],
+        lookup_key = ['lkey'],
+        missing_handler=RowHandler('ignore'),
+        fillna={'value': 'EMPTY'}
+    )
+
+    factory = PdLookupJoinPipeScenarioFactory(pipe)
+    scenario = factory.scenario
+
+    with scenario.case('it fills in missing values') as case:
+        expected = pemi.data.Table(
             '''
-            | key | data |
-            | -   | -    |
-            | one | a    |
-            |     | b    |
-            | two | c    |
+            | key    | words | lkey    | values  | words_lkp |
+            | -      | -     | -       | -       | -         |
+            | {k[1]} | words | {lk[1]} | one     | I         |
+            | {k[1]} | words | {lk[1]} | one     | I         |
+            | {k[3]} | more  | {lk[3]} | three   | dead      |
+            | {k[7]} | words | EMPTY   | EMPTY   | EMPTY     |
+            | {k[4]} | even  | {lk[4]} | four    | people    |
+            | {k[4]} | more  | {lk[4]} | four    | people    |
+            '''.format(
+                k = scenario.case_keys.cache('main_target', 'key'),
+                lk = scenario.case_keys.cache('lookup', 'lkey')
+            )
+        )
+
+        case.when(
+            *factory.background()
+        ).then(
+            pt.then.target_matches_example(scenario.targets['main_target'], expected)
+        )
+
+    @pytest.mark.scenario(scenario)
+    def test_scenario(self, case):
+        case.assert_case()
+
+class TestPdLookupJoinPipeLookupPrefix():
+    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+        main_key = ['key'],
+        lookup_key = ['lkey'],
+        lookup_prefix='existing_'
+    )
+
+    factory = PdLookupJoinPipeScenarioFactory(pipe)
+    scenario = factory.scenario
+
+    with scenario.case('it prefixes lookup fields') as case:
+        expected = pemi.data.Table(
+            '''
+            | key    | words | lkey    | existing_values | existing_words |
+            | -      | -     | -       | -               | -              |
+            | {k[1]} | words | {lk[1]} | one             | I              |
+            | {k[1]} | words | {lk[1]} | one             | I              |
+            | {k[3]} | more  | {lk[3]} | three           | dead           |
+            | {k[4]} | even  | {lk[4]} | four            | people         |
+            | {k[4]} | more  | {lk[4]} | four            | people         |
+            '''.format(
+                k = scenario.case_keys.cache('main_target', 'key'),
+                lk = scenario.case_keys.cache('lookup', 'lkey')
+            )
+        )
+
+        case.when(
+            *factory.background()
+        ).then(
+            pt.then.target_matches_example(scenario.targets['main_target'], expected)
+        )
+
+    @pytest.mark.scenario(scenario)
+    def test_scenario(self, case):
+        case.assert_case()
+
+class TestPdLookupJoinPipeLookupPrefixMissing():
+    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+        main_key = ['key'],
+        lookup_key = ['lkey'],
+        lookup_prefix='existing_',
+        missing_handler=RowHandler('ignore')
+    )
+
+    factory = PdLookupJoinPipeScenarioFactory(pipe)
+    scenario = factory.scenario
+
+    with scenario.case('it prefixes lookup fields when lookup is empty') as case:
+        lookup = pemi.data.Table(
+            '''
+            | lkey | values | words  |
+            | -    | -      | -      |
             ''',
             schema=pemi.Schema(
-                key=StringField()
+                lkey=StringField(),
+                values=StringField(),
+                words=StringField()
+            )
+        )
+
+        expected = pemi.data.Table(
+            '''
+            | key    | words | lkey | existing_values | existing_words |
+            | -      | -     | -    | -               | -              |
+            | {k[1]} | words |      |                 |                |
+            | {k[1]} | words |      |                 |                |
+            | {k[3]} | more  |      |                 |                |
+            | {k[7]} | words |      |                 |                |
+            | {k[4]} | even  |      |                 |                |
+            | {k[4]} | more  |      |                 |                |
+            '''.format(
+                k = scenario.case_keys.cache('main_target', 'key')
+            ),
+            schema=pemi.Schema(
+                values=StringField(),
+                words=StringField()
+            )
+        )
+
+        case.when(
+            *factory.background(),
+            pt.when.example_for_source(scenario.sources['lookup'], lookup)
+        ).then(
+            pt.then.target_matches_example(scenario.targets['main_target'], expected)
+        )
+
+    @pytest.mark.scenario(scenario)
+    def test_scenario(self, case):
+        case.assert_case()
+
+
+class TestPdLookupJoinPipeIndicator():
+    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+        main_key = ['key'],
+        lookup_key = ['lkey'],
+        missing_handler = RowHandler('ignore'),
+        indicator = 'lkp_found'
+    )
+
+    factory = PdLookupJoinPipeScenarioFactory(pipe)
+    scenario = factory.scenario
+
+    with scenario.case('it adds an indicator') as case:
+        expected = pemi.data.Table(
+            '''
+            | key    | words | lkp_found |
+            | -      | -     | -         |
+            | {k[1]} | words | True      |
+            | {k[1]} | words | True      |
+            | {k[3]} | more  | True      |
+            | {k[7]} | words | False     |
+            | {k[4]} | even  | True      |
+            | {k[4]} | more  | True      |
+            '''.format(
+                k = scenario.case_keys.cache('main_target', 'key')
+            )
+        )
+
+        case.when(
+            *factory.background()
+        ).then(
+            pt.then.target_matches_example(scenario.targets['main_target'], expected)
+        )
+
+    @pytest.mark.scenario(scenario)
+    def test_scenario(self, case):
+        case.assert_case()
+
+
+class TestPdLookupJoinPipeBlankKeys():
+    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+        main_key = ['key'],
+        lookup_key = ['key']
+    )
+
+    def case_keys():
+        ids = list(range(1000))
+        for i in ids:
+            yield {
+                'main_source': {'alt_key': 'k{}'.format(i)},
+                'main_target': {'alt_key': 'k{}'.format(i)},
+                'errors': {'alt_key': 'k{}'.format(i)}
+            }
+
+    scenario = pt.Scenario(
+        runner = pipe.flow,
+        case_keys = case_keys(),
+        sources={
+            'main_source': pipe.sources['main'],
+            'lookup': pipe.sources['lookup']
+        },
+        targets={
+            'main_target': pipe.targets['main'],
+            'errors': pipe.targets['errors']
+        }
+    )
+
+    with scenario.case('it does not use blanks as keys') as case:
+        ex_main = pemi.data.Table(
+            '''
+            | key | alt_key |
+            | -   | -       |
+            | one | {k[1]}  |
+            |     | {k[2]}  |
+            | two | {k[3]}  |
+            '''.format(k = scenario.case_keys.cache('main_source', 'alt_key')),
+            schema=pemi.Schema(
+                key=StringField(),
+                alt_key=StringField()
             )
         )
 
@@ -397,39 +417,47 @@ class TestPdLookupJoinPipeOnBlanks(unittest.TestCase):
 
         expected = pemi.data.Table(
             '''
-            | key | value     |
-            | -   | -         |
-            | one | ONE       |
-            | two | TWO       |
-            '''
-        )
-
-        pipe = pemi.pipes.pd.PdLookupJoinPipe(
-            main_key = ['key'],
-            lookup_key = ['key']
-        )
-
-        rules = self.rules(pipe)
-        scenario = self.scenario(pipe, rules)
-
-
-        scenario.when(
-            rules.when_example_for_source(
-                ex_main, source_subject=pipe.sources['main']
-            ),
-            rules.when_example_for_source(
-                ex_lookup, source_subject=pipe.sources['lookup']
-            ),
-        ).then(
-            rules.then_target_matches_example(
-                expected, target_subject=pipe.targets['main']
+            | key | value | alt_key |
+            | -   | -     | -       |
+            | one | ONE   | {k[1]}  |
+            | two | TWO   | {k[3]}  |
+            '''.format(k = scenario.case_keys.cache('main_target', 'alt_key')),
+            schema=pemi.Schema(
+                key=StringField(),
+                value=StringField(),
+                alt_key=StringField()
             )
         )
-        scenario.run()
+
+
+        errors = pemi.data.Table(
+            '''
+            | key | alt_key |
+            | -   | -       |
+            |     | {k[2]}  |
+            '''.format(k = scenario.case_keys.cache('main_target', 'alt_key')),
+            schema=pemi.Schema(
+                key=StringField(),
+                alt_key=StringField()
+            )
+        )
+
+        case.when(
+            pt.when.example_for_source(scenario.sources['main_source'], ex_main),
+            pt.when.example_for_source(scenario.sources['lookup'], ex_lookup)
+        ).then(
+            pt.then.target_matches_example(scenario.targets['main_target'], expected),
+            pt.then.target_matches_example(scenario.targets['errors'], errors),
+        )
+
+    @pytest.mark.scenario(scenario)
+    def test_scenario(self, case):
+        case.assert_case()
 
 
 
-class TestPdConcatPipe(unittest.TestCase):
+
+class TestPdConcatPipe():
     def test_it_concatenates_sources(self):
         pipe = pemi.pipes.pd.PdConcatPipe(sources=['s1', 's2'])
         pipe.sources['s1'].df = pd.DataFrame({
@@ -449,7 +477,7 @@ class TestPdConcatPipe(unittest.TestCase):
             'f2': [np.nan, np.nan, np.nan, 1, 2]
         }, index = [0,1,2,0,1])
         actual_df = pipe.targets['main'].df
-        pemi.testing.assert_frame_equal(actual_df, expected_df)
+        pt.assert_frame_equal(actual_df, expected_df)
 
     def test_given_no_data(self):
         'It returns an empty dataframe'
@@ -458,12 +486,14 @@ class TestPdConcatPipe(unittest.TestCase):
 
         expected_df = pd.DataFrame()
         actual_df = pipe.targets['main'].df
-        pemi.testing.assert_frame_equal(actual_df, expected_df)
+        pt.assert_frame_equal(actual_df, expected_df)
 
 
-class TestPdFieldValueForkPipe(unittest.TestCase):
-    def setUp(self):
-        self.pipe = pemi.pipes.pd.PdFieldValueForkPipe(
+class TestPdFieldValueForkPipe():
+
+    @pytest.fixture(scope='class')
+    def pipe(self):
+        pipe = pemi.pipes.pd.PdFieldValueForkPipe(
             field='target',
             forks=['create', 'update', 'empty']
         )
@@ -473,36 +503,35 @@ class TestPdFieldValueForkPipe(unittest.TestCase):
             'values': [1,2,3,4,5,6]
         })
 
-        self.pipe.sources['main'].df = df
-        self.pipe.flow()
+        pipe.sources['main'].df = df
+        pipe.flow()
+        return pipe
 
-
-    def test_it_forks_data_to_create(self):
+    def test_it_forks_data_to_create(self, pipe):
         expected_df = pd.DataFrame({
             'target': ['create', 'create'],
             'values': [1,5]
         }, index=[0,4])
-        actual_df = self.pipe.targets['create'].df
-        pemi.testing.assert_frame_equal(actual_df, expected_df)
+        actual_df = pipe.targets['create'].df
+        pt.assert_frame_equal(actual_df, expected_df)
 
-
-    def test_it_forks_data_to_update(self):
+    def test_it_forks_data_to_update(self, pipe):
         expected_df = pd.DataFrame({
             'target': ['update', 'update'],
             'values': [2,3]
         }, index=[1,2])
-        actual_df = self.pipe.targets['update'].df
-        pemi.testing.assert_frame_equal(actual_df, expected_df)
+        actual_df = pipe.targets['update'].df
+        pt.assert_frame_equal(actual_df, expected_df)
 
-    def test_it_puts_unknown_values_in_remainder(self):
+    def test_it_puts_unknown_values_in_remainder(self, pipe):
         expected_df = pd.DataFrame({
             'target': ['else1', 'else2'],
             'values': [4,6]
         }, index=[3,5])
-        actual_df = self.pipe.targets['remainder'].df
-        pemi.testing.assert_frame_equal(actual_df, expected_df)
+        actual_df = pipe.targets['remainder'].df
+        pt.assert_frame_equal(actual_df, expected_df)
 
-    def test_it_creates_an_empty_dataframe_with_the_right_columns(self):
+    def test_it_creates_an_empty_dataframe_with_the_right_columns(self, pipe):
         expected_df = pd.DataFrame(columns=['target', 'values'])
-        actual_df = self.pipe.targets['empty'].df
-        pemi.testing.assert_frame_equal(actual_df, expected_df)
+        actual_df = pipe.targets['empty'].df
+        pt.assert_frame_equal(actual_df, expected_df)

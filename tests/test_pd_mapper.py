@@ -1,10 +1,10 @@
-import unittest
+import pytest
 
 import pandas as pd
 
 import pemi
 import pemi.pd_mapper
-import pemi.testing
+import pemi.testing as pt
 from pemi.pd_mapper import *
 
 def translate(val):
@@ -32,9 +32,11 @@ def unknown_recoder(val):
     return 'Unknown: {}'.format(val)
 
 
-class TestCardinalities(unittest.TestCase):
-    def setUp(self):
-        self.df = pd.DataFrame(
+class TestCardinalities():
+
+    @pytest.fixture
+    def df(self):
+        return pd.DataFrame(
             {
                 'num': [1,2,3],
                 'name': ['one', 'two', 'three'],
@@ -43,32 +45,32 @@ class TestCardinalities(unittest.TestCase):
         )
 
 
-    def test_one_to_one_map(self):
+    def test_one_to_one_map(self, df):
         '''
         One-to-one mapping
         '''
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source='num', target='translated', transform=translate)
         ]).apply()
 
         result_df = mapper.mapped_df
         expected_df = pd.DataFrame({'translated': ['UNO', 'DOS', 'TRES']})
 
-        pemi.testing.assert_frame_equal(result_df, expected_df)
+        pt.assert_frame_equal(result_df, expected_df)
 
-    def test_many_to_one_map(self):
+    def test_many_to_one_map(self, df):
         '''
         Many-to-one mapping
         '''
 
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source=('name', 'num'), target='concatenated', transform=concatenate('-'))
         ]).apply()
 
         result_df = mapper.mapped_df
         expected_df = pd.DataFrame({'concatenated': ['one-1', 'two-2', 'three-3']})
 
-        pemi.testing.assert_frame_equal(result_df, expected_df)
+        pt.assert_frame_equal(result_df, expected_df)
 
     def test_many_to_one_map_empty(self):
         '''
@@ -83,14 +85,14 @@ class TestCardinalities(unittest.TestCase):
         result_df = mapper.mapped_df
         expected_df = pd.DataFrame(columns=['col3'])
 
-        pemi.testing.assert_frame_equal(result_df, expected_df, check_dtype=False)
+        pt.assert_frame_equal(result_df, expected_df, check_dtype=False)
 
-    def test_one_to_many_map(self):
+    def test_one_to_many_map(self, df):
         '''
         One-to-many mapping
         '''
 
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source='num_name', target=('split_name', 'split_num'), transform=mysplit)
         ]).apply()
 
@@ -100,13 +102,13 @@ class TestCardinalities(unittest.TestCase):
             'split_name': ['one', 'two', 'three']
         })
 
-        pemi.testing.assert_frame_equal(result_df, expected_df)
+        pt.assert_frame_equal(result_df, expected_df)
 
-    def test_multiple_maps(self):
+    def test_multiple_maps(self, df):
         '''
         Multiple mappings of various cardinalities
         '''
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source='num', target='translated', transform=translate),
             PdMap(source=('name', 'num'), target='concatenated', transform=concatenate('-')),
             PdMap(source='num_name', target=('split_name', 'split_num'), transform=mysplit)
@@ -122,10 +124,10 @@ class TestCardinalities(unittest.TestCase):
             },
             columns=['translated', 'concatenated', 'split_name', 'split_num']
         )
-        pemi.testing.assert_frame_equal(result_df, expected_df)
+        pt.assert_frame_equal(result_df, expected_df)
 
 
-    def test_one_to_zero_map(self):
+    def test_one_to_zero_map(self, df):
         '''
         One-to-zero mapping
         '''
@@ -136,14 +138,14 @@ class TestCardinalities(unittest.TestCase):
             return _recorder
 
         saved = []
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source='num', transform=recorder(saved)),
         ]).apply()
 
-        self.assertEqual(saved, [1,2,3])
+        assert saved == [1,2,3]
 
 
-    def test_many_to_zero_map(self):
+    def test_many_to_zero_map(self, df):
         '''
         Many-to-zero mapping
         '''
@@ -154,52 +156,55 @@ class TestCardinalities(unittest.TestCase):
             return _recorder
 
         saved = []
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source=['num', 'name'], transform=recorder(saved)),
         ]).apply()
 
-        self.assertEqual(saved, ['1-one','2-two','3-three'])
+        assert saved == ['1-one','2-two','3-three']
 
 
-    def test_zero_to_one_map(self):
+    def test_zero_to_one_map(self, df):
         '''
         Zero-to-one mapping
         '''
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(target='my_constant', transform=lambda v: 5)
         ]).apply()
 
         result_df = mapper.mapped_df
         expected_df = pd.DataFrame({'my_constant': [5,5,5]})
 
-        pemi.testing.assert_frame_equal(result_df, expected_df)
+        pt.assert_frame_equal(result_df, expected_df)
 
 
 
-class TestHandlerModes(unittest.TestCase):
-    def setUp(self):
-        self.df = pd.DataFrame(
+class TestHandlerModes():
+
+    @pytest.fixture
+    def df(self):
+        return pd.DataFrame(
             {
                 'num': [1,20,3,40]
             }
         )
 
-    def test_raise_mode(self):
+    def test_raise_mode(self, df):
         '''
         Raises an error immediately (default handler)
         '''
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source='num', target='translated', transform=translate)
         ])
 
-        self.assertRaises(ValueError, mapper.apply)
+        with pytest.raises(ValueError):
+            mapper.apply()
 
 
-    def test_warn_mode(self):
+    def test_warn_mode(self, df):
         '''
         The warning handler replaces errors with None
         '''
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source='num', target='translated', transform=translate, handler=RowHandler('warn'))
         ]).apply()
 
@@ -211,14 +216,14 @@ class TestHandlerModes(unittest.TestCase):
             }
         )
 
-        pemi.testing.assert_frame_equal(mapped_df, expected_mapped_df)
+        pt.assert_frame_equal(mapped_df, expected_mapped_df)
 
 
-    def test_warn_mode_catch(self):
+    def test_warn_mode_catch(self, df):
         '''
         The warning handler records warning records in the errors dataframe
         '''
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source='num', target='translated', transform=translate, handler=RowHandler('warn'))
         ]).apply()
 
@@ -232,14 +237,14 @@ class TestHandlerModes(unittest.TestCase):
             index=[1,3]
         )
 
-        pemi.testing.pemi.testing.assert_frame_equal(errors_df[expected_errors_df.columns], expected_errors_df)
+        pt.assert_frame_equal(errors_df[expected_errors_df.columns], expected_errors_df)
 
 
-    def test_ignore_mode(self):
+    def test_ignore_mode(self, df):
         '''
         The ignore handler replaces errors with None
         '''
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source='num', target='translated', transform=translate, handler=RowHandler('ignore'))
         ]).apply()
 
@@ -251,28 +256,28 @@ class TestHandlerModes(unittest.TestCase):
             }
         )
 
-        pemi.testing.assert_frame_equal(mapped_df, expected_mapped_df)
+        pt.assert_frame_equal(mapped_df, expected_mapped_df)
 
 
-    def test_ignore_mode_catch(self):
+    def test_ignore_mode_catch(self, df):
         '''
         The ignore handler does not put data in the errors dataframe
         '''
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source='num', target='translated', transform=translate, handler=RowHandler('ignore'))
         ]).apply()
 
         errors_df = mapper.errors_df
 
         expected_errors_df = pd.DataFrame([])
-        pemi.testing.pemi.testing.assert_frame_equal(errors_df[expected_errors_df.columns], expected_errors_df)
+        pt.assert_frame_equal(errors_df[expected_errors_df.columns], expected_errors_df)
 
 
-    def test_exclude_mode(self):
+    def test_exclude_mode(self, df):
         '''
         Errors are excluded from the mapped dataframe
         '''
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source='num', target='translated', transform=translate, handler=RowHandler('exclude'))
         ]).apply()
 
@@ -286,14 +291,14 @@ class TestHandlerModes(unittest.TestCase):
             index=[0,2]
         )
 
-        pemi.testing.assert_frame_equal(mapped_df, expected_mapped_df)
+        pt.assert_frame_equal(mapped_df, expected_mapped_df)
 
 
-    def test_exclude_mode_catch(self):
+    def test_exclude_mode_catch(self, df):
         '''
         Errors are captured in an errors dataframe
         '''
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source='num', target='translated', transform=translate, handler=RowHandler('exclude'))
         ]).apply()
 
@@ -309,18 +314,18 @@ class TestHandlerModes(unittest.TestCase):
             index=[1,3]
         )
 
-        pemi.testing.assert_frame_equal(errors_df[expected_errors_df.columns], expected_errors_df)
+        pt.assert_frame_equal(errors_df[expected_errors_df.columns], expected_errors_df)
 
 
 
-    def test_recode_mode_one_to_one(self):
+    def test_recode_mode_one_to_one(self, df):
         '''
         The recode handler can be used to supply defaults for errors (one-to-one)
         '''
         def recoder(val):
             return 'Unknown: {}'.format(str(val))
 
-        mapper = PdMapper(self.df, maps=[
+        mapper = PdMapper(df, maps=[
             PdMap(source='num', target='translated', transform=translate, handler=RowHandler('recode', recode=recoder))
         ]).apply()
         mapped_df = mapper.mapped_df
@@ -330,7 +335,7 @@ class TestHandlerModes(unittest.TestCase):
                 'translated': ['UNO', 'Unknown: 20', 'TRES', 'Unknown: 40']
             },
         )
-        pemi.testing.assert_frame_equal(mapped_df, expected_mapped_df)
+        pt.assert_frame_equal(mapped_df, expected_mapped_df)
 
 
     def test_recode_mode_many_to_one(self):
@@ -357,7 +362,7 @@ class TestHandlerModes(unittest.TestCase):
                 'combined': ['1=one', 'idk', '3=three']
             }
         )
-        pemi.testing.assert_frame_equal(mapped_df, expected_mapped_df)
+        pt.assert_frame_equal(mapped_df, expected_mapped_df)
 
 
     def test_recode_mode_many_to_many(self):
@@ -387,12 +392,14 @@ class TestHandlerModes(unittest.TestCase):
             },
             columns = ['split_num', 'split_name']
         )
-        pemi.testing.assert_frame_equal(mapped_df, expected_mapped_df)
+        pt.assert_frame_equal(mapped_df, expected_mapped_df)
 
 
-class TestPassthrough(unittest.TestCase):
-    def setUp(self):
-        self.df = pd.DataFrame(
+class TestPassthrough():
+
+    @pytest.fixture
+    def df(self):
+        return pd.DataFrame(
             {
                 'field1': [1,2,3],
                 'field2': [1,2,3],
@@ -401,8 +408,8 @@ class TestPassthrough(unittest.TestCase):
             }
         )
 
-    def test_fields_can_be_passed_through(self):
-        mapper = PdMapper(self.df, mapped_df=self.df.copy(), maps=[
+    def test_fields_can_be_passed_through(self, df):
+        mapper = PdMapper(df, mapped_df=df.copy(), maps=[
             PdMap(source='field3', target='field3', transform=lambda v: v + 10),
             PdMap(source='field2', target='field2p', transform=lambda v: v + 10)
         ]).apply()
@@ -418,4 +425,4 @@ class TestPassthrough(unittest.TestCase):
             columns = ['field1', 'field2', 'field3', 'field4', 'field2p']
         )
 
-        pemi.testing.assert_frame_equal(mapper.mapped_df, expected_mapped_df)
+        pt.assert_frame_equal(mapper.mapped_df, expected_mapped_df)

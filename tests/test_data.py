@@ -1,6 +1,6 @@
-import unittest
-
 import math
+
+import pytest
 import pandas as pd
 from pandas.util.testing import assert_frame_equal
 from pandas.util.testing import assert_series_equal
@@ -9,7 +9,7 @@ import pemi
 import pemi.testing
 from pemi.fields import *
 
-class TestTableConvertMarkdown(unittest.TestCase):
+class TestTableConvertMarkdown():
     'Scenarios that involve converting a Markdown table into a pandas dataframe'
 
     def test_convert_table_to_df(self):
@@ -126,7 +126,7 @@ class TestTableConvertMarkdown(unittest.TestCase):
         )
 
         ids = [id for id in given_table.df['id'] if not math.isnan(id)]
-        self.assertEqual(len(ids), len(set(ids)))
+        assert len(ids) == len(set(ids))
 
     def test_custom_coercions(self):
         actual = pemi.data.Table(

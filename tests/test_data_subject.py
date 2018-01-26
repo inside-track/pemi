@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 import sqlalchemy as sa
 import pandas as pd
 from pandas.util.testing import assert_frame_equal
@@ -8,7 +10,7 @@ from pandas.util.testing import assert_frame_equal
 import pemi
 from pemi.fields import *
 
-class TestPdDataSubject(unittest.TestCase):
+class TestPdDataSubject():
     def test_it_creates_an_empty_dataframe(self):
         ds = pemi.PdDataSubject(schema=pemi.Schema(
             f1=StringField(),
@@ -33,7 +35,9 @@ class TestPdDataSubject(unittest.TestCase):
             'f2': [4,5,6]
         })
 
-        self.assertRaises(pemi.data_subject.MissingFieldsError, lambda: ds2.connect_from(ds1))
+        with pytest.raises(pemi.data_subject.MissingFieldsError):
+            ds2.connect_from(ds1)
+
 
     def test_it_creates_an_empty_df_with_schema_when_connected_to_empty(self):
         ds1 = pemi.PdDataSubject()
@@ -46,9 +50,10 @@ class TestPdDataSubject(unittest.TestCase):
         ds2.connect_from(ds1)
         assert_frame_equal(ds2.df, pd.DataFrame(columns=['f1','f3']))
 
-#TODO: Fill out more tests
-class TestSaDataSubject(unittest.TestCase):
-    def setUp(self):
+#TODO: Fill out more tests and clean up the fixture
+class TestSaDataSubject():
+    @pytest.fixture(autouse=True)
+    def dbconn(self):
         self.sa_engine = sa.create_engine('postgresql://{user}:{password}@{host}/{dbname}'.format(
             user=os.environ.get('POSTGRES_USER'),
             password=os.environ.get('POSTGRES_PASSWORD'),
@@ -74,8 +79,8 @@ class TestSaDataSubject(unittest.TestCase):
             table='some_data'
         )
 
+        yield
 
-    def tearDown(self):
         with self.sa_engine.connect() as conn:
             conn.execute('DROP TABLE IF EXISTS some_data;')
 

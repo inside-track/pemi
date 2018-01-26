@@ -159,9 +159,9 @@ class BooleanField(Field):
 
     def parse(self, value):
         value = str(value).lower()
-        if value.lower() in self.true_values:
+        if value in self.true_values:
             return True
-        elif value.lower() in self.false_values:
+        elif value in self.false_values:
             return False
         elif 'unknown_truthiness' in self.metadata:
             return self.metadata['unknown_truthiness']
