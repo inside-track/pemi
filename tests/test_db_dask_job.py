@@ -200,8 +200,8 @@ class DenormalizeBeersPipe(pemi.Pipe):
 class TestDenormalizeBeersPipe():
     pipe = DenormalizeBeersPipe()
 
-    pipe.pipes['dumb_sales'] = pt.mock_pipe(pipe.pipes['dumb_sales'])
-    pipe.pipes['dumb_beers'] = pt.mock_pipe(pipe.pipes['dumb_beers'])
+    pt.mock_pipe(pipe, 'dumb_sales')
+    pt.mock_pipe(pipe, 'dumb_beers')
 
     def case_keys():
         ids = list(range(1000))

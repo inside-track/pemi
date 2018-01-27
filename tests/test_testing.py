@@ -218,3 +218,96 @@ class TestBasics():
     @pytest.mark.scenario(scenario)
     def test_one_to_one(self, case):
         case.assert_case()
+
+
+
+
+
+
+
+
+class ChildPipe(pemi.Pipe):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.source(
+            pemi.PdDataSubject,
+            name='child_source',
+            schema=pemi.Schema(
+                cs1=StringField(),
+                cs2=StringField()
+            )
+        )
+
+        self.target(
+            pemi.PdDataSubject,
+            name='child_target',
+            schema=pemi.Schema(
+                ct1=StringField(),
+                ct2=StringField()
+            )
+        )
+
+class ParentPipe(pemi.Pipe):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.source(
+            pemi.PdDataSubject,
+            name='parent_source',
+            schema=pemi.Schema(
+                ps1=StringField(),
+                ps2=StringField()
+            )
+        )
+
+        self.target(
+            pemi.PdDataSubject,
+            name='parent_target',
+            schema=pemi.Schema(
+                pt1=StringField(),
+                pt2=StringField()
+            )
+        )
+
+        self.pipe(
+            name='child',
+            pipe=ChildPipe()
+        )
+
+class GrandPipe(pemi.Pipe):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.pipe(
+            name='parent',
+            pipe=ParentPipe()
+        )
+
+class TestPipeMock():
+    @pytest.fixture
+    def mock_pipe(self):
+        pipe = GrandPipe()
+        pt.mock_pipe(pipe, 'parent')
+        return pipe
+
+    @pytest.fixture
+    def real_pipe(self):
+        pipe = GrandPipe()
+        return pipe
+
+    def test_parent_is_mocked(self, mock_pipe):
+        assert isinstance(mock_pipe.pipes['parent'], pt.MockPipe)
+
+    def test_parent_source_reassigned(self, real_pipe, mock_pipe):
+        assert real_pipe.pipes['parent'].sources['parent_source'].schema \
+            == mock_pipe.pipes['parent'].sources['parent_source'].schema
+
+    def test_parent_target_reassigned(self, real_pipe, mock_pipe):
+        assert real_pipe.pipes['parent'].targets['parent_target'].schema \
+            == mock_pipe.pipes['parent'].targets['parent_target'].schema
+
+    #TODO: not sure if traversing nested pipes is necessary or desired.
+    @pytest.mark.skip
+    def test_child_is_mocked(self, mock_pipe):
+        assert isinstance(mock_pipe.pipes['parent'].pipes['child'], pt.MockPipe)

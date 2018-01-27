@@ -145,8 +145,8 @@ class BlackBoxJob(pemi.Pipe):
 class TestBlackBoxJob():
     pipe = BlackBoxJob()
 
-    pipe.pipes['beers_file'] = pt.mock_pipe(pipe.pipes['beers_file'])
-    pipe.pipes['beers_w_style_file'] = pt.mock_pipe(pipe.pipes['beers_w_style_file'])
+    pt.mock_pipe(pipe, 'beers_file')
+    pt.mock_pipe(pipe, 'beers_w_style_file')
 
     def case_keys():
         ids = list(range(1000))

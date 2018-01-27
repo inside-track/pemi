@@ -362,13 +362,12 @@ class Scenario():
         self.has_run = True
 
 
-# TODO: Do I still like this or can I be using pytest?
 class MockPipe(pemi.Pipe):
     def flow(self):
         pemi.log.debug('FLOWING mocked pipe: {}'.format(self))
-        pass
 
-def mock_pipe(pipe):
+def mock_pipe(parent_pipe, pipe_name):
+    pipe = parent_pipe.pipes[pipe_name]
     mocked = MockPipe(name=pipe.name)
     for source in pipe.sources:
         mocked.sources[source] = pipe.sources[source]
@@ -378,4 +377,4 @@ def mock_pipe(pipe):
         mocked.targets[target] = pipe.targets[target]
         mocked.targets[target].pipe = mocked
 
-    return mocked
+    parent_pipe.pipes[pipe_name] = mocked
