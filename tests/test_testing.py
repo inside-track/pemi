@@ -8,7 +8,7 @@ import pemi.data
 import pemi.testing as pt
 from pemi.fields import *
 
-class TestBasics():
+class TestBasics:
     mysource = pemi.PdDataSubject(
         schema = pemi.Schema(
             id = IntegerField(),
@@ -217,6 +217,133 @@ class TestBasics():
 
     @pytest.mark.scenario(scenario)
     def test_one_to_one(self, case):
+        case.assert_case()
+
+
+
+class TestMultipleKeys:
+    mysource = pemi.PdDataSubject(
+        schema = pemi.Schema(
+            student_id = StringField(),
+            term_id = StringField()
+        )
+    )
+
+    mytarget = pemi.PdDataSubject(
+        schema = pemi.Schema(
+            student_id = StringField(),
+            term_id = StringField()
+        )
+    )
+
+    def case_keys():
+        student_ids = pemi.data.UniqueIdGenerator(lambda i: 'stu{}'.format(i))
+        term_ids = pemi.data.UniqueIdGenerator(lambda i: 'T{}'.format(i))
+
+        while True:
+            student_id = next(student_ids)
+            term_id = next(term_ids)
+            yield {
+                'mysource': {
+                    'student_id': student_id,
+                    'term_id': term_id
+                },
+                'mytarget': {
+                    'student_id': student_id,
+                    'term_id': term_id
+                }
+            }
+
+    def runner(source, target):
+        def _runner():
+            target.df = source.df.copy()
+        return _runner
+
+    scenario = pt.Scenario(
+        runner = runner(mysource, mytarget),
+        case_keys = case_keys(),
+        sources = {
+            'mysource': mysource
+        },
+        targets = {
+            'mytarget': mytarget
+        }
+    )
+
+    with scenario.case('it works when each row has unique keys') as case:
+        source_table = pemi.data.Table(
+            '''
+            | student_id | term_id |
+            | -          | -       |
+            | {s[1]}     | {t[1]}  |
+            | {s[2]}     | {t[2]}  |
+            | {s[3]}     | {t[3]}  |
+            '''.format(
+                s = scenario.case_keys.cache('mysource', 'student_id'),
+                t = scenario.case_keys.cache('mysource', 'term_id')
+            ),
+            schema = mysource.schema
+        )
+
+        target_table = pemi.data.Table(
+            '''
+            | student_id | term_id |
+            | -          | -       |
+            | {s[1]}     | {t[1]}  |
+            | {s[2]}     | {t[2]}  |
+            | {s[3]}     | {t[3]}  |
+            '''.format(
+                s = scenario.case_keys.cache('mytarget', 'student_id'),
+                t = scenario.case_keys.cache('mytarget', 'term_id')
+            ),
+            schema = mytarget.schema
+        )
+
+        case.when(
+            pt.when.example_for_source(scenario.sources['mysource'], source_table),
+        ).then(
+            pt.then.target_matches_example(scenario.targets['mytarget'], target_table)
+        )
+
+
+    with scenario.case('it works when keys are repeated on different rows') as case:
+        source_table = pemi.data.Table(
+            '''
+            | student_id | term_id |
+            | -          | -       |
+            | {s[1]}     | {t[1]}  |
+            | {s[1]}     | {t[2]}  |
+            | {s[3]}     | {t[1]}  |
+            '''.format(
+                s = scenario.case_keys.cache('mysource', 'student_id'),
+                t = scenario.case_keys.cache('mysource', 'term_id')
+            ),
+            schema = mysource.schema
+        )
+
+        target_table = pemi.data.Table(
+            '''
+            | student_id | term_id |
+            | -          | -       |
+            | {s[1]}     | {t[1]}  |
+            | {s[1]}     | {t[2]}  |
+            | {s[3]}     | {t[1]}  |
+            '''.format(
+                s = scenario.case_keys.cache('mytarget', 'student_id'),
+                t = scenario.case_keys.cache('mytarget', 'term_id')
+            ),
+            schema = mysource.schema
+        )
+
+        case.when(
+            pt.when.example_for_source(scenario.sources['mysource'], source_table),
+        ).then(
+            pt.then.target_matches_example(scenario.targets['mytarget'], target_table)
+        )
+
+
+    @pytest.mark.scenario(scenario)
+    def test_scenario(self, case):
         case.assert_case()
 
 

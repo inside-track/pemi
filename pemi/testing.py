@@ -1,5 +1,4 @@
 from collections import OrderedDict
-from collections import namedtuple
 from itertools import tee
 
 import os
@@ -32,10 +31,6 @@ def assert_series_equal(actual, expected, **kwargs):
         print('Actual:\n{}'.format(actual))
         print('Expected:\n{}'.format(expected))
         raise err
-
-def to_tuple(d):
-    return namedtuple('KeyMapTuple', d.keys())(**d)
-
 
 class when():
     def source_has_keys(sources, case_keys, source_name):
@@ -193,7 +188,7 @@ class CaseKeyTracker():
         self.case = None
 
         self.cached = {}
-        self.subject_key_to_case = {}
+        self.subject_case_keys = {}
 
         self.subject_keys = {name: list(keys.keys()) for name, keys in next(case_key_gen).items()}
         self._build_synced_generators(case_key_gen)
@@ -205,9 +200,9 @@ class CaseKeyTracker():
     def _track_key(self, subject_case_keys, case=None):
         case = case if case else self.case
         for subject_name, key in subject_case_keys.items():
-            if subject_name not in self.subject_key_to_case:
-                self.subject_key_to_case[subject_name] = {}
-            self.subject_key_to_case[subject_name][to_tuple(key)] = case
+            if subject_name not in self.subject_case_keys:
+                self.subject_case_keys[subject_name] = []
+            self.subject_case_keys[subject_name].append({'case': case, 'key': key})
 
     def _build_synced_generators(self, case_key_gen):
         subjects = list(self.subject_keys.keys())
@@ -220,7 +215,7 @@ class CaseKeyTracker():
                 self.synced_generators['__internal__'] = tgen
 
     def get_key(self, subject, field, case=None, cache=None):
-        cache = os.urandom(32) if not cache else cache
+        cache = os.urandom(32) if cache is None else cache
         if cache not in self.cached:
             self.cached[cache] = next(self.synced_generators['__internal__'])
             self._track_key(self.cached[cache], case=case)
@@ -326,14 +321,16 @@ class Scenario():
 
     def collect_results(self):
         def assign_case(target_name):
-            def _assign_case(row):
-                key_to_case = self.case_keys.subject_key_to_case[target_name]
-                # Assumes every subject CaseKey uses the same fields
-                #  probably a nicer way to do this in the class
-                key_fields = list(list(key_to_case.keys())[0]._fields)
+            subject_case_keys = self.case_keys.subject_case_keys[target_name]
+            key_fields = list(subject_case_keys[0]['key'].keys())
 
-                key = to_tuple(dict(row[key_fields]))
-                return self.case_keys.subject_key_to_case[target_name][key]
+            def _assign_case(row):
+                row_key = set(dict(row[key_fields]).items())
+                for key_case in subject_case_keys:
+                    key = set(key_case['key'].items())
+                    if len(row_key & key) > 0:
+                        return key_case['case']
+                raise KeyError('No case found for {}'.format(row_keys))
             return _assign_case
 
         for target_name, target in self.targets.items():
