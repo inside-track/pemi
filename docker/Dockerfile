@@ -59,6 +59,7 @@ RUN pip install pip-tools invoke && rm -rf /root/.cache
 RUN pip install -r requirements.txt && rm -rf /root/.cache
 
 # Configure Jupyterlab
+ENV PYTHONPATH /app
 RUN jupyter serverextension enable --py jupyterlab --sys-prefix
 ADD docker/jupyter_notebook_config.py /root/.jupyter/jupyter_notebook_config.py
 
