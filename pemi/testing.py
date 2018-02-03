@@ -12,15 +12,18 @@ import pandas.util.testing
 import pemi
 import pemi.data
 
+pd.set_option('display.expand_frame_repr', False)
+
 #TODO: Organize and doc
 
 def assert_frame_equal(actual, expected, **kwargs):
     try:
         pd.util.testing.assert_frame_equal(actual, expected, **kwargs)
     except AssertionError as err:
-        print('Actual:\n{}'.format(actual))
-        print('Expected:\n{}'.format(expected))
-        raise err
+        msg = str(err)
+        msg += '\nActual:\n{}'.format(actual)
+        msg += '\nExpected:\n{}'.format(expected)
+        raise AssertionError(msg)
 
 def assert_series_equal(actual, expected, **kwargs):
     actual.reset_index(drop=True, inplace=True)
@@ -28,39 +31,52 @@ def assert_series_equal(actual, expected, **kwargs):
     try:
         pd.util.testing.assert_series_equal(actual, expected, **kwargs)
     except AssertionError as err:
-        print('Actual:\n{}'.format(actual))
-        print('Expected:\n{}'.format(expected))
-        raise err
+        msg = str(err)
+        msg += '\nActual:\n{}'.format(actual)
+        msg += '\nExpected:\n{}'.format(expected)
+        raise AssertionError(msg)
 
-class when():
-    def source_has_keys(sources, case_keys, source_name):
-        source = sources[source_name]
-
+class when:
+    def source_has_keys(source, case_keys):
         def gen_values(case):
             while True:
                 values = {}
                 cache_id = os.urandom(32)
-                for field in case_keys.subject_keys[source_name]:
-                    values[field] = case_keys.cache(source_name, field, case=case)[cache_id]
+                for field in case_keys.subject_keys[source.name]:
+                    values[field] = case_keys.cache(source.name, field, case=case)[cache_id]
                 yield values
 
         def _when(case):
             values = gen_values(case)
             keys_df = pd.DataFrame([next(values) for i in range(len(source[case].data))])
-            for field in case_keys.subject_keys[source_name]:
+            for field in case_keys.subject_keys[source.name]:
                 source[case].data[field] = keys_df[field]
 
         return _when
 
     def source_field_has_value(source, field, value):
         def _when(case):
+            n = len(source[case].data)
             if hasattr(value, '__next__'):
-                n = len(source[case].data)
                 source[case].data[field] = pd.Series([next(value) for i in range(n)])
             else:
-                source[case].data[field] = value
+                #TODO: Add test that shows fails without this change
+                source[case].data[field] = pd.Series([value]*n)
 
         return _when
+
+    #TODO: Add a test in pemi
+    def source_fields_have_values(source, mapping):
+        def _when(case):
+            for field, value in mapping.items():
+                n = len(source[case].data)
+                if hasattr(value, '__next__'):
+                    source[case].data[field] = pd.Series([next(value) for i in range(n)])
+                else:
+                    source[case].data[field] = pd.Series([value]*n)
+
+        return _when
+
 
     def example_for_source(source, table):
         def _when(case):
@@ -80,12 +96,13 @@ class when():
 
 
 
-class then():
+class then:
     def target_field_has_value(target, field, value):
         def _then(case):
-            target_data = target[case].data[field]
+            target_data = pd.Series(list(target[case].data[field]))
             expected_data = pd.Series([value] * len(target_data), index = target_data.index)
-            assert_series_equal(target_data, expected_data, check_names=False, check_dtype=False)
+
+            assert_series_equal(target_data, expected_data, check_names=False, check_dtype=False, check_datetimelike_compat=True)
 
         return _then
 
@@ -126,10 +143,10 @@ class then():
         return _then
 
     def fields_are_copied(source, target, mapping, by=None):
-        def _then(case):
-            source_fields = list(set([m[0] for m in mapping]))
-            target_fields = list(set([m[1] for m in mapping]))
+        source_fields = list(set([m[0] for m in mapping]))
+        target_fields = list(set([m[1] for m in mapping]))
 
+        def _then(case):
             if by:
                 expected = source[case].data.sort_values(by).reset_index(drop=True)[source_fields]
                 actual = target[case].data.sort_values(by).reset_index(drop=True)[target_fields]
@@ -139,7 +156,7 @@ class then():
 
             for source_field, target_field in mapping:
                 try:
-                    assert_series_equal(expected[source_field], actual[target_field], check_names=False)
+                    assert_series_equal(expected[source_field], actual[target_field], check_names=False, check_dtype=False)
                 except AssertionError as err:
                     raise AssertionError('Source field {} not copied to target field {}: {}'.format(
                         source_field, target_field, err)
@@ -175,6 +192,7 @@ class then():
 
 
 
+#TODO: Rename this to SubscriptableLambda
 class CachedCaseKeyAccessor():
     def __init__(self, func):
         self.func = func
@@ -219,7 +237,12 @@ class CaseKeyTracker():
         if cache not in self.cached:
             self.cached[cache] = next(self.synced_generators['__internal__'])
             self._track_key(self.cached[cache], case=case)
-        return self.cached[cache][subject][field]
+
+        try:
+            return self.cached[cache][subject][field]
+        except KeyError as err:
+            msg = "No case key found for field '{}' and subject '{}'".format(field, subject)
+            raise KeyError(msg)
 
     def cache(self, subject, field, case=None):
         return CachedCaseKeyAccessor(lambda name: self.get_key(subject, field, case=case, cache=name))
@@ -244,8 +267,9 @@ class CaseData():
         self._data = value
 
 class TestSubject():
-    def __init__(self, subject):
+    def __init__(self, subject, name):
         self.subject = subject
+        self.name = name
         self.data = {}
 
     def __getitem__(self, case):
@@ -282,8 +306,17 @@ class Case():
     def assert_case(self):
         self.scenario.run()
 
-        for t in self.thens:
-            t(self)
+        try:
+            for t in self.thens:
+                t(self)
+        except AssertionError as err:
+            msg = '\nAssertion Error for {}'.format(self)
+            for name, source in self.scenario.sources.items():
+                msg += '\nSource {}:\n{}'.format(name, source.subject.to_pd())
+            for name, target in self.scenario.targets.items():
+                msg += '\nTarget {}:\n{}'.format(name, target.subject.to_pd())
+            raise AssertionError(msg)
+
 
     def __str__(self):
         return "<Case '{}' ({})>".format(self.name, id(self))
@@ -296,8 +329,8 @@ class Scenario():
         self.cases = OrderedDict()
         self.has_run = False
 
-        self.sources = {name: TestSubject(subject) for name, subject in sources.items()}
-        self.targets = {name: TestSubject(subject) for name, subject in targets.items()}
+        self.sources = {name: TestSubject(subject, name) for name, subject in sources.items()}
+        self.targets = {name: TestSubject(subject, name) for name, subject in targets.items()}
 
 
     def case(self, name):
@@ -321,7 +354,13 @@ class Scenario():
 
     def collect_results(self):
         def assign_case(target_name):
-            subject_case_keys = self.case_keys.subject_case_keys[target_name]
+            try:
+                subject_case_keys = self.case_keys.subject_case_keys[target_name]
+            except KeyError:
+                raise KeyError('''No case keys assigned for target '{}'.
+                     This usually means you forgot to build source data with case keys.
+                     '''.format(target_name))
+
             key_fields = list(subject_case_keys[0]['key'].keys())
 
             def _assign_case(row):
@@ -330,7 +369,7 @@ class Scenario():
                     key = set(key_case['key'].items())
                     if len(row_key & key) > 0:
                         return key_case['case']
-                raise KeyError('No case found for {}'.format(row_keys))
+                raise KeyError("No case found for {} for target '{}'".format(row_key, target_name))
             return _assign_case
 
         for target_name, target in self.targets.items():
@@ -373,5 +412,7 @@ def mock_pipe(parent_pipe, pipe_name):
     for target in pipe.targets:
         mocked.targets[target] = pipe.targets[target]
         mocked.targets[target].pipe = mocked
+
+    #TODO: optionally copy some attributes of mocked pipe
 
     parent_pipe.pipes[pipe_name] = mocked

@@ -72,9 +72,20 @@ class TestBasics:
             pt.then.target_field_has_value(scenario.targets['mytarget'], 'full_name', 'Joe Jones')
         )
 
+    with scenario.case('Using when.source_fields_have_values') as case:
+        case.when(
+            pt.when.source_fields_have_values(scenario.sources['mysource'], mapping={
+                'id': scenario.case_keys.cache('mysource', 'id')[1],
+                'first_name': 'Joe',
+                'last_name': 'Jones'
+            })
+        ).then(
+            pt.then.target_field_has_value(scenario.targets['mytarget'], 'full_name', 'Joe Jones')
+        )
+
     with scenario.case('Using when.source_has_keys') as case:
         case.when(
-            pt.when.source_has_keys(scenario.sources, scenario.case_keys, 'mysource'),
+            pt.when.source_has_keys(scenario.sources['mysource'], scenario.case_keys),
             pt.when.source_field_has_value(scenario.sources['mysource'], 'first_name', 'Bob'),
             pt.when.source_field_has_value(scenario.sources['mysource'], 'last_name', 'Boberts')
         ).then(
@@ -85,7 +96,7 @@ class TestBasics:
 
     def background(scenario):
         return [
-            pt.when.source_has_keys(scenario.sources, scenario.case_keys, 'mysource'),
+            pt.when.source_has_keys(scenario.sources['mysource'], scenario.case_keys),
             pt.when.source_field_has_value(scenario.sources['mysource'], 'last_name', 'Background')
         ]
 
@@ -165,7 +176,7 @@ class TestBasics:
     with scenario.case('Using then.field_is_copied') as case:
         case.when(
             pt.when.source_conforms_to_schema(scenario.sources['mysource']),
-            pt.when.source_has_keys(scenario.sources, scenario.case_keys, 'mysource')
+            pt.when.source_has_keys(scenario.sources['mysource'], scenario.case_keys),
         ).then(
             pt.then.field_is_copied(scenario.sources['mysource'], 'last_name',
                                     scenario.targets['mytarget'], 'last_name'),
@@ -176,7 +187,7 @@ class TestBasics:
     with scenario.case('Using then.fields_are_copied') as case:
         case.when(
             pt.when.source_conforms_to_schema(scenario.sources['mysource']),
-            pt.when.source_has_keys(scenario.sources, scenario.case_keys, 'mysource')
+            pt.when.source_has_keys(scenario.sources['mysource'], scenario.case_keys),
         ).then(
             pt.then.fields_are_copied(scenario.sources['mysource'], scenario.targets['mytarget'],
                                       [
@@ -187,7 +198,7 @@ class TestBasics:
 
     with scenario.case('Using then.target_does_not_have_fields') as case:
         case.when(
-            pt.when.source_has_keys(scenario.sources, scenario.case_keys, 'mysource')
+            pt.when.source_has_keys(scenario.sources['mysource'], scenario.case_keys),
         ).then(
             pt.then.target_does_not_have_fields(scenario.targets['mytarget'], 'glerbo', 'mcstuffins')
         )

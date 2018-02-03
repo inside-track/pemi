@@ -173,7 +173,7 @@ class TestBlackBoxJob():
     def background(scenario):
         return [
             pt.when.source_conforms_to_schema(scenario.sources['beers_file']),
-            pt.when.source_has_keys(scenario.sources, scenario.case_keys, 'beers_file')
+            pt.when.source_has_keys(scenario.sources['beers_file'], scenario.case_keys)
         ]
 
     with scenario.case('it copies the name field') as case:
@@ -311,7 +311,7 @@ class TestBlackBoxPipe():
     def background(scenario):
         return [
             pt.when.source_conforms_to_schema(scenario.sources['beers_file']),
-            pt.when.source_has_keys(scenario.sources, scenario.case_keys, 'beers_file')
+            pt.when.source_has_keys(scenario.sources['beers_file'], scenario.case_keys)
         ]
 
     with scenario.case('it copies the name field') as case:
