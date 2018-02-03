@@ -93,7 +93,7 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'dev': [],
-        'test': ['nose2'],
+        'test': ['pytest'],
     },
 
     # If there are data files included in your packages that need to be
@@ -117,4 +117,9 @@ setup(
     #         'sample=sample:main',
     #     ],
     # },
+    # entry_points={
+    #     'pytest11': [
+    #         'pemi = pemi.pytest'
+    #     ]
+    # }
 )

@@ -1,18 +1,19 @@
-import unittest
 import datetime
 import decimal
 import tempfile
 from pathlib import Path
 
+import pytest
+
 import pandas as pd
 from pandas.util.testing import assert_frame_equal
 
 import pemi
-import pemi.testing
+import pemi.testing as pt
 import pemi.pipes.csv
 from pemi.fields import *
 
-class TestLocalCsvFileSourcePipe(unittest.TestCase):
+class TestLocalCsvFileSourcePipe():
     def test_it_parses_a_complex_csv(self):
         schema = pemi.Schema(
             id         = StringField(),
@@ -64,12 +65,12 @@ class TestLocalCsvFileSourcePipe(unittest.TestCase):
 
         expected_df.reset_index(drop=True, inplace=True)
         actual_df.reset_index(drop=True, inplace=True)
-        pemi.testing.assert_frame_equal(actual_df, expected_df, check_names=False)
+        pt.assert_frame_equal(actual_df, expected_df, check_names=False)
 
 
         expected_errors_df.reset_index(drop=True, inplace=True)
         actual_errors_df.reset_index(drop=True, inplace=True)
-        pemi.testing.assert_frame_equal(actual_errors_df[expected_errors_df.columns], expected_errors_df, check_names=False)
+        pt.assert_frame_equal(actual_errors_df[expected_errors_df.columns], expected_errors_df, check_names=False)
 
 
     def test_it_combines_multiple_csvs(self):
@@ -121,10 +122,10 @@ class TestLocalCsvFileSourcePipe(unittest.TestCase):
         pipe.flow()
 
         filenames = pipe.targets['main'].df['filename'].unique()
-        self.assertEqual(set(filenames), set(('id_name_1.csv', 'id_name_2.csv')))
+        assert set(filenames) == set(('id_name_1.csv', 'id_name_2.csv'))
 
 
-class TestLocalCsvFileTargetPipe(unittest.TestCase):
+class TestLocalCsvFileTargetPipe():
     def test_it_writes_a_csv(self):
         tmp_file = tempfile.NamedTemporaryFile()
 
@@ -158,4 +159,4 @@ class TestLocalCsvFileTargetPipe(unittest.TestCase):
         ]).encode('utf-8')
 
         actual_csv = tmp_file.read()
-        self.assertEqual(actual_csv, expected_csv)
+        assert actual_csv == expected_csv

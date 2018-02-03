@@ -1,4 +1,4 @@
-import unittest
+import pytest
 
 from pandas.util.testing import assert_frame_equal
 
@@ -72,21 +72,41 @@ class JobPipe(pemi.Pipe):
 
 
 
-class TestPickling(unittest.TestCase):
-    # TODO: good case for pytest paramtrized tests uses the result of job.flow() as a fixture computed once
-    def test_it_unpickles_pickled_pipes(self):
+class TestPickling():
+    @pytest.fixture(scope='class')
+    def job(self):
         job = JobPipe()
         job.flow()
+        return job
 
+    @pytest.fixture(scope='class')
+    def unpickled_job(self, job):
         pickled = job.to_pickle()
-        unpickled_job = JobPipe().from_pickle(pickled)
+        return JobPipe().from_pickle(pickled)
 
-        assert_frame_equal(job.pipes['s1'].targets['main'].df, unpickled_job.pipes['s1'].targets['main'].df)
-        assert_frame_equal(job.pipes['s2'].targets['main'].df, unpickled_job.pipes['s2'].targets['main'].df)
-        assert_frame_equal(job.pipes['concat'].sources['s1'].df, unpickled_job.pipes['concat'].sources['s1'].df)
-        assert_frame_equal(job.pipes['concat'].sources['s2'].df, unpickled_job.pipes['concat'].sources['s2'].df)
-        assert_frame_equal(job.pipes['concat'].targets['main'].df, unpickled_job.pipes['concat'].targets['main'].df)
-        assert_frame_equal(job.pipes['t1'].sources['main'].df, unpickled_job.pipes['t1'].sources['main'].df)
+
+    @pytest.mark.parametrize('sub_pipe,subject', [
+        ('concat', 's1'),
+        ('concat', 's2'),
+        ('t1', 'main'),
+    ])
+    def test_it_unpickles_pickled_pipe_sources(self, sub_pipe, subject, job, unpickled_job):
+        assert_frame_equal(
+            job.pipes[sub_pipe].sources[subject].df,
+            unpickled_job.pipes[sub_pipe].sources[subject].df
+        )
+
+    @pytest.mark.parametrize('sub_pipe,subject', [
+        ('s1', 'main'),
+        ('s2', 'main'),
+        ('concat', 'main'),
+    ])
+    def test_it_unpickles_pickled_pipe_targets(self, sub_pipe, subject, job, unpickled_job):
+        assert_frame_equal(
+            job.pipes[sub_pipe].targets[subject].df,
+            unpickled_job.pipes[sub_pipe].targets[subject].df
+        )
+
 
     def test_it_pickles_when_pipe_has_unpickleable_things(self):
         class NotPickleablePipe(JobPipe):
@@ -103,7 +123,7 @@ class TestPickling(unittest.TestCase):
         pickled = job.to_pickle()
         unpickled_job = NotPickleablePipe().from_pickle(pickled)
 
-        self.assertEqual(unpickled_job.pipes['s1'].params['addone'](3), 4)
+        assert unpickled_job.pipes['s1'].params['addone'](3) == 4
 
     def test_unpickled_references_original_pipes(self):
         job = JobPipe()
@@ -112,7 +132,4 @@ class TestPickling(unittest.TestCase):
         pickled = job.to_pickle()
         unpickled_job = JobPipe().from_pickle(pickled)
 
-        self.assertEqual(
-            unpickled_job.pipes['s1'].targets['main'].pipe.__class__,
-            job.pipes['s1'].targets['main'].pipe.__class__
-        )
+        assert unpickled_job.pipes['s1'].targets['main'].pipe.__class__ == job.pipes['s1'].targets['main'].pipe.__class__

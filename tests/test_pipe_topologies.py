@@ -1,6 +1,6 @@
-import unittest
-
 import pandas as pd
+
+import pytest
 
 import pemi
 import pemi.testing
@@ -90,7 +90,7 @@ class YPipe(pemi.Pipe):
 
 
 # One-to-one pipe & subjects
-class TestAa1ToXx1(unittest.TestCase):
+class TestAa1ToXx1():
     class Aa1ToXx1Pipe(pemi.Pipe):
         def __init__(self, **params):
             super().__init__(**params)
@@ -117,11 +117,11 @@ class TestAa1ToXx1(unittest.TestCase):
 
         expected = 'a1 from APipe'
         actual = pipe.pipes['X'].sources['x1'].df['msg'][0]
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
 
 # One-to-one pipe & subjects, with multiple subjects
-class TestAa1a2ToXx1x2(unittest.TestCase):
+class TestAa1a2ToXx1x2():
     class Aa1a2ToXx1x2Pipe(pemi.Pipe):
         def __init__(self, **params):
             super().__init__(**params)
@@ -149,11 +149,11 @@ class TestAa1a2ToXx1x2(unittest.TestCase):
 
         expected = ['a1 from APipe', 'a2 from APipe']
         actual = [pipe.pipes['X'].sources['x1'].df['msg'][0], pipe.pipes['X'].sources['x2'].df['msg'][0]]
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
 
 # Many-to-one pipes, one-to-one subjects
-class TestAa1Bb1ToXx1x2(unittest.TestCase):
+class TestAa1Bb1ToXx1x2():
     class Aa1Bb1ToXx1x2Pipe(pemi.Pipe):
         def __init__(self, **params):
             super().__init__(**params)
@@ -186,10 +186,10 @@ class TestAa1Bb1ToXx1x2(unittest.TestCase):
 
         expected = ['a1 from APipe', 'b1 from BPipe']
         actual = [pipe.pipes['X'].sources['x1'].df['msg'][0], pipe.pipes['X'].sources['x2'].df['msg'][0]]
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
 # One-to-many pipes, one-to-one subjects
-class TestAa1a2ToXx1Yy1(unittest.TestCase):
+class TestAa1a2ToXx1Yy1():
     class Aa1a2ToXx1Yy1Pipe(pemi.Pipe):
         def __init__(self, **params):
             super().__init__(**params)
@@ -222,12 +222,12 @@ class TestAa1a2ToXx1Yy1(unittest.TestCase):
 
         expected = ['a1 from APipe', 'a2 from APipe']
         actual = [pipe.pipes['X'].sources['x1'].df['msg'][0], pipe.pipes['Y'].sources['y1'].df['msg'][0]]
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
 
 
 # One-to-many pipes, one-to-many subjects (via Fork)
-class TestAa1ToXx1Yy1(unittest.TestCase):
+class TestAa1ToXx1Yy1():
     class Aa1ToXx1Yy1Pipe(pemi.Pipe):
         def __init__(self, **params):
             super().__init__(**params)
@@ -292,15 +292,16 @@ class TestAa1ToXx1Yy1(unittest.TestCase):
 
         expected = ['a1 from APipe', 'a1 from APipe']
         actual = [pipe.pipes['X'].sources['x1'].df['msg'][0], pipe.pipes['Y'].sources['y1'].df['msg'][0]]
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
     def test_fails_without_a_fork(self):
         pipe = self.Aa1ToXx1Yy1NoForkPipe()
-        self.assertRaises(pemi.connections.DagValidationError, pipe.flow)
+        with pytest.raises(pemi.connections.DagValidationError):
+            pipe.flow()
 
 
 # One-to-one pipes, many-to-one subjects (via Concat)
-class TestAa1a2ToXx1(unittest.TestCase):
+class TestAa1a2ToXx1():
     class Aa1a2ToXx1Pipe(pemi.Pipe):
         def __init__(self, **params):
             super().__init__(**params)
@@ -354,15 +355,16 @@ class TestAa1a2ToXx1(unittest.TestCase):
 
         expected = ['a1 from APipe', 'a2 from APipe']
         actual = list(pipe.pipes['X'].sources['x1'].df['msg'])
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
     def test_fails_without_concat(self):
         pipe = self.Aa1a2ToXx1NoConcatPipe()
-        self.assertRaises(pemi.connections.DagValidationError, pipe.flow)
+        with pytest.raises(pemi.connections.DagValidationError):
+            pipe.flow()
 
 
 # Many-to-one pipes, many-to-one subjects (via Concat)
-class TestAa1Bb1ToXx1(unittest.TestCase):
+class TestAa1Bb1ToXx1():
     class Aa1Bb1ToXx1Pipe(pemi.Pipe):
         def __init__(self, **params):
             super().__init__(**params)
@@ -401,11 +403,11 @@ class TestAa1Bb1ToXx1(unittest.TestCase):
 
         expected = ['a1 from APipe', 'b1 from BPipe']
         actual = list(pipe.pipes['X'].sources['x1'].df['msg'])
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
 
 # Connecting from external source pipes
-class TestExternalSourcePipes(unittest.TestCase):
+class TestExternalSourcePipes():
     class FromAa1Pipe(pemi.Pipe):
         def __init__(self, **params):
             super().__init__(**params)
@@ -440,11 +442,11 @@ class TestExternalSourcePipes(unittest.TestCase):
 
         expected = 'a1 from APipe'
         actual = pipe.targets['main'].df['msg'][0]
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
 
 # Connecting to external target pipes
-class TestExternalTargetPipes(unittest.TestCase):
+class TestExternalTargetPipes():
     class ToXx1Pipe(pemi.Pipe):
         def __init__(self, **params):
             super().__init__(**params)
@@ -473,11 +475,11 @@ class TestExternalTargetPipes(unittest.TestCase):
 
         expected = 'generated in self'
         actual = pipe.pipes['X'].sources['x1'].df['msg'][0]
-        self.assertEqual(actual, expected)
+        assert actual == expected
 
 
 # Connected from external source pipes and external target pipes
-class TestExternalSourceAndTargetPipes(unittest.TestCase):
+class TestExternalSourceAndTargetPipes():
     class FromAa1ToXx1Pipe(pemi.Pipe):
         def __init__(self, **params):
             super().__init__(**params)
@@ -522,4 +524,4 @@ class TestExternalSourceAndTargetPipes(unittest.TestCase):
 
         expected = 'a1 from APipe via self'
         actual = pipe.pipes['X'].sources['x1'].df['msg'][0]
-        self.assertEqual(actual, expected)
+        assert actual == expected

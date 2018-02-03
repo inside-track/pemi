@@ -11,6 +11,33 @@ from pemi.fields import *
 
 fake = Factory.create()
 
+class UniqueIdGenerator:
+    '''
+    Class used to build id generators.
+    fmt - A function that accepts a single integer argument and returns a value to be used as an id.
+
+    Example:
+      students = UniqueIdGenerator(lambda i: 'S{i}'.format(i))
+      [next(students) for x in range(5)]
+      #=> ['S6', 'S5', 'S3', 'S1', 'S4', 'S7', 'S9', 'S2', 'S8', 'S16']
+    '''
+    def __init__(self, fmt):
+        self.fmt = fmt
+        self.size = 1
+        self.gen_sample()
+
+    def gen_sample(self):
+        self.sample = list(range(10**(self.size-1), 10**self.size))
+        random.shuffle(self.sample)
+        self.size += 1
+
+    def __next__(self):
+        i = self.sample.pop()
+        if len(self.sample) == 0:
+            self.gen_sample()
+        return self.fmt(i)
+
+
 class InvalidHeaderSeparatorError(Exception): pass
 
 default_fakers = {

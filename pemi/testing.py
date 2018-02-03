@@ -1,237 +1,117 @@
+from collections import OrderedDict
+from itertools import tee
+
+import os
 import re
 import io
 import unittest
 
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
+import pandas.util.testing
 
 import pemi
 import pemi.data
+
+pd.set_option('display.expand_frame_repr', False)
+
+#TODO: Organize and doc
 
 def assert_frame_equal(actual, expected, **kwargs):
     try:
         pd.util.testing.assert_frame_equal(actual, expected, **kwargs)
     except AssertionError as err:
-        print('Actual:\n{}'.format(actual))
-        print('Expected:\n{}'.format(expected))
-        raise err
+        msg = str(err)
+        msg += '\nActual:\n{}'.format(actual)
+        msg += '\nExpected:\n{}'.format(expected)
+        raise AssertionError(msg)
+
+def assert_series_equal(actual, expected, **kwargs):
+    actual.reset_index(drop=True, inplace=True)
+    expected.reset_index(drop=True, inplace=True)
+    try:
+        pd.util.testing.assert_series_equal(actual, expected, **kwargs)
+    except AssertionError as err:
+        msg = str(err)
+        msg += '\nActual:\n{}'.format(actual)
+        msg += '\nExpected:\n{}'.format(expected)
+        raise AssertionError(msg)
+
+class when:
+    def source_has_keys(source, case_keys):
+        def gen_values(case):
+            while True:
+                values = {}
+                cache_id = os.urandom(32)
+                for field in case_keys.subject_keys[source.name]:
+                    values[field] = case_keys.cache(source.name, field, case=case)[cache_id]
+                yield values
+
+        def _when(case):
+            values = gen_values(case)
+            keys_df = pd.DataFrame([next(values) for i in range(len(source[case].data))])
+            for field in case_keys.subject_keys[source.name]:
+                source[case].data[field] = keys_df[field]
+
+        return _when
+
+    def source_field_has_value(source, field, value):
+        def _when(case):
+            n = len(source[case].data)
+            if hasattr(value, '__next__'):
+                source[case].data[field] = pd.Series([next(value) for i in range(n)])
+            else:
+                #TODO: Add test that shows fails without this change
+                source[case].data[field] = pd.Series([value]*n)
+
+        return _when
+
+    #TODO: Add a test in pemi
+    def source_fields_have_values(source, mapping):
+        def _when(case):
+            for field, value in mapping.items():
+                n = len(source[case].data)
+                if hasattr(value, '__next__'):
+                    source[case].data[field] = pd.Series([next(value) for i in range(n)])
+                else:
+                    source[case].data[field] = pd.Series([value]*n)
+
+        return _when
 
 
-class Scenario():
-    def __init__(self, runner=lambda: None, source_subjects=[], target_subjects=[], givens=[]):
-        self.runner = runner
-        self.source_subjects = source_subjects
-        self.target_subjects = target_subjects
-        self.givens = givens
-        self.whens = []
-        self.thens = []
+    def example_for_source(source, table):
+        def _when(case):
+            source[case].data = table.df
 
-    def when(self, *whens):
-        self.whens = whens
-        return self
+        return _when
 
-    def load_test_data_to_source_subjects(self):
-        for source in self.source_subjects:
-            source.from_pd(source.__test_data__)
-
-    def get_test_data_from_target_subjects(self):
-        for target in self.target_subjects:
-            target.__test_data__ = target.to_pd()
-
-    def then(self, *thens):
-        self.thens = thens
-        return self
-
-    def run(self):
-        for given in self.givens:
-            given()
-        for when in self.whens:
-            when()
-        self.load_test_data_to_source_subjects()
-        self.runner()
-        self.get_test_data_from_target_subjects()
-        for then in self.thens:
-            then()
-
-        return self
-
-class MockPipe(pemi.Pipe):
-    def flow(self):
-        pemi.log.debug('FLOWING mocked pipe: {}'.format(self))
-        pass
-
-
-
-def mock_pipe(pipe):
-    mocked = MockPipe(name=pipe.name)
-    for source in pipe.sources:
-        mocked.sources[source] = pipe.sources[source]
-        mocked.sources[source].pipe = mocked
-
-    for target in pipe.targets:
-        mocked.targets[target] = pipe.targets[target]
-        mocked.targets[target].pipe = mocked
-
-    return mocked
-
-
-
-class MultipleSubjectsError(Exception): pass
-
-class Rules():
-    def __init__(self, source_subjects, target_subjects):
-        self.source_subjects = source_subjects
-        self.target_subjects = target_subjects
-
-    def _find_source(self, subject):
-        return self._find_subject(self.source_subjects, subject)
-
-    def _find_target(self, subject):
-        return self._find_subject(self.target_subjects, subject)
-
-    def _find_subject(self, subject_list, subject):
-        if subject == None and len(subject_list) == 1:
-            return subject_list[0]
-        elif subject != None:
-            return subject
-        else:
-            raise MultipleSubjectsError('Multiple subjects defined in rules, none selected: {}'.format(subject_list))
-
-
-    def when_source_conforms_to_schema(self, source_subject=None):
-        'The source data subject conforms to the schema'
-        source_subject = self._find_source(source_subject)
-
-        def _when_source_conforms_to_schema():
+    def source_conforms_to_schema(source):
+        def _when(case):
             data = pemi.data.Table(
-                schema=source_subject.schema
+                nrows=3,
+                schema=source.subject.schema
             ).df
 
-            source_subject.__test_data__ = data
-
-        _when_source_conforms_to_schema.__doc__ = '''
-            The source data subject {} conforms to the schema: {}
-        '''.format(
-            source_subject,
-            source_subject.schema
-        )
-
-        return _when_source_conforms_to_schema
-
-    def when_sources_conform_to_schemas(self):
-        return [self.when_source_conforms_to_schema(source_subject) for source_subject in self.source_subjects]
+            source[case].data = data
+        return _when
 
 
-    def then_field_is_copied(self, source_field, target_field, source_subject=None, target_subject=None, by=None):
-        source_subject = self._find_source(source_subject)
-        target_subject = self._find_target(target_subject)
 
-        if source_field == None:
-            raise TypeError('Expecting a field name for source_field_name, got None')
-        if target_field == None:
-            raise TypeError('Expecting a field name for target_field_name, got None')
+class then:
+    def target_field_has_value(target, field, value):
+        def _then(case):
+            target_data = pd.Series(list(target[case].data[field]))
+            expected_data = pd.Series([value] * len(target_data), index = target_data.index)
 
-        def _then_field_is_copied():
-            expected = source_subject.__test_data__
-            actual = target_subject.__test_data__
+            assert_series_equal(target_data, expected_data, check_names=False, check_dtype=False, check_datetimelike_compat=True)
 
-            if by:
-                expected = expected.sort_values(by).reset_index(drop=True)
-                actual = actual.sort_values(by).reset_index(drop=True)
+        return _then
 
-            pd.testing.assert_series_equal(expected[source_field], actual[target_field],
-                                           check_dtype=False, check_names=False)
-
-
-        _then_field_is_copied.__doc__ = '''
-            The field {} from the source {} is copied to field {} on the target {}
-        '''.format(
-            source_subject,
-            source_field,
-            target_subject,
-            target_field
-        )
-        return _then_field_is_copied
-
-# TODO: Drop this... pytest can parameterize it
-#       If we really want a good mapping
-    def then_fields_are_copied(self, mapping, source_subject=None, target_subject=None, by=None):
-        def _then_fields_are_copied():
-            for source_field, target_field in mapping.items():
-                self.then_field_is_copied(
-                    source_subject=source_subject,
-                    target_subject=target_subject,
-                    source_field=source_field,
-                    target_field=target_field,
-                    by=by
-                )()
-
-        mapping_doc = "\n".join(["'{}' -> '{}'".format(s,t) for s,t in mapping.items()])
-
-        _then_fields_are_copied.__doc__ = '''
-            Fields are directly copied from '{}' to '{}' according to the mapping:
-            {}
-        '''.format(source_subject, target_subject, mapping_doc)
-        return _then_fields_are_copied
-
-    def when_source_field_has_value(self, field_name, field_value, source_subject=None):
-        source_subject = self._find_source(source_subject)
-
-        def _when_source_field_has_value():
-            source_data = source_subject.__test_data__
-            source_data[field_name] = pd.Series([field_value] * len(source_data))
-
-        _when_source_field_has_value.__doc__ = '''
-            The source field '{}' has the value "{}"
-        '''.format(source_subject, field_value)
-        return _when_source_field_has_value
-
-
-    def when_source_field_has_value_like(self, field_name, generator, source_subject=None):
-        source_subject = self._find_source(source_subject)
-
-        def _when_source_field_has_value_like():
-            source_data = source_subject.__test_data__
-            source_data[field_name] = pd.Series([generator() for i in range(len(source_data))])
-
-        doc_values = list(set([generator() for i in range(10)]))
-        _when_source_field_has_value_like.__doc__ = '''
-            The source field '{}' has the value "{}"
-        '''.format(source_subject, doc_values)
-        return _when_source_field_has_value_like
-
-    def then_target_field_has_value(self, field_name, field_value, target_subject=None):
-        target_subject = self._find_target(target_subject)
-
-        def _then_target_field_has_value():
-            target_data = target_subject.__test_data__
-            expected_data = pd.Series([field_value] * len(target_data), index=target_data.index)
-            pd.testing.assert_series_equal(target_data[field_name], expected_data, check_names=False, check_dtype=False)
-
-        _then_target_field_has_value.__doc__ = '''
-            The target field '{}' has the value "{}"
-        '''.format(target_subject, field_value)
-        return _then_target_field_has_value
-
-    def when_example_for_source(self, table, source_subject=None):
-        source_subject = self._find_source(source_subject)
-
-        def _when_example_for_source():
-            source_subject.__test_data__ = table.df
-
-        _when_example_for_source.__doc__ = '''
-            The following example for '{}':
-            {}
-        '''.format(source_subject, table.df[table.defined_fields])
-        return _when_example_for_source
-
-    def then_target_matches_example(self, expected_table, target_subject=None, by=None):
-        target_subject = self._find_target(target_subject)
+    def target_matches_example(target, expected_table, by=None):
         subject_fields = expected_table.defined_fields
 
-        def _then_target_matches_example():
+        def _then(case):
             expected = expected_table.df[subject_fields]
-            actual = target_subject.__test_data__[subject_fields]
+            actual = target[case].data[subject_fields]
 
             if by:
                 expected = expected.sort_values(by).reset_index(drop=True)
@@ -242,59 +122,297 @@ class Rules():
 
             assert_frame_equal(actual, expected, check_names=False, check_dtype=False)
 
-        _then_target_matches_example.__doc__ = '''
-            The target '{}' matches the example:
-        '''.format(target_subject, expected_table.df[subject_fields])
-        return _then_target_matches_example
+        return _then
 
-    def then_target_does_not_have_field(self, field_name, target_subject=None):
-        target_subject = self._find_target(target_subject)
+    def field_is_copied(source, source_field, target, target_field, by=None):
+        def _then(case):
+            if by:
+                expected = source[case].data.sort_values(by).reset_index(drop=True)[[source_field]]
+                actual = target[case].data.sort_values(by).reset_index(drop=True)[[target_field]]
+            else:
+                expected = source[case].data[[source_field]]
+                actual = target[case].data[[target_field]]
 
-        def _then_target_does_not_have_field():
-            if field_name in target_subject.__test_data__.columns:
-                raise AssertionError("'{}' was not expected to be found in the target".format(field_name))
+            try:
+                assert_series_equal(expected[source_field], actual[target_field], check_names=False)
+            except AssertionError as err:
+                raise AssertionError('Source field {} not copied to target field {}: {}'.format(
+                    source_field, target_field, err)
+                )
 
-        _then_target_does_not_have_field.__doc__='''
-            The target '{}' does not have a field called '{}'
-        '''.format(target_subject, field_name)
-        return _then_target_does_not_have_field
+        return _then
 
-    def then_target_does_not_have_fields(self, field_names, target_subject=None):
-        target_subject = self._find_target(target_subject)
+    def fields_are_copied(source, target, mapping, by=None):
+        source_fields = list(set([m[0] for m in mapping]))
+        target_fields = list(set([m[1] for m in mapping]))
 
-        def _then_target_does_not_have_fields():
-            unexpected_fields = set(field_names) & set(target_subject.__test_data__.columns)
+        def _then(case):
+            if by:
+                expected = source[case].data.sort_values(by).reset_index(drop=True)[source_fields]
+                actual = target[case].data.sort_values(by).reset_index(drop=True)[target_fields]
+            else:
+                expected = source[case].data[source_fields]
+                actual = target[case].data[target_fields]
+
+            for source_field, target_field in mapping:
+                try:
+                    assert_series_equal(expected[source_field], actual[target_field], check_names=False, check_dtype=False)
+                except AssertionError as err:
+                    raise AssertionError('Source field {} not copied to target field {}: {}'.format(
+                        source_field, target_field, err)
+                    )
+
+        return _then
+
+
+    def target_does_not_have_fields(target, *fields):
+        def _then(case):
+            unexpected_fields = set(fields) & set(target[case].data.columns)
             if len(unexpected_fields) > 0:
                 raise AssertionError("The fields '{}' were not expected to be found in the target".format(unexpected_fields))
 
-        _then_target_does_not_have_fields.__doc__='''
-            The target '{}' does not have any of the following fields: '{}'
-        '''.format(target_subject, "','".join(field_names))
-        return _then_target_does_not_have_fields
+        return _then
 
-
-    def then_target_is_empty(self, target_subject=None):
-        target_subject = self._find_target(target_subject)
-
-        def _then_target_is_empty():
-            nrecords = len(target_subject.__test_data__)
+    def target_is_empty(target):
+        def _then(case):
+            nrecords = len(target[case].data)
             if nrecords != 0:
-                raise AssertionError('Excpecting target to be empty, found {} records'.format(nrecords))
+                 raise AssertionError('Expecting target to be empty, found {} records'.format(nrecords))
 
-        _then_target_is_empty.__doc__='''
-            The target '{}' is empty
-        '''.format(target_subject)
-        return _then_target_is_empty
+        return _then
 
-    def then_target_has_n_records(self, expected_n, target_subject=None):
-        target_subject = self._find_target(target_subject)
-
-        def _then_target_has_n_records():
-            nrecords = len(target_subject.__test_data__)
+    def target_has_n_records(target, expected_n):
+        def _then(case):
+            nrecords = len(target[case].data)
             if nrecords != expected_n:
                 raise AssertionError('Excpecting target to have {} records, found {} records'.format(expected_n, nrecords))
 
-        _then_target_has_n_records.__doc__='''
-            The target '{}' has {} records
-        '''.format(target_subject, expected_n)
-        return _then_target_has_n_records
+        return _then
+
+
+
+
+#TODO: Rename this to SubscriptableLambda
+class CachedCaseKeyAccessor():
+    def __init__(self, func):
+        self.func = func
+
+    def __getitem__(self, cache=None):
+        return self.func(cache)
+
+
+class CaseKeyTracker():
+    def __init__(self, case_key_gen):
+        self.case = None
+
+        self.cached = {}
+        self.subject_case_keys = {}
+
+        self.subject_keys = {name: list(keys.keys()) for name, keys in next(case_key_gen).items()}
+        self._build_synced_generators(case_key_gen)
+
+    def _next_case(self, case):
+        self.cached = {}
+        self.case = case
+
+    def _track_key(self, subject_case_keys, case=None):
+        case = case if case else self.case
+        for subject_name, key in subject_case_keys.items():
+            if subject_name not in self.subject_case_keys:
+                self.subject_case_keys[subject_name] = []
+            self.subject_case_keys[subject_name].append({'case': case, 'key': key})
+
+    def _build_synced_generators(self, case_key_gen):
+        subjects = list(self.subject_keys.keys())
+
+        self.synced_generators = {}
+        for idx, tgen in enumerate(tee(case_key_gen, len(subjects) + 1)):
+            if idx < len(subjects):
+                self.synced_generators[subjects[idx]] = tgen
+            else:
+                self.synced_generators['__internal__'] = tgen
+
+    def get_key(self, subject, field, case=None, cache=None):
+        cache = os.urandom(32) if cache is None else cache
+        if cache not in self.cached:
+            self.cached[cache] = next(self.synced_generators['__internal__'])
+            self._track_key(self.cached[cache], case=case)
+
+        try:
+            return self.cached[cache][subject][field]
+        except KeyError as err:
+            msg = "No case key found for field '{}' and subject '{}'".format(field, subject)
+            raise KeyError(msg)
+
+    def cache(self, subject, field, case=None):
+        return CachedCaseKeyAccessor(lambda name: self.get_key(subject, field, case=case, cache=name))
+
+
+
+class CaseData():
+    def __init__(self, case, test_subject):
+        self.case = case
+        self.test_subject = test_subject
+
+    @property
+    def data(self):
+        if not hasattr(self, '_data'):
+            cols = self.test_subject.subject.schema.keys()
+            self._data = pd.DataFrame([[None] * len(cols)], columns=cols)
+
+        return self._data
+
+    @data.setter
+    def data(self, value):
+        self._data = value
+
+class TestSubject():
+    def __init__(self, subject, name):
+        self.subject = subject
+        self.name = name
+        self.data = {}
+
+    def __getitem__(self, case):
+        case_id = id(case)
+        if not(case_id in self.data):
+            self.data[case_id] = CaseData(case, self)
+        return self.data[case_id]
+
+class Case():
+    def __init__(self, name, scenario):
+        self.name = name
+        self.scenario = scenario
+        self.whens = []
+        self.thens = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def when(self, *funcs):
+        self.whens.extend(funcs)
+        return self
+
+    def then(self, *funcs):
+        self.thens.extend(funcs)
+        return self
+
+    def setup(self):
+        for w in self.whens:
+            w(self)
+
+    def assert_case(self):
+        self.scenario.run()
+
+        try:
+            for t in self.thens:
+                t(self)
+        except AssertionError as err:
+            msg = '\nAssertion Error for {}'.format(self)
+            for name, source in self.scenario.sources.items():
+                msg += '\nSource {}:\n{}'.format(name, source.subject.to_pd())
+            for name, target in self.scenario.targets.items():
+                msg += '\nTarget {}:\n{}'.format(name, target.subject.to_pd())
+            raise AssertionError(msg)
+
+
+    def __str__(self):
+        return "<Case '{}' ({})>".format(self.name, id(self))
+
+class Scenario():
+    def __init__(self, runner, case_keys=None, sources={}, targets={}):
+        self.runner = runner
+        self.case_keys = CaseKeyTracker(case_keys)
+
+        self.cases = OrderedDict()
+        self.has_run = False
+
+        self.sources = {name: TestSubject(subject, name) for name, subject in sources.items()}
+        self.targets = {name: TestSubject(subject, name) for name, subject in targets.items()}
+
+
+    def case(self, name):
+        case = Case(name, self)
+        self.case_keys._next_case(case)
+        self.cases[name] = case
+        return case
+
+    def setup_cases(self):
+        for case in self.cases.values():
+            case.setup()
+
+        self.load_test_data()
+
+    def load_test_data(self):
+        for source_name, source in self.sources.items():
+            if len(source.data.values()) > 0:
+                all_case_data = pd.concat([cd.data for cd in source.data.values()], ignore_index=True)
+                source.subject.from_pd(all_case_data)
+
+
+    def collect_results(self):
+        def assign_case(target_name):
+            try:
+                subject_case_keys = self.case_keys.subject_case_keys[target_name]
+            except KeyError:
+                raise KeyError('''No case keys assigned for target '{}'.
+                     This usually means you forgot to build source data with case keys.
+                     '''.format(target_name))
+
+            key_fields = list(subject_case_keys[0]['key'].keys())
+
+            def _assign_case(row):
+                row_key = set(dict(row[key_fields]).items())
+                for key_case in subject_case_keys:
+                    key = set(key_case['key'].items())
+                    if len(row_key & key) > 0:
+                        return key_case['case']
+                raise KeyError("No case found for {} for target '{}'".format(row_key, target_name))
+            return _assign_case
+
+        for target_name, target in self.targets.items():
+            all_target_data = target.subject.to_pd()
+            for case in self.cases.values():
+                target[case].data = pd.DataFrame(columns=all_target_data.columns)
+
+            if len(all_target_data) > 0:
+                all_target_data['__pemi_case__'] = all_target_data.apply(assign_case(target_name), axis=1)
+                for case, df in all_target_data.groupby(['__pemi_case__'], sort=False):
+                    del df['__pemi_case__']
+                    target[case].data = df
+
+    def assert_cases(self):
+        for case in self.cases.values():
+            case.assert_case()
+
+    def run(self):
+        if self.has_run:
+            return
+
+        self.setup_cases()
+        self.runner()
+        self.collect_results()
+
+        self.has_run = True
+
+
+class MockPipe(pemi.Pipe):
+    def flow(self):
+        pemi.log.debug('FLOWING mocked pipe: {}'.format(self))
+
+def mock_pipe(parent_pipe, pipe_name):
+    pipe = parent_pipe.pipes[pipe_name]
+    mocked = MockPipe(name=pipe.name)
+    for source in pipe.sources:
+        mocked.sources[source] = pipe.sources[source]
+        mocked.sources[source].pipe = mocked
+
+    for target in pipe.targets:
+        mocked.targets[target] = pipe.targets[target]
+        mocked.targets[target].pipe = mocked
+
+    #TODO: optionally copy some attributes of mocked pipe
+
+    parent_pipe.pipes[pipe_name] = mocked
