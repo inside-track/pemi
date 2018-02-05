@@ -49,7 +49,7 @@ def db_case_clean(case, db_schema_init):
         yield
 
 
-with pt.Scenario('SaSqlSourcePipe', fixtures=['db_case_clean']) as scenario:
+with pt.Scenario('SaSqlSourcePipe', usefixtures=['db_case_clean']) as scenario:
     sales_schema = pemi.Schema(
             beer_id  = IntegerField(),
             name     = StringField(),
