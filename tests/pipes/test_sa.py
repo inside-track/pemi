@@ -41,12 +41,15 @@ def db_schema_init():
 
 @pytest.fixture
 def db_case_clean(case, db_schema_init):
-    truncate_sa_sources(case.scenario.sources.values())
-    yield
-    truncate_sa_sources(case.scenario.sources.values())
+    if not case.scenario.has_run:
+        truncate_sa_sources(case.scenario.sources.values())
+        yield
+        truncate_sa_sources(case.scenario.sources.values())
+    else:
+        yield
 
 
-class TestSaSqlSourcePipe():
+with pt.Scenario('SaSqlSourcePipe', usefixtures=['db_case_clean']) as scenario:
     sales_schema = pemi.Schema(
             beer_id  = IntegerField(),
             name     = StringField(),
@@ -81,7 +84,7 @@ class TestSaSqlSourcePipe():
                 'sql_source': {'beer_id': i}
             }
 
-    scenario = pt.Scenario(
+    scenario.setup(
         runner = pipe.pipes['sql_source'].flow,
         case_keys = case_keys(),
         sources = {
@@ -127,9 +130,3 @@ class TestSaSqlSourcePipe():
         ).then(
             pt.then.target_matches_example(scenario.targets['sql_source'], ex_sales)
         )
-
-    #TODO: This is running truncate before/after every case.  It would be nice if it only did so once a scenario
-    @pytest.mark.usefixtures('db_case_clean')
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()

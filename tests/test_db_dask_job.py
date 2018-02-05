@@ -196,8 +196,7 @@ class DenormalizeBeersPipe(pemi.Pipe):
                 '''
             )
 
-
-class TestDenormalizeBeersPipe():
+with pt.Scenario('DenormalizeBeersPipe') as scenario:
     pipe = DenormalizeBeersPipe()
 
     pt.mock_pipe(pipe, 'dumb_sales')
@@ -212,7 +211,7 @@ class TestDenormalizeBeersPipe():
                 'beer_sales': {'beer_id': i}
             }
 
-    scenario = pt.Scenario(
+    scenario.setup(
         runner = pipe.flow,
         case_keys = case_keys(),
         sources={
@@ -275,8 +274,3 @@ class TestDenormalizeBeersPipe():
         ).then(
             pt.then.target_matches_example(scenario.targets['beer_sales'], beer_sales_table)
         )
-
-
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()

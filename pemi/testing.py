@@ -5,7 +5,9 @@ import os
 import re
 import io
 import unittest
+import sys
 
+import pytest
 import pandas as pd
 import pandas.util.testing
 
@@ -60,12 +62,10 @@ class when:
             if hasattr(value, '__next__'):
                 source[case].data[field] = pd.Series([next(value) for i in range(n)])
             else:
-                #TODO: Add test that shows fails without this change
                 source[case].data[field] = pd.Series([value]*n)
 
         return _when
 
-    #TODO: Add a test in pemi
     def source_fields_have_values(source, mapping):
         def _when(case):
             for field, value in mapping.items():
@@ -192,8 +192,7 @@ class then:
 
 
 
-#TODO: Rename this to SubscriptableLambda
-class CachedCaseKeyAccessor():
+class SubscriptableLambda():
     def __init__(self, func):
         self.func = func
 
@@ -245,7 +244,7 @@ class CaseKeyTracker():
             raise KeyError(msg)
 
     def cache(self, subject, field, case=None):
-        return CachedCaseKeyAccessor(lambda name: self.get_key(subject, field, case=case, cache=name))
+        return SubscriptableLambda(lambda name: self.get_key(subject, field, case=case, cache=name))
 
 
 
@@ -322,7 +321,28 @@ class Case():
         return "<Case '{}' ({})>".format(self.name, id(self))
 
 class Scenario():
-    def __init__(self, runner, case_keys=None, sources={}, targets={}):
+    def __init__(self, name, *selector, usefixtures=[]):
+        self.name = name
+        self.selector = selector
+        self.usefixtures = usefixtures
+
+    def _register_test(self, module_name):
+        @pytest.mark.usefixtures(*self.usefixtures)
+        @pytest.mark.scenario(self, *self.selector)
+        def test_scenario(case):
+            case.assert_case()
+        setattr(sys.modules[module_name], 'testScenario:{}'.format(self.name), test_scenario)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        import inspect
+        f = inspect.currentframe()
+        calling_module = inspect.getouterframes(f)[1].frame.f_locals['__name__']
+        self._register_test(calling_module)
+
+    def setup(self, runner, case_keys=None, sources={}, targets={}):
         self.runner = runner
         self.case_keys = CaseKeyTracker(case_keys)
 
