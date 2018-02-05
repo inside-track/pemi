@@ -62,12 +62,10 @@ class when:
             if hasattr(value, '__next__'):
                 source[case].data[field] = pd.Series([next(value) for i in range(n)])
             else:
-                #TODO: Add test that shows fails without this change
                 source[case].data[field] = pd.Series([value]*n)
 
         return _when
 
-    #TODO: Add a test in pemi
     def source_fields_have_values(source, mapping):
         def _when(case):
             for field, value in mapping.items():
@@ -194,8 +192,7 @@ class then:
 
 
 
-#TODO: Rename this to SubscriptableLambda
-class CachedCaseKeyAccessor():
+class SubscriptableLambda():
     def __init__(self, func):
         self.func = func
 
@@ -247,7 +244,7 @@ class CaseKeyTracker():
             raise KeyError(msg)
 
     def cache(self, subject, field, case=None):
-        return CachedCaseKeyAccessor(lambda name: self.get_key(subject, field, case=case, cache=name))
+        return SubscriptableLambda(lambda name: self.get_key(subject, field, case=case, cache=name))
 
 
 
