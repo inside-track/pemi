@@ -8,7 +8,8 @@ import pemi.data
 import pemi.testing as pt
 from pemi.fields import *
 
-class TestBasics:
+
+with pt.Scenario('Testing Basics') as scenario:
     mysource = pemi.PdDataSubject(
         schema = pemi.Schema(
             id = IntegerField(),
@@ -50,7 +51,7 @@ class TestBasics:
                 )
         return _runner
 
-    scenario = pt.Scenario(
+    scenario.setup(
         runner = runner(mysource, mytarget),
         case_keys = id_key_maps(),
         sources = {
@@ -226,13 +227,9 @@ class TestBasics:
         )
 
 
-    @pytest.mark.scenario(scenario)
-    def test_one_to_one(self, case):
-        case.assert_case()
 
 
-
-class TestMultipleKeys:
+with pt.Scenario('Testing with multiple keys') as scenario:
     mysource = pemi.PdDataSubject(
         schema = pemi.Schema(
             student_id = StringField(),
@@ -270,7 +267,7 @@ class TestMultipleKeys:
             target.df = source.df.copy()
         return _runner
 
-    scenario = pt.Scenario(
+    scenario.setup(
         runner = runner(mysource, mytarget),
         case_keys = case_keys(),
         sources = {
@@ -353,12 +350,6 @@ class TestMultipleKeys:
         )
 
 
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()
-
-
-
 
 
 
@@ -422,7 +413,7 @@ class GrandPipe(pemi.Pipe):
             pipe=ParentPipe()
         )
 
-class TestPipeMock():
+class TestPipeMock:
     @pytest.fixture
     def mock_pipe(self):
         pipe = GrandPipe()

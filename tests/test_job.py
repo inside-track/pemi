@@ -142,7 +142,7 @@ class BlackBoxJob(pemi.Pipe):
         self.connections.flow()
 
 
-class TestBlackBoxJob():
+with pt.Scenario('BlackBoxJob') as scenario:
     pipe = BlackBoxJob()
 
     pt.mock_pipe(pipe, 'beers_file')
@@ -158,7 +158,7 @@ class TestBlackBoxJob():
             }
 
 
-    scenario = pt.Scenario(
+    scenario.setup(
         runner=pipe.flow,
         case_keys=case_keys(),
         sources={
@@ -279,14 +279,10 @@ class TestBlackBoxJob():
             pt.then.target_matches_example(scenario.targets['dropped_duplicates'], dropped_duplicates)
         )
 
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()
-
 
 # We can also test just the core pipe that does the interesting stuff in isolation from
 # all of the sub pipes.  This may be simpler to test in most cases.
-class TestBlackBoxPipe():
+with pt.Scenario('BlackBoxPipe') as scenario:
     pipe = BlackBoxPipe()
 
     def case_keys():
@@ -297,7 +293,7 @@ class TestBlackBoxPipe():
                 'beers_w_style_file': {'id': i}
             }
 
-    scenario = pt.Scenario(
+    scenario.setup(
         runner=pipe.flow,
         case_keys=case_keys(),
         sources={
@@ -345,7 +341,3 @@ class TestBlackBoxPipe():
         ).then(
             pt.then.target_field_has_value(scenario.targets['beers_w_style_file'], 'style', 'Unknown Style')
         )
-
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()
