@@ -321,13 +321,13 @@ class Case():
         return "<Case '{}' ({})>".format(self.name, id(self))
 
 class Scenario():
-    def __init__(self, name, *selector, fixtures=[]):
+    def __init__(self, name, *selector, usefixtures=[]):
         self.name = name
         self.selector = selector
-        self.fixtures = fixtures
+        self.usefixtures = usefixtures
 
     def _register_test(self, module_name):
-        @pytest.mark.usefixtures(*self.fixtures)
+        @pytest.mark.usefixtures(*self.usefixtures)
         @pytest.mark.scenario(self, *self.selector)
         def test_scenario(case):
             case.assert_case()
