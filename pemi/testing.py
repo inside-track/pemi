@@ -5,7 +5,9 @@ import os
 import re
 import io
 import unittest
+import sys
 
+import pytest
 import pandas as pd
 import pandas.util.testing
 
@@ -322,7 +324,28 @@ class Case():
         return "<Case '{}' ({})>".format(self.name, id(self))
 
 class Scenario():
-    def __init__(self, runner, case_keys=None, sources={}, targets={}):
+    def __init__(self, name, *selector, fixtures=[]):
+        self.name = name
+        self.selector = selector
+        self.fixtures = fixtures
+
+    def _register_test(self, module_name):
+        @pytest.mark.usefixtures(*self.fixtures)
+        @pytest.mark.scenario(self, *self.selector)
+        def test_scenario(case):
+            case.assert_case()
+        setattr(sys.modules[module_name], 'testScenario:{}'.format(self.name), test_scenario)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        import inspect
+        f = inspect.currentframe()
+        calling_module = inspect.getouterframes(f)[1].frame.f_locals['__name__']
+        self._register_test(calling_module)
+
+    def setup(self, runner, case_keys=None, sources={}, targets={}):
         self.runner = runner
         self.case_keys = CaseKeyTracker(case_keys)
 

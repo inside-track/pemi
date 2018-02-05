@@ -84,7 +84,7 @@ class DenormalizeBeersPipe(pemi.Pipe):
         self.targets['beer_sales'].df.createOrReplaceTempView('beer_sales')
 
 
-class TestDenormalizeBeersPipe():
+with pt.Scenario('DenormalizeBeersPipe') as scenario:
     spark_session = pyspark.sql.SparkSession \
         .builder \
         .master("spark://spark-master:7077") \
@@ -103,7 +103,7 @@ class TestDenormalizeBeersPipe():
                 'beer_sales': {'beer_id': i}
             }
 
-    scenario = pt.Scenario(
+    scenario.setup(
         runner=pipe.flow,
         case_keys = case_keys(),
         sources = {
@@ -167,7 +167,3 @@ class TestDenormalizeBeersPipe():
             pt.then.target_matches_example(scenario.targets['beer_sales'], beer_sales_table,
                                            by=['beer_id', 'sold_at'])
         )
-
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()

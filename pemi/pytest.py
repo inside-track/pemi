@@ -15,7 +15,7 @@ def pytest_generate_tests(metafunc):
             metafunc.config.warn(0, 'WARNING - Only a subset of cases are selected: {}'.format(args))
             re_tag = re.compile(args[1])
             for name, case in list(scenario.cases.items()):
-                if not re_tag.match(name):
+                if not re_tag.search(name):
                     del scenario.cases[name]
 
         metafunc.parametrize(

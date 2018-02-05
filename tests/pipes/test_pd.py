@@ -10,9 +10,9 @@ from pemi.fields import *
 from pemi.pd_mapper import *
 
 class PdLookupJoinPipeScenarioFactory():
-    def __init__(self, pipe):
+    def __init__(self, scenario, pipe):
+        self.scenario = scenario
         self.pipe = pipe
-        self.scenario = self._create_scenario(pipe)
 
     @staticmethod
     def case_keys():
@@ -25,19 +25,19 @@ class PdLookupJoinPipeScenarioFactory():
                 'errors': {'key': 'k{}'.format(i)}
             }
 
-    def _create_scenario(self, pipe):
-        return pt.Scenario(
-            runner = pipe.flow,
-            case_keys = self.case_keys(),
-            sources={
+    def scenario_setup(self):
+        return {
+            'runner': self.pipe.flow,
+            'case_keys': self.case_keys(),
+            'sources': {
                 'main_source': pipe.sources['main'],
                 'lookup': pipe.sources['lookup']
             },
-            targets={
+            'targets': {
                 'main_target': pipe.targets['main'],
                 'errors': pipe.targets['errors']
             }
-        )
+        }
 
     def ex_main(self):
         return pemi.data.Table(
@@ -83,14 +83,14 @@ class PdLookupJoinPipeScenarioFactory():
         ]
 
 
-class TestPdLookupJoinPipeBase():
-    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+
+with pt.Scenario('PdLookupJoinPipe Basics') as scenario:
+    pipe=pemi.pipes.pd.PdLookupJoinPipe(
         main_key = ['key'],
         lookup_key = ['lkey']
     )
-
-    factory = PdLookupJoinPipeScenarioFactory(pipe)
-    scenario = factory.scenario
+    factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
+    scenario.setup(**factory.scenario_setup())
 
     with scenario.case('it performs the lookup') as case:
         expected = pemi.data.Table(
@@ -129,20 +129,16 @@ class TestPdLookupJoinPipeBase():
             pt.then.target_matches_example(scenario.targets['errors'], expected)
         )
 
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()
 
-
-class TestPdLookupJoinPipeIgnoreHandler():
+with pt.Scenario('PdLookupJoinPipe IgnoreHandler') as scenario:
     pipe = pemi.pipes.pd.PdLookupJoinPipe(
         main_key = ['key'],
         lookup_key = ['lkey'],
         missing_handler=RowHandler('ignore')
     )
 
-    factory = PdLookupJoinPipeScenarioFactory(pipe)
-    scenario = factory.scenario
+    factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
+    scenario.setup(**factory.scenario_setup())
 
     with scenario.case('it does not redirect errors') as case:
         case.when(
@@ -187,20 +183,16 @@ class TestPdLookupJoinPipeIgnoreHandler():
         )
 
 
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()
 
-class TestPdLookupJoinPipeFillNa():
+with pt.Scenario('PdLookupJoinPipe FillNa') as scenario:
     pipe = pemi.pipes.pd.PdLookupJoinPipe(
         main_key = ['key'],
         lookup_key = ['lkey'],
         missing_handler=RowHandler('ignore'),
         fillna={'value': 'EMPTY'}
     )
-
-    factory = PdLookupJoinPipeScenarioFactory(pipe)
-    scenario = factory.scenario
+    factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
+    scenario.setup(**factory.scenario_setup())
 
     with scenario.case('it fills in missing values') as case:
         expected = pemi.data.Table(
@@ -225,19 +217,17 @@ class TestPdLookupJoinPipeFillNa():
             pt.then.target_matches_example(scenario.targets['main_target'], expected)
         )
 
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()
 
-class TestPdLookupJoinPipeLookupPrefix():
+
+with pt.Scenario('PdLookupJoinPipe Lookup Prefix') as scenario:
     pipe = pemi.pipes.pd.PdLookupJoinPipe(
         main_key = ['key'],
         lookup_key = ['lkey'],
         lookup_prefix='existing_'
     )
 
-    factory = PdLookupJoinPipeScenarioFactory(pipe)
-    scenario = factory.scenario
+    factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
+    scenario.setup(**factory.scenario_setup())
 
     with scenario.case('it prefixes lookup fields') as case:
         expected = pemi.data.Table(
@@ -261,11 +251,8 @@ class TestPdLookupJoinPipeLookupPrefix():
             pt.then.target_matches_example(scenario.targets['main_target'], expected)
         )
 
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()
 
-class TestPdLookupJoinPipeLookupPrefixMissing():
+with pt.Scenario('PdLookupJoinPipe Prefix Missing') as scenario:
     pipe = pemi.pipes.pd.PdLookupJoinPipe(
         main_key = ['key'],
         lookup_key = ['lkey'],
@@ -273,8 +260,8 @@ class TestPdLookupJoinPipeLookupPrefixMissing():
         missing_handler=RowHandler('ignore')
     )
 
-    factory = PdLookupJoinPipeScenarioFactory(pipe)
-    scenario = factory.scenario
+    factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
+    scenario.setup(**factory.scenario_setup())
 
     with scenario.case('it prefixes lookup fields when lookup is empty') as case:
         lookup = pemi.data.Table(
@@ -315,12 +302,9 @@ class TestPdLookupJoinPipeLookupPrefixMissing():
             pt.then.target_matches_example(scenario.targets['main_target'], expected)
         )
 
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()
 
 
-class TestPdLookupJoinPipeIndicator():
+with pt.Scenario('PdLookupJoinPipe Indicator') as scenario:
     pipe = pemi.pipes.pd.PdLookupJoinPipe(
         main_key = ['key'],
         lookup_key = ['lkey'],
@@ -328,8 +312,8 @@ class TestPdLookupJoinPipeIndicator():
         indicator = 'lkp_found'
     )
 
-    factory = PdLookupJoinPipeScenarioFactory(pipe)
-    scenario = factory.scenario
+    factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
+    scenario.setup(**factory.scenario_setup())
 
     with scenario.case('it adds an indicator') as case:
         expected = pemi.data.Table(
@@ -353,12 +337,9 @@ class TestPdLookupJoinPipeIndicator():
             pt.then.target_matches_example(scenario.targets['main_target'], expected)
         )
 
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()
 
 
-class TestPdLookupJoinPipeBlankKeys():
+with pt.Scenario('PdLookupJoinPipe Blank Keys') as scenario:
     pipe = pemi.pipes.pd.PdLookupJoinPipe(
         main_key = ['key'],
         lookup_key = ['key']
@@ -373,7 +354,7 @@ class TestPdLookupJoinPipeBlankKeys():
                 'errors': {'alt_key': 'k{}'.format(i)}
             }
 
-    scenario = pt.Scenario(
+    scenario.setup(
         runner = pipe.flow,
         case_keys = case_keys(),
         sources={
@@ -450,14 +431,11 @@ class TestPdLookupJoinPipeBlankKeys():
             pt.then.target_matches_example(scenario.targets['errors'], errors),
         )
 
-    @pytest.mark.scenario(scenario)
-    def test_scenario(self, case):
-        case.assert_case()
 
 
 
 
-class TestPdConcatPipe():
+class TestPdConcatPipe:
     def test_it_concatenates_sources(self):
         pipe = pemi.pipes.pd.PdConcatPipe(sources=['s1', 's2'])
         pipe.sources['s1'].df = pd.DataFrame({
@@ -489,8 +467,7 @@ class TestPdConcatPipe():
         pt.assert_frame_equal(actual_df, expected_df)
 
 
-class TestPdFieldValueForkPipe():
-
+class TestPdFieldValueForkPipe:
     @pytest.fixture(scope='class')
     def pipe(self):
         pipe = pemi.pipes.pd.PdFieldValueForkPipe(
