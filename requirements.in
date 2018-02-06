@@ -5,7 +5,8 @@ graphviz
 faker
 sqlalchemy
 psycopg2
-jupyter
+jupyter>=0.30
 jupyterlab
-pyspark
+pyspark==2.2.1
 pytest
+pylint

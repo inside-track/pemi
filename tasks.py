@@ -55,10 +55,16 @@ def logs(ctx):
     'Follow docker logs'
     ctx.run('docker-compose logs -f')
 
-@task(help={'nose2': "Arguments to pass to nose2 running in the container."})
-def test(ctx, nose2=''):
-    'Runs the test suite.  User can specifiy nose2 options to run specific tests.'
-    ctx.run('docker-compose run app nose2 {}'.format(nose2))
+@task(help={'pytest': "Arguments to pass to pytest running in the container."})
+def test(ctx, pytest=''):
+    'Runs the test suite.  User can specifiy pytest options to run specific tests.'
+    ctx.run('docker-compose run app pytest {}'.format(pytest))
+
+@task
+def lint(ctx):
+    'Checks code quality with pylint'
+    ctx.run('docker-compose run app pylint --rcfile pemi/.pylintrc pemi')
+    ctx.run('docker-compose run app pylint --rcfile tests/.pylintrc tests')
 
 @task
 def ps(ctx):

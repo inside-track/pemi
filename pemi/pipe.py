@@ -1,11 +1,9 @@
-import re
 import pickle
 import copy
 from collections import OrderedDict
 
 import pemi
 import pemi.connections
-from pemi.data_subject import PdDataSubject
 
 
 class Pipe():

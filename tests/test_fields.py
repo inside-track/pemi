@@ -6,7 +6,7 @@ import pytest
 import pemi.fields
 from pemi.fields import *
 
-class TestField():
+class TestField:
     def test_it_accepts_metadata(self):
         '''
         Users can define custom metadata to add to fields
@@ -28,7 +28,7 @@ class TestField():
         field = pemi.fields.Field(null='#N/A')
         assert field.null == '#N/A'
 
-class TestStringField():
+class TestStringField:
     def test_convert_a_string(self):
         '''
         It takes a string and outputs a string
@@ -64,7 +64,7 @@ class TestStringField():
 
 
 
-class TestIntegerField():
+class TestIntegerField:
     def test_convert_to_integers(self):
         '''
         String values should be converted into integers
@@ -93,7 +93,7 @@ class TestIntegerField():
         assert coerced == 42
 
 
-class TestFloatField():
+class TestFloatField: #pylint: disable=too-few-public-methods
     def test_convert_to_float(self):
         '''
         String values should be converted into floats
@@ -104,14 +104,14 @@ class TestFloatField():
         assert coerced == 42.3
 
 
-class TestDateField():
+class TestDateField:
     def test_convert_to_date(self):
         '''
         String values should convert to Python dates
         '''
         field = DateField()
         coerced = field.coerce('2016-02-14')
-        assert coerced == datetime.date(2016,2,14)
+        assert coerced == datetime.date(2016, 2, 14)
 
     def test_custom_format(self):
         '''
@@ -119,23 +119,23 @@ class TestDateField():
         '''
         field = DateField(format='%d/%m/%Y')
         coerced = field.coerce('14/02/2016')
-        assert coerced == datetime.date(2016,2,14)
+        assert coerced == datetime.date(2016, 2, 14)
 
     def test_convert_from_date(self):
         '''
         Just return the date if it's already a date
         '''
         field = DateField()
-        coerced = field.coerce(datetime.date(2016,2,14))
-        assert coerced == datetime.date(2016,2,14)
+        coerced = field.coerce(datetime.date(2016, 2, 14))
+        assert coerced == datetime.date(2016, 2, 14)
 
     def test_convert_from_datetime(self):
         '''
         Return the date part if it's already a datetime
         '''
         field = DateField()
-        coerced = field.coerce(datetime.datetime(2016,2,14,1,2,3))
-        assert coerced == datetime.date(2016,2,14)
+        coerced = field.coerce(datetime.datetime(2016, 2, 14, 1, 2, 3))
+        assert coerced == datetime.date(2016, 2, 14)
 
     def test_convert_invalid_date(self):
         '''
@@ -152,7 +152,7 @@ class TestDateField():
         '''
         field = DateField(infer_format=True)
         coerced = field.coerce('14/02/2016')
-        assert coerced == datetime.date(2016,2,14)
+        assert coerced == datetime.date(2016, 2, 14)
 
     def test_convert_invalid_inferred_date(self):
         '''
@@ -164,14 +164,14 @@ class TestDateField():
             coerce()
 
 
-class TestDateTimeField():
+class TestDateTimeField:
     def test_convert_to_datetime(self):
         '''
         String values should convert to Python datetimes
         '''
         field = DateTimeField()
         coerced = field.coerce('2016-02-14 04:33:00')
-        assert coerced == datetime.datetime(2016,2,14,4,33,0)
+        assert coerced == datetime.datetime(2016, 2, 14, 4, 33, 0)
 
     def test_custom_format(self):
         '''
@@ -179,23 +179,23 @@ class TestDateTimeField():
         '''
         field = DateTimeField(format='%d/%m/%Y%H%M%S')
         coerced = field.coerce('14/02/2016043300')
-        assert coerced == datetime.datetime(2016,2,14,4,33,0)
+        assert coerced == datetime.datetime(2016, 2, 14, 4, 33, 0)
 
     def test_convert_from_date(self):
         '''
         Dates should be converted to datetimes with zeroes appended
         '''
         field = DateTimeField()
-        coerced = field.coerce(datetime.date(2016,2,14))
-        assert coerced == datetime.datetime(2016,2,14,0,0,0)
+        coerced = field.coerce(datetime.date(2016, 2, 14))
+        assert coerced == datetime.datetime(2016, 2, 14, 0, 0, 0)
 
     def test_convert_from_datetime(self):
         '''
         Just return the datetime if it's already a datetime
         '''
         field = DateTimeField()
-        coerced = field.coerce(datetime.datetime(2016,2,14,4,33,0))
-        assert coerced == datetime.datetime(2016,2,14,4,33,0)
+        coerced = field.coerce(datetime.datetime(2016, 2, 14, 4, 33, 0))
+        assert coerced == datetime.datetime(2016, 2, 14, 4, 33, 0)
 
     def test_convert_invalid_datetime(self):
         '''
@@ -212,7 +212,7 @@ class TestDateTimeField():
         '''
         field = DateTimeField(infer_format=True)
         coerced = field.coerce('14/02/2016 04:33:00')
-        assert coerced == datetime.datetime(2016,2,14,4,33,0)
+        assert coerced == datetime.datetime(2016, 2, 14, 4, 33, 0)
 
     def test_convert_invalid_inferred_datetime(self):
         '''
@@ -224,7 +224,7 @@ class TestDateTimeField():
             coerce()
 
 
-class TestBooleanField():
+class TestBooleanField:
     def test_convert_to_true(self):
         '''
         Convert a truthy string value to True
@@ -296,7 +296,7 @@ class TestBooleanField():
         assert coerced is False
 
 
-class TestDecimalField():
+class TestDecimalField:
     def test_convert_to_decimal(self):
         '''
         String values should convert to a decimal given an expected precision and scale
@@ -340,7 +340,7 @@ class TestDecimalField():
         coerced = field.coerce('3.55')
         assert coerced == decimal.Decimal('3.6')
 
-class TestJsonField():
+class TestJsonField:
     def test_convert_to_json(self):
         '''
         String values should be converted into python objects

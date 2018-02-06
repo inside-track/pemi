@@ -3,15 +3,16 @@ import io
 import random
 
 import pandas as pd
-import faker
 from faker import Factory
 
 import pemi
 from pemi.fields import *
 
-fake = Factory.create()
 
-class UniqueIdGenerator:
+fake = Factory.create() #pylint: disable=invalid-name
+
+
+class UniqueIdGenerator: #pylint: disable=too-few-public-methods
     '''
     Class used to build id generators.
     fmt - A function that accepts a single integer argument and returns a value to be used as an id.
@@ -40,20 +41,21 @@ class UniqueIdGenerator:
 
 class InvalidHeaderSeparatorError(Exception): pass
 
-default_fakers = {
-    IntegerField:  fake.pyint,
-    StringField:   fake.word,
-    DateField:     fake.date_object,
-    DateTimeField: fake.date_time,
-    FloatField:    fake.pyfloat,
-    DecimalField:  fake.pydecimal,
-    BooleanField:  fake.pybool,
-    JsonField:     lambda: fake.pydict(5, True, 'str', 'int', 'date')
+default_fakers = { #pylint: disable=invalid-name
+    IntegerField:  fake.pyint, #pylint: disable=no-member
+    StringField:   fake.word, #pylint: disable=no-member
+    DateField:     fake.date_object, #pylint: disable=no-member
+    DateTimeField: fake.date_time, #pylint: disable=no-member
+    FloatField:    fake.pyfloat, #pylint: disable=no-member
+    DecimalField:  fake.pydecimal, #pylint: disable=no-member
+    BooleanField:  fake.pybool, #pylint: disable=no-member
+    JsonField:     lambda: fake.pydict(5, True, 'str', 'int', 'date') #pylint: disable=no-member
 }
 
 
-class Table:
-    def __init__(self, markdown=None, nrows=10, schema=pemi.Schema(), fake_with=None, coerce_with=None):
+class Table: #pylint: disable=too-many-arguments,too-few-public-methods
+    def __init__(self, markdown=None, nrows=10,
+                 schema=pemi.Schema(), fake_with=None, coerce_with=None):
         self.markdown = markdown
         self.schema = schema
         self.nrows = nrows
@@ -69,20 +71,20 @@ class Table:
         cleaned = self.markdown
 
         # Remove trailing comments
-        cleaned = re.compile(r'(#.*$)', flags = re.MULTILINE).sub('', cleaned)
+        cleaned = re.compile(r'(#.*$)', flags=re.MULTILINE).sub('', cleaned)
 
         # Remove whitespace surrouding pipes
         cleaned = re.compile(r'[ \t]*\|[ \t]*').sub('|', cleaned)
 
         # Remove beginning and terminal pipe on each row
-        cleaned = re.compile(r'(^\s*\|\s*|\s*\|\s*$)', flags = re.MULTILINE).sub('', cleaned)
+        cleaned = re.compile(r'(^\s*\|\s*|\s*\|\s*$)', flags=re.MULTILINE).sub('', cleaned)
 
         # Split by newlines
         cleaned = cleaned.split('\n')
 
         # Remove header separator
         header_separator = cleaned.pop(1)
-        if re.search(re.compile(r'^[\s\-\|]*$'), header_separator) == None:
+        if re.search(re.compile(r'^[\s\-\|]*$'), header_separator) is None:
             raise InvalidHeaderSeparatorError('Bad header separator: {}'.format(header_separator))
 
         # Unsplit
@@ -91,7 +93,11 @@ class Table:
 
     def _build_from_markdown(self):
         cleaned = self._clean_markdown()
-        str_df = pd.read_csv(io.StringIO(cleaned), sep='|', converters={k:str for k in self.schema.keys()})
+        str_df = pd.read_csv(
+            io.StringIO(cleaned),
+            sep='|',
+            converters={k:str for k in self.schema.keys()}
+        )
 
         df = pd.DataFrame()
         for header in list(str_df):
@@ -126,8 +132,6 @@ class Table:
             df = pd.DataFrame([], index=range(self.nrows))
 
         for column in self.schema.keys():
-            if column in df:
-                next
-            else:
+            if column not in df:
                 df[column] = self._fake_series(column, len(df))
         return df

@@ -7,15 +7,17 @@ import pemi
 
 class DagValidationError(Exception): pass
 
-class PipeConnection():
+class PipeConnection:
     def __init__(self, parent, from_pipe_name, from_subject_name):
         self.parent = parent
         self.from_pipe_name = from_pipe_name
         self.from_subject_name = from_subject_name
         self.group = None
+        self.to_pipe_name = None
+        self.to_subject_name = None
 
 
-    def to(self, to_pipe_name, to_subject_name):
+    def to(self, to_pipe_name, to_subject_name): #pylint: disable=invalid-name
         self.to_pipe_name = to_pipe_name
         self.to_subject_name = to_subject_name
         return self
@@ -62,8 +64,7 @@ class PipeConnection():
     def __repr__(self):
         return '<{}>'.format(self.__str__())
 
-
-class DaskPipe():
+class DaskPipe: #pylint: disable=too-few-public-methods
     'DaskPipe is just a wrapper around Pipe that allows us to use the Pipes in the context of Dask'
 
     def __init__(self, pipe, is_parent):
@@ -71,7 +72,7 @@ class DaskPipe():
         self.is_parent = is_parent
 
     def __call__(self, *args):
-        pemi.log.info('DaskPipe flowing pipe {}'.format(self.pipe))
+        pemi.log.info('DaskPipe flowing pipe %s', self.pipe)
         if not self.is_parent:
             self.pipe.flow()
         return self
@@ -80,7 +81,7 @@ class DaskPipe():
         return self.pipe.name
 
 
-class PipeConnections():
+class PipeConnections:
     def __init__(self, connections=None):
         self.connections = connections or []
 
@@ -91,7 +92,6 @@ class PipeConnections():
         return self.__class__([c for c in self.connections if c.group == group])
 
     def flow(self):
-        nodes = list(self.dask_dag().keys())
         return dask.get(self.dask_dag(), list(self.dask_dag().keys()))
 
 
@@ -124,42 +124,67 @@ class PipeConnections():
             sources[from_str].append(to_str)
             targets[to_str].append(from_str)
 
-            if not(conn.from_pipe_name in conn.parent.pipes):
-                raise DagValidationError("Pipe '{}' not defined in parent pipe '{}'".format(conn.from_pipe_name, conn.parent.name))
-            if not(conn.to_pipe_name in conn.parent.pipes):
-                raise DagValidationError("Pipe '{}' not defined in parent pipe '{}'".format(conn.to_pipe_name, conn.parent.name))
-            if not(conn.from_subject_name in conn.parent.pipes[conn.from_pipe_name].targets):
-                raise DagValidationError("Pipe '{}' has no target named '{}'".format(conn.from_pipe_name, conn.from_subject_name))
-            if not(conn.to_subject_name in conn.parent.pipes[conn.to_pipe_name].sources):
-                raise DagValidationError("Pipe '{}' has no source named '{}'".format(conn.from_pipe_name, conn.from_subject_name))
+            if not conn.from_pipe_name in conn.parent.pipes:
+                msg = "Pipe '{}' not defined in parent pipe '{}'".format(
+                    conn.from_pipe_name, conn.parent.name
+                )
+                raise DagValidationError(msg)
+            if not conn.to_pipe_name in conn.parent.pipes:
+                msg = "Pipe '{}' not defined in parent pipe '{}'".format(
+                    conn.to_pipe_name, conn.parent.name
+                )
+                raise DagValidationError(msg)
+            if not conn.from_subject_name in conn.parent.pipes[conn.from_pipe_name].targets:
+                msg = "Pipe '{}' has no target named '{}'".format(
+                    conn.from_pipe_name, conn.from_subject_name
+                )
+                raise DagValidationError(msg)
+            if not conn.to_subject_name in conn.parent.pipes[conn.to_pipe_name].sources:
+                msg = "Pipe '{}' has no source named '{}'".format(
+                    conn.from_pipe_name, conn.from_subject_name
+                )
+                raise DagValidationError(msg)
 
-        target_dupes = {k:v for k,v in targets.items() if len(v) > 1}
+        target_dupes = {k:v for k, v in targets.items() if len(v) > 1}
         if len(target_dupes) > 0:
-            raise DagValidationError('Multiple connections to the same target.  Use a concatenator pipe instead.  Details: {}'.format(target_dupes))
+            msg = 'Multiple connections to the same target.  ' \
+                + 'Use a concatenator pipe instead.  Details: {}'.format(target_dupes)
+            raise DagValidationError(msg)
 
-        source_dupes = {k:v for k,v in sources.items() if len(v) > 1}
+        source_dupes = {k:v for k, v in sources.items() if len(v) > 1}
         if len(source_dupes) > 0:
-            raise DagValidationError('Multiple connections from the same source.  Use a fork pipe instead.  Details: {}'.format(source_dupes))
+            msg = 'Multiple connections from the same source.  ' \
+                + 'Use a fork pipe instead.  Details: {}'.format(source_dupes)
+            raise DagValidationError(msg)
 
-    def _connect_to(self, source, connection):
+    @staticmethod
+    def _connect_to(source, connection):
         def __connect_to(target):
-            pemi.log.debug('connecting {} to {}'.format(target, source))
+            pemi.log.debug('connecting %s to %s', target, source)
             connection.connect()
             return target
         __connect_to.__name__ = 'connect_to'
         return __connect_to
 
-    def _get_target(self, name):
+    @staticmethod
+    def _get_target(name):
         def __get_target(daskpipe):
-            pemi.log.debug('Getting target {} from pipe {}'.format(name, daskpipe.pipe))
+            pemi.log.debug('Getting target %s from pipe %s', name, daskpipe.pipe)
             return daskpipe.pipe.targets[name]
         __get_target.__name__ = '[{}]'.format(name)
         return __get_target
 
     def _node_edge(self, conn):
         return {
-            '{}.targets'.format(conn.from_pipe_name): (DaskPipe(conn.from_pipe, conn.from_self), []),
-            '{}.targets[{}]'.format(conn.from_pipe_name, conn.from_subject_name): (self._get_target(conn.from_subject_name), '{}.targets'.format(conn.from_pipe_name)),
-            '{}.sources[{}]'.format(conn.to_pipe_name, conn.to_subject_name): (self._connect_to(conn.to_pipe.sources[conn.to_subject_name], conn), '{}.targets[{}]'.format(conn.from_pipe_name, conn.from_subject_name)),
-            '{}.targets'.format(conn.to_pipe_name): (DaskPipe(conn.to_pipe, conn.to_self), ['{}.sources[{}]'.format(conn.to_pipe_name, conn.to_subject_name)])
+            '{}.targets'.format(conn.from_pipe_name):
+                (DaskPipe(conn.from_pipe, conn.from_self), []),
+            '{}.targets[{}]'.format(conn.from_pipe_name, conn.from_subject_name):
+                (self._get_target(conn.from_subject_name), '{}.targets'.format(
+                    conn.from_pipe_name)),
+            '{}.sources[{}]'.format(conn.to_pipe_name, conn.to_subject_name):
+                (self._connect_to(conn.to_pipe.sources[conn.to_subject_name], conn),
+                 '{}.targets[{}]'.format(conn.from_pipe_name, conn.from_subject_name)),
+            '{}.targets'.format(conn.to_pipe_name):
+                (DaskPipe(conn.to_pipe, conn.to_self),
+                 ['{}.sources[{}]'.format(conn.to_pipe_name, conn.to_subject_name)])
         }

@@ -7,7 +7,7 @@ import pemi
 import pemi.transforms
 from pemi.fields import *
 
-class TestValidateNoNull():
+class TestValidateNoNull:
     @pytest.fixture
     def transform(self):
         field = StringField('Warf')
@@ -20,32 +20,32 @@ class TestValidateNoNull():
     def test_it_raises_no_error_if_not_null(self, transform):
         assert transform('hello') == 'hello'
 
-class TestIsBlank():
+class TestIsBlank:
     def test_np_nan(self):
-        assert pemi.transforms.isblank(np.nan) == True
+        assert pemi.transforms.isblank(np.nan) is True
 
     def test_float_nan(self):
-        assert pemi.transforms.isblank(float('NaN')) == True
+        assert pemi.transforms.isblank(float('NaN')) is True
 
     def test_empty_str(self):
-        assert pemi.transforms.isblank('') == True
+        assert pemi.transforms.isblank('') is True
 
     def test_none(self):
-        assert pemi.transforms.isblank(None) == True
+        assert pemi.transforms.isblank(None) is True
 
     def test_string(self):
-        assert pemi.transforms.isblank('Something') == False
+        assert pemi.transforms.isblank('Something') is False
 
     def test_float(self):
-        assert pemi.transforms.isblank(3.2) == False
+        assert pemi.transforms.isblank(3.2) is False
 
     def test_true(self):
-        assert pemi.transforms.isblank(True) == False
+        assert pemi.transforms.isblank(True) is False
 
     def test_false(self):
-        assert pemi.transforms.isblank(False) == False
+        assert pemi.transforms.isblank(False) is False
 
-class TestConcatenate():
+class TestConcatenate:
     def test_it_concatenates(self):
         row = pd.Series(['ab', 'c', 'd'])
         assert pemi.transforms.concatenate()(row) == 'abcd'
@@ -54,7 +54,7 @@ class TestConcatenate():
         row = pd.Series(['ab', 'c', 'd'])
         assert pemi.transforms.concatenate('-')(row) == 'ab-c-d'
 
-class TestNvl():
+class TestNvl:
     def test_it_picks_the_first_non_blank(self):
         row = pd.Series([None, '', 'three', 'four', None])
         assert pemi.transforms.nvl()(row) == 'three'

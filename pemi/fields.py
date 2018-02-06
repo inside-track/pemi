@@ -1,7 +1,8 @@
 import decimal
 import datetime
-import dateutil
 import json
+
+import dateutil
 
 import pemi.transforms
 
@@ -34,8 +35,8 @@ def convert_exception(fun):
         return coerced
     return wrapper
 
-
-class Field():
+#pylint: disable=too-few-public-methods
+class Field:
     def __init__(self, name=None, **metadata):
         self.name = name
         self.metadata = metadata
@@ -52,7 +53,9 @@ class Field():
         return '<{} {}>'.format(self.__class__.__name__, self.__dict__.__str__())
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.metadata == other.metadata and self.name == other.name
+        return type(self) is type(other) \
+            and self.metadata == other.metadata \
+            and self.name == other.name
 
 
 class StringField(Field):
@@ -64,8 +67,7 @@ class StringField(Field):
     def coerce(self, value):
         if pemi.transforms.isblank(value):
             return self.null
-        else:
-            return str(value)
+        return str(value)
 
 
 class IntegerField(Field):
@@ -79,8 +81,7 @@ class IntegerField(Field):
             return self.null
         elif self.coerce_float:
             return int(float(value))
-        else:
-            return int(value)
+        return int(value)
 
 
 class FloatField(Field):
@@ -88,8 +89,7 @@ class FloatField(Field):
     def coerce(self, value):
         if pemi.transforms.isblank(value):
             return self.null
-        else:
-            return float(value)
+        return float(value)
 
 
 class DateField(Field):
@@ -103,8 +103,7 @@ class DateField(Field):
     def coerce(self, value):
         if pemi.transforms.isblank(value):
             return self.null
-        else:
-            return self.parse(value)
+        return self.parse(value)
 
     def parse(self, value):
         if isinstance(value, datetime.datetime):
@@ -113,8 +112,7 @@ class DateField(Field):
             return value
         elif not self.infer_format:
             return datetime.datetime.strptime(value, self.format).date()
-        else:
-            return dateutil.parser.parse(value).date()
+        return dateutil.parser.parse(value).date()
 
 class DateTimeField(Field):
     def __init__(self, name=None, **metadata):
@@ -127,8 +125,7 @@ class DateTimeField(Field):
     def coerce(self, value):
         if pemi.transforms.isblank(value):
             return self.null
-        else:
-            return self.parse(value)
+        return self.parse(value)
 
     def parse(self, value):
         if isinstance(value, datetime.datetime):
@@ -137,16 +134,23 @@ class DateTimeField(Field):
             return datetime.datetime.combine(value, datetime.time.min)
         elif not self.infer_format:
             return datetime.datetime.strptime(value, self.format)
-        else:
-            return dateutil.parser.parse(value)
+        return dateutil.parser.parse(value)
 
 
 class BooleanField(Field):
-    # TODOC: Point out that if unknown_truthiness is set, then that is used when no matching value is found (see tests)
+    # TODOC: Point out that if unknown_truthiness is set,
+    #        then that is used when no matching value is found (see tests)
     def __init__(self, name=None, **metadata):
         super().__init__(name=name, **metadata)
-        self.true_values = self.metadata.get('true_values', ['t','true','y','yes','on','1'])
-        self.false_values = self.metadata.get('false_values', ['f','false','n','no','off','0'])
+
+        self.true_values = self.metadata.get(
+            'true_values',
+            ['t', 'true', 'y', 'yes', 'on', '1']
+        )
+        self.false_values = self.metadata.get(
+            'false_values',
+            ['f', 'false', 'n', 'no', 'off', '0']
+        )
 
     @convert_exception
     def coerce(self, value):
@@ -154,8 +158,7 @@ class BooleanField(Field):
             return value
         elif pemi.transforms.isblank(value):
             return self.null
-        else:
-            return self.parse(value)
+        return self.parse(value)
 
     def parse(self, value):
         value = str(value).lower()
@@ -180,8 +183,7 @@ class DecimalField(Field):
     def coerce(self, value):
         if pemi.transforms.isblank(value):
             return self.null
-        else:
-            return self.parse(value)
+        return self.parse(value)
 
     def parse(self, value):
         dec = decimal.Decimal(str(value))
@@ -197,13 +199,17 @@ class DecimalField(Field):
             detected_scale = -dec.as_tuple().exponent
 
             if detected_precision > self.precision:
-                raise DecimalCoercionError('Decimal coercion error for "{}".  Expected precision: {}, Actual precision: {}'.format(
-                    dec, self.precision, detected_precision
-                ))
+                msg = ('Decimal coercion error for "{}".  ' \
+                    + 'Expected precision: {}, Actual precision: {}').format(
+                        dec, self.precision, detected_precision
+                    )
+                raise DecimalCoercionError(msg)
             if detected_scale > self.scale:
-                raise DecimalCoercionError('Decimal coercion error for "{}".  Expected scale: {}, Actual scale: {}'.format(
-                    dec, self.scale, detected_scale
-                ))
+                msg = ('Decimal coercion error for "{}".  ' \
+                    + 'Expected scale: {}, Actual scale: {}').format(
+                        dec, self.scale, detected_scale
+                    )
+                raise DecimalCoercionError(msg)
 
         return dec
 
@@ -217,3 +223,5 @@ class JsonField(Field):
             return json.loads(value)
         except TypeError:
             return value
+
+#pylint: enable=too-few-public-methods

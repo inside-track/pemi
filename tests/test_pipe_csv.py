@@ -1,9 +1,5 @@
-import datetime
-import decimal
 import tempfile
 from pathlib import Path
-
-import pytest
 
 import pandas as pd
 from pandas.util.testing import assert_frame_equal
@@ -16,12 +12,12 @@ from pemi.fields import *
 class TestLocalCsvFileSourcePipe():
     def test_it_parses_a_complex_csv(self):
         schema = pemi.Schema(
-            id         = StringField(),
-            name       = StringField(allow_null=False),
-            is_awesome = BooleanField(),
-            price      = DecimalField(precision=4, scale=2),
-            sell_date  = DateField(format='%m/%d/%Y'),
-            updated_at = DateTimeField(format='%m/%d/%Y %H:%M:%S')
+            id=StringField(),
+            name=StringField(allow_null=False),
+            is_awesome=BooleanField(),
+            price=DecimalField(precision=4, scale=2),
+            sell_date=DateField(format='%m/%d/%Y'),
+            updated_at=DateTimeField(format='%m/%d/%Y %H:%M:%S')
         )
 
         pipe = pemi.pipes.csv.LocalCsvFileSourcePipe(
@@ -46,8 +42,8 @@ class TestLocalCsvFileSourcePipe():
             | 08 | Foamy        | True        | 10.83 | 2017-03-22 | 2017-01-01 23:39:39 |
             ''',
             schema=schema.merge(pemi.Schema(
-                sell_date  = DateField(format='%Y-%m-%d'),
-                updated_at = DateTimeField(format='%Y-%m-%d %H:%M:%S')
+                sell_date=DateField(format='%Y-%m-%d'),
+                updated_at=DateTimeField(format='%Y-%m-%d %H:%M:%S')
             ))
         ).df
 
@@ -58,8 +54,8 @@ class TestLocalCsvFileSourcePipe():
             | 02 | null is not allowed for field 'name' |
             ''',
             schema=pemi.Schema(
-                id                = StringField(),
-                __error_message__ = StringField()
+                id=StringField(),
+                __error_message__=StringField()
             )
         ).df
 
@@ -70,14 +66,18 @@ class TestLocalCsvFileSourcePipe():
 
         expected_errors_df.reset_index(drop=True, inplace=True)
         actual_errors_df.reset_index(drop=True, inplace=True)
-        pt.assert_frame_equal(actual_errors_df[expected_errors_df.columns], expected_errors_df, check_names=False)
+        pt.assert_frame_equal(
+            actual_errors_df[expected_errors_df.columns],
+            expected_errors_df,
+            check_names=False
+        )
 
 
     def test_it_combines_multiple_csvs(self):
         pipe = pemi.pipes.csv.LocalCsvFileSourcePipe(
             schema=pemi.Schema(
-                id   = StringField(),
-                name = StringField()
+                id=StringField(),
+                name=StringField()
             ),
             paths=[
                 Path(__file__).parent / Path('fixtures') / Path('id_name_1.csv'),
@@ -109,9 +109,9 @@ class TestLocalCsvFileSourcePipe():
     def test_it_optionally_adds_a_filename(self):
         pipe = pemi.pipes.csv.LocalCsvFileSourcePipe(
             schema=pemi.Schema(
-                filename = StringField(),
-                id       = StringField(),
-                name     = StringField()
+                filename=StringField(),
+                id=StringField(),
+                name=StringField()
             ),
             paths=[
                 Path(__file__).parent / Path('fixtures') / Path('id_name_1.csv'),
@@ -125,14 +125,14 @@ class TestLocalCsvFileSourcePipe():
         assert set(filenames) == set(('id_name_1.csv', 'id_name_2.csv'))
 
 
-class TestLocalCsvFileTargetPipe():
+class TestLocalCsvFileTargetPipe: #pylint: disable=too-few-public-methods
     def test_it_writes_a_csv(self):
         tmp_file = tempfile.NamedTemporaryFile()
 
         pipe = pemi.pipes.csv.LocalCsvFileTargetPipe(
             schema=pemi.Schema(
-                id   = StringField(),
-                name = StringField()
+                id=StringField(),
+                name=StringField()
             ),
             path=tmp_file.name,
             csv_opts={'sep': '|'}

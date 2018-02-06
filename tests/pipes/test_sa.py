@@ -18,12 +18,15 @@ sa_engine = sa.create_engine('postgresql://{user}:{password}@{host}/{dbname}'.fo
 
 
 def truncate_sa_sources(scenario_sources):
-    sa_sources = [source.subject for source in scenario_sources if isinstance(source.subject, pemi.SaDataSubject)]
+    sa_sources = [
+        source.subject
+        for source in scenario_sources if isinstance(source.subject, pemi.SaDataSubject)
+    ]
     for source in sa_sources:
         with source.engine.connect().begin() as trans:
             trans.connection.execute('TRUNCATE {}'.format(source.table))
 
-
+#pylint: disable=unused-argument
 @pytest.fixture(scope='module')
 def db_schema_init():
     with sa_engine.connect() as conn:
@@ -39,6 +42,7 @@ def db_schema_init():
             '''
         )
 
+
 @pytest.fixture
 def db_case_clean(case, db_schema_init):
     if not case.scenario.has_run:
@@ -47,15 +51,15 @@ def db_case_clean(case, db_schema_init):
         truncate_sa_sources(case.scenario.sources.values())
     else:
         yield
-
+#pylint: enable=unused-argument
 
 with pt.Scenario('SaSqlSourcePipe', usefixtures=['db_case_clean']) as scenario:
     sales_schema = pemi.Schema(
-            beer_id  = IntegerField(),
-            name     = StringField(),
-            sold_at  = DateField(),
-            quantity = IntegerField()
-        )
+        beer_id=IntegerField(),
+        name=StringField(),
+        sold_at=DateField(),
+        quantity=IntegerField()
+    )
 
     pipe = pemi.Pipe()
     pipe.pipe(
@@ -85,12 +89,12 @@ with pt.Scenario('SaSqlSourcePipe', usefixtures=['db_case_clean']) as scenario:
             }
 
     scenario.setup(
-        runner = pipe.pipes['sql_source'].flow,
-        case_keys = case_keys(),
-        sources = {
+        runner=pipe.pipes['sql_source'].flow,
+        case_keys=case_keys(),
+        sources={
             'sales': pipe.sources['sales']
         },
-        targets = {
+        targets={
             'sql_source': pipe.pipes['sql_source'].targets['main']
         }
     )
@@ -103,7 +107,7 @@ with pt.Scenario('SaSqlSourcePipe', usefixtures=['db_case_clean']) as scenario:
             | {b[1]}  | 2017-01-01 | 3        |
             | {b[2]}  | 2017-01-02 | 2        |
             | {b[3]}  | 2017-01-03 | 5        |
-            '''.format(b = scenario.case_keys.cache('sales', 'beer_id')),
+            '''.format(b=scenario.case_keys.cache('sales', 'beer_id')),
             schema=pipe.sources['sales'].schema
         )
 
@@ -121,7 +125,7 @@ with pt.Scenario('SaSqlSourcePipe', usefixtures=['db_case_clean']) as scenario:
             | {b[1]}  | 2017-01-01 | 3        |
             | {b[2]}  | 2017-01-02 |          |
             | {b[3]}  | 2017-01-03 | 5        |
-            '''.format(b = scenario.case_keys.cache('sales', 'beer_id')),
+            '''.format(b=scenario.case_keys.cache('sales', 'beer_id')),
             schema=pipe.sources['sales'].schema
         )
 

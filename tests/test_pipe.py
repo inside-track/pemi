@@ -57,7 +57,7 @@ class JobPipe(pemi.Pipe):
         self.pipe(
             name='concat',
             pipe=pemi.pipes.pd.PdConcatPipe(
-                sources=['s1','s2']
+                sources=['s1', 's2']
             )
         )
         self.connect('concat', 'main').to('t1', 'main')
@@ -132,4 +132,5 @@ class TestPickling():
         pickled = job.to_pickle()
         unpickled_job = JobPipe().from_pickle(pickled)
 
-        assert unpickled_job.pipes['s1'].targets['main'].pipe.__class__ == job.pipes['s1'].targets['main'].pipe.__class__
+        assert unpickled_job.pipes['s1'].targets['main'].pipe.__class__ \
+            == job.pipes['s1'].targets['main'].pipe.__class__
