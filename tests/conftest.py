@@ -1,1 +1,1 @@
-pytest_plugins=['pemi.pytest']
+pytest_plugins = ['pemi.pytest']

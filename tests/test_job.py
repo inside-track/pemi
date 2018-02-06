@@ -1,32 +1,28 @@
 import re
+import sys
 from collections import OrderedDict
 
-import pytest
-
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
-from pandas.util.testing import assert_series_equal
 
 import pemi
 import pemi.testing as pt
 from pemi.data_subject import PdDataSubject
 from pemi.fields import *
 
-import sys
 this = sys.modules[__name__]
 
 this.schemas = {
     'beers': pemi.Schema(
-        id             = IntegerField(),
-        name           = StringField(),
-        abv            = DecimalField(precision=3, scale=1),
-        last_brewed_at = DateField()
+        id=IntegerField(),
+        name=StringField(),
+        abv=DecimalField(precision=3, scale=1),
+        last_brewed_at=DateField()
     ),
     'beers_w_style': pemi.Schema(
-        id    = IntegerField(),
-        name  = StringField(),
-        abv   = DecimalField(precision=3, scale=1),
-        style = StringField()
+        id=IntegerField(),
+        name=StringField(),
+        abv=DecimalField(precision=3, scale=1),
+        style=StringField()
     )
 }
 
@@ -42,7 +38,7 @@ class RemoteSourcePipe(pemi.Pipe):
 
     def flow(self):
         pemi.log().debug('FLOWING {}'.format(self))
-        self.targets['main'].df = pd.DataFrame({'id': [1,2,3], 'name': ['one', 'two', 'three']})
+        self.targets['main'].df = pd.DataFrame({'id': [1, 2, 3], 'name': ['one', 'two', 'three']})
         raise NotImplementedError('The test needs to mock out external calls')
 
 
@@ -148,19 +144,29 @@ with pt.Scenario('BlackBoxJob') as scenario:
     pt.mock_pipe(pipe, 'beers_file')
     pt.mock_pipe(pipe, 'beers_w_style_file')
 
-    def case_keys():
-        ids = list(range(1000))
-        for i in ids:
-            yield {
-                'beers_file': {'id': i},
-                'beers_w_style_file': {'id': i},
-                'dropped_duplicates': {'id': i}
-            }
+    class BlackBoxJobScenario:
+        @staticmethod
+        def case_keys():
+            ids = list(range(1000))
+            for i in ids:
+                yield {
+                    'beers_file': {'id': i},
+                    'beers_w_style_file': {'id': i},
+                    'dropped_duplicates': {'id': i}
+                }
 
+        @staticmethod
+        def background(scenario):
+            return [
+                pt.when.source_conforms_to_schema(scenario.sources['beers_file']),
+                pt.when.source_has_keys(scenario.sources['beers_file'], scenario.case_keys)
+            ]
+
+    background = BlackBoxJobScenario.background
 
     scenario.setup(
         runner=pipe.flow,
-        case_keys=case_keys(),
+        case_keys=BlackBoxJobScenario.case_keys(),
         sources={
             'beers_file': pipe.pipes['beers_file'].targets['main']
         },
@@ -170,11 +176,6 @@ with pt.Scenario('BlackBoxJob') as scenario:
         }
     )
 
-    def background(scenario):
-        return [
-            pt.when.source_conforms_to_schema(scenario.sources['beers_file']),
-            pt.when.source_has_keys(scenario.sources['beers_file'], scenario.case_keys)
-        ]
 
     with scenario.case('it copies the name field') as case:
         case.when(
@@ -189,23 +190,26 @@ with pt.Scenario('BlackBoxJob') as scenario:
         case.when(
             *background(scenario)
         ).then(
-            pt.then.fields_are_copied(scenario.sources['beers_file'],
-                                      scenario.targets['beers_w_style_file'],
-                                      by=['id'],
-                                      mapping=[
-                                          ('id', 'id'),
-                                          ('name', 'name'),
-                                          ('abv', 'abv')
-                                      ]
+            pt.then.fields_are_copied(
+                scenario.sources['beers_file'],
+                scenario.targets['beers_w_style_file'],
+                by=['id'],
+                mapping=[
+                    ('id', 'id'),
+                    ('name', 'name'),
+                    ('abv', 'abv')
+                ]
             )
         )
 
     with scenario.case('it uses a default style') as case:
         case.when(
             *background(scenario),
-            pt.when.source_field_has_value(scenario.sources['beers_file'], 'name', 'Deduce This!')
+            pt.when.source_field_has_value(scenario.sources['beers_file'],
+                                           'name', 'Deduce This!')
         ).then(
-            pt.then.target_field_has_value(scenario.targets['beers_w_style_file'], 'style', 'Unknown Style')
+            pt.then.target_field_has_value(scenario.targets['beers_w_style_file'],
+                                           'style', 'Unknown Style')
         )
 
 
@@ -217,7 +221,7 @@ with pt.Scenario('BlackBoxJob') as scenario:
             | {b[1]} | Fireside IPA             |
             | {b[2]} | Perfunctory Pale Ale     |
             | {b[3]} | Ginormous India Pale Ale |
-            '''.format(b = scenario.case_keys.cache('beers_file', 'id')),
+            '''.format(b=scenario.case_keys.cache('beers_file', 'id')),
             schema=pipe.pipes['beers_file'].targets['main'].schema
         )
 
@@ -228,7 +232,7 @@ with pt.Scenario('BlackBoxJob') as scenario:
             | {b[1]} | Fireside IPA             | IPA   |
             | {b[2]} | Perfunctory Pale Ale     | Pale  |
             | {b[3]} | Ginormous India Pale Ale | IPA   |
-            '''.format(b = scenario.case_keys.cache('beers_w_style_file', 'id')),
+            '''.format(b=scenario.case_keys.cache('beers_w_style_file', 'id')),
             schema=pipe.pipes['beers_w_style_file'].sources['main'].schema
         )
 
@@ -247,7 +251,7 @@ with pt.Scenario('BlackBoxJob') as scenario:
             | {b[2]} | Perfunctory Pale Ale     |
             | {b[2]} | Excellent ESB            |
             | {b[4]} | Ginormous India Pale Ale |
-            '''.format(b = scenario.case_keys.cache('beers_file', 'id')),
+            '''.format(b=scenario.case_keys.cache('beers_file', 'id')),
             schema=pipe.pipes['beers_file'].targets['main'].schema
         )
 
@@ -258,7 +262,7 @@ with pt.Scenario('BlackBoxJob') as scenario:
             | {b[1]} | Fireside IPA             |
             | {b[2]} | Perfunctory Pale Ale     |
             | {b[4]} | Ginormous India Pale Ale |
-            '''.format(b = scenario.case_keys.cache('beers_w_style_file', 'id')),
+            '''.format(b=scenario.case_keys.cache('beers_w_style_file', 'id')),
             schema=pipe.pipes['beers_w_style_file'].sources['main'].schema
         )
 
@@ -267,7 +271,7 @@ with pt.Scenario('BlackBoxJob') as scenario:
             | id     | name                     |
             | -      | -                        |
             | {b[2]} | Excellent ESB            |
-            '''.format(b = scenario.case_keys.cache('dropped_duplicates', 'id')),
+            '''.format(b=scenario.case_keys.cache('dropped_duplicates', 'id')),
             schema=pipe.pipes['black_box'].targets['dropped_duplicates'].schema
         )
 
@@ -275,8 +279,10 @@ with pt.Scenario('BlackBoxJob') as scenario:
         case.when(
             pt.when.example_for_source(scenario.sources['beers_file'], example_duplicates)
         ).then(
-            pt.then.target_matches_example(scenario.targets['beers_w_style_file'], expected_styles),
-            pt.then.target_matches_example(scenario.targets['dropped_duplicates'], dropped_duplicates)
+            pt.then.target_matches_example(scenario.targets['beers_w_style_file'],
+                                           expected_styles),
+            pt.then.target_matches_example(scenario.targets['dropped_duplicates'],
+                                           dropped_duplicates)
         )
 
 
@@ -285,17 +291,29 @@ with pt.Scenario('BlackBoxJob') as scenario:
 with pt.Scenario('BlackBoxPipe') as scenario:
     pipe = BlackBoxPipe()
 
-    def case_keys():
-        ids = list(range(1000))
-        for i in ids:
-            yield {
-                'beers_file': {'id': i},
-                'beers_w_style_file': {'id': i}
-            }
+    class BlackBoxPipeScenario:
+        @staticmethod
+        def case_keys():
+            ids = list(range(1000))
+            for i in ids:
+                yield {
+                    'beers_file': {'id': i},
+                    'beers_w_style_file': {'id': i}
+                }
+
+        @staticmethod
+        def background(scenario):
+            return [
+                pt.when.source_conforms_to_schema(scenario.sources['beers_file']),
+                pt.when.source_has_keys(scenario.sources['beers_file'], scenario.case_keys)
+            ]
+
+    background = BlackBoxPipeScenario.background
+
 
     scenario.setup(
         runner=pipe.flow,
-        case_keys=case_keys(),
+        case_keys=BlackBoxPipeScenario.case_keys(),
         sources={
             'beers_file': pipe.sources['beers_file']
         },
@@ -304,11 +322,6 @@ with pt.Scenario('BlackBoxPipe') as scenario:
         }
     )
 
-    def background(scenario):
-        return [
-            pt.when.source_conforms_to_schema(scenario.sources['beers_file']),
-            pt.when.source_has_keys(scenario.sources['beers_file'], scenario.case_keys)
-        ]
 
     with scenario.case('it copies the name field') as case:
         case.when(
@@ -323,21 +336,24 @@ with pt.Scenario('BlackBoxPipe') as scenario:
         case.when(
             *background(scenario)
         ).then(
-            pt.then.fields_are_copied(scenario.sources['beers_file'],
-                                      scenario.targets['beers_w_style_file'],
-                                      by=['id'],
-                                      mapping=[
-                                          ('id', 'id'),
-                                          ('name', 'name'),
-                                          ('abv', 'abv')
-                                      ]
+            pt.then.fields_are_copied(
+                scenario.sources['beers_file'],
+                scenario.targets['beers_w_style_file'],
+                by=['id'],
+                mapping=[
+                    ('id', 'id'),
+                    ('name', 'name'),
+                    ('abv', 'abv')
+                ]
             )
         )
 
     with scenario.case('it uses a default style') as case:
         case.when(
             *background(scenario),
-            pt.when.source_field_has_value(scenario.sources['beers_file'], 'name', 'Deduce This!')
+            pt.when.source_field_has_value(scenario.sources['beers_file'],
+                                           'name', 'Deduce This!')
         ).then(
-            pt.then.target_field_has_value(scenario.targets['beers_w_style_file'], 'style', 'Unknown Style')
+            pt.then.target_field_has_value(scenario.targets['beers_w_style_file'],
+                                           'style', 'Unknown Style')
         )

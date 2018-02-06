@@ -2,6 +2,7 @@
 *-checkpoint.ipynb
 .env
 .data
+.cache
 dist
 build
 pemi.egg-info

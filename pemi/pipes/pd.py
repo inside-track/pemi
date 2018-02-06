@@ -18,7 +18,7 @@ class PdConcatPipe(pemi.pipes.patterns.ConcatPipe):
 
 
     def flow(self):
-        source_dfs = [source.df for source in self.sources.values() if not(source.df is None)]
+        source_dfs = [source.df for source in self.sources.values() if source.df is not None]
         if len(source_dfs) == 0:
             self.targets['main'].df = pd.DataFrame()
         else:
@@ -32,7 +32,7 @@ class PdLookupJoinPipe(pemi.Pipe):
                  indicator=None,
                  lookup_prefix='',
                  fillna=None,
-                 **kwargs):
+                 **kwargs): #pylint: disable=too-many-arguments
         super().__init__(**kwargs)
 
         self.main_key = main_key
@@ -63,19 +63,23 @@ class PdLookupJoinPipe(pemi.Pipe):
             name='errors'
         )
 
-
     def flow(self):
-        pemi.log.debug('PdLookupJoinPipe - main source columns: {}'.format(self.sources['main'].df.columns))
-        pemi.log.debug('PdLookupJoinPipe - main lookup columns: {}'.format(self.sources['lookup'].df.columns))
+        pemi.log.debug('PdLookupJoinPipe - main source columns: %s',
+                       self.sources['main'].df.columns)
+        pemi.log.debug('PdLookupJoinPipe - main lookup columns: %s',
+                       self.sources['lookup'].df.columns)
 
         lkp_df = self.sources['lookup'].df
 
         if self.lookup_prefix != '':
             lkp_df = lkp_df.rename(
-                columns={col: self.lookup_prefix + col for col in lkp_df.columns if not col in self.lookup_key},
+                columns={col: self.lookup_prefix + col
+                         for col in lkp_df.columns if not col in self.lookup_key},
             )
 
-        missing_keys = lkp_df[self.lookup_key].apply(lambda v: v.apply(pemi.transforms.isblank).any(), axis=1)
+        missing_keys = lkp_df[self.lookup_key].apply(
+            lambda v: v.apply(pemi.transforms.isblank).any(), axis=1
+        )
         if len(missing_keys) > 0:
             lkp_df = lkp_df[~missing_keys]
 
@@ -88,8 +92,8 @@ class PdLookupJoinPipe(pemi.Pipe):
         merged_df = pd.merge(
             self.sources['main'].df,
             uniq_lkp_df,
-            left_on = self.main_key,
-            right_on = self.lookup_key,
+            left_on=self.main_key,
+            right_on=self.lookup_key,
             how='left',
             suffixes=self.suffixes,
             indicator='__indicator__'
@@ -102,14 +106,17 @@ class PdLookupJoinPipe(pemi.Pipe):
 
 
         mapper = PdMapper(merged_df, mapped_df=merged_df, maps=[
-            PdMap(source=[*self.main_key, '__indicator__'], transform=raise_on_mismatch, handler=self.missing_handler)
+            PdMap(source=[*self.main_key, '__indicator__'], transform=raise_on_mismatch,
+                  handler=self.missing_handler)
         ]).apply()
 
         if not self.indicator:
             del mapper.mapped_df['__indicator__']
         else:
             indicator_map = lambda v: True if v == 'both' else False
-            mapper.mapped_df[self.indicator] = mapper.mapped_df['__indicator__'].apply(indicator_map).astype('bool')
+            mapper.mapped_df[self.indicator] = mapper.mapped_df['__indicator__'].apply(
+                indicator_map
+            ).astype('bool')
 
         if self.fillna:
             mapper.mapped_df.fillna(**self.fillna, inplace=True)
@@ -117,7 +124,8 @@ class PdLookupJoinPipe(pemi.Pipe):
         self.targets['main'].df = mapper.mapped_df
         self.targets['errors'].df = mapper.errors_df
 
-        pemi.log.debug('PdLookupJoinPipe - main target columns: {}'.format(self.targets['main'].df.columns))
+        pemi.log.debug('PdLookupJoinPipe - main target columns: %s',
+                       self.targets['main'].df.columns)
 
 
 
@@ -155,4 +163,6 @@ class PdFieldValueForkPipe(pemi.Pipe):
 
         remainder = set(grouped.groups.keys()) - set(self.forks)
         if len(remainder) > 0:
-            self.targets['remainder'].df = pd.concat([grouped.get_group(r) for r in remainder]).sort_index()
+            self.targets['remainder'].df = pd.concat(
+                [grouped.get_group(r) for r in remainder]
+            ).sort_index()

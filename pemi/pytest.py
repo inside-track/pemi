@@ -1,7 +1,5 @@
 import re
 
-import pytest
-
 def pytest_generate_tests(metafunc):
     if not hasattr(metafunc.function, 'pytestmark'):
         return
@@ -12,9 +10,11 @@ def pytest_generate_tests(metafunc):
         scenario = args[0]
 
         if len(args) > 1:
-            metafunc.config.warn(0, 'WARNING - Only a subset of cases are selected: {}'.format(args))
+            metafunc.config.warn(
+                0, 'WARNING - Only a subset of cases are selected: {}'.format(args)
+            )
             re_tag = re.compile(args[1])
-            for name, case in list(scenario.cases.items()):
+            for name, _ in list(scenario.cases.items()):
                 if not re_tag.search(name):
                     del scenario.cases[name]
 

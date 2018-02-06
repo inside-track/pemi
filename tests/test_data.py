@@ -1,9 +1,7 @@
 import math
 
-import pytest
 import pandas as pd
 from pandas.util.testing import assert_frame_equal
-from pandas.util.testing import assert_series_equal
 
 import pemi
 import pemi.testing
@@ -121,7 +119,7 @@ class TestTableConvertMarkdown():
                 name=StringField()
             ),
             fake_with={
-                'id': {'valid': lambda: pemi.data.fake.random_int(1,5), 'unique': True}
+                'id': {'valid': lambda: pemi.data.fake.random_int(1, 5), 'unique': True} #pylint: disable=no-member
             }
         )
 

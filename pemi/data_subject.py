@@ -1,7 +1,8 @@
 import json
 
-import pemi
 import pandas as pd
+
+import pemi
 from pemi.fields import *
 
 __all__ = [
@@ -13,7 +14,7 @@ __all__ = [
 class MissingFieldsError(Exception): pass
 
 # TODOC: Note that to_pd and from_pd are only strictly needed for testing
-class DataSubject():
+class DataSubject:
     '''
     A data subject is mostly just a schema and a generic data object
     Actually, it's mostly just a schema that knows which pipe it belongs to (if any)
@@ -31,20 +32,19 @@ class DataSubject():
         subject_str = '<{}({}) {}>'.format(self.__class__.__name__, self.name, id(self))
         if self.pipe:
             return '{}.{}'.format(self.pipe, subject_str)
-        else:
-            return subject_str
+        return subject_str
 
     def to_pd(self):
         raise NotImplementedError
 
-    def from_pd(self, df):
+    def from_pd(self, df, **kwargs):
         raise NotImplementedError
 
-    def connect_from(self, other):
-        raise NotImplementedError
+    def connect_from(self, other): #pylint: disable=unused-argument
         self.validate_schema()
+        raise NotImplementedError
 
-    def validate_schema(self):
+    def validate_schema(self): #pylint: disable=no-self-use
         return True
 
 
@@ -52,18 +52,18 @@ class PdDataSubject(DataSubject):
     def __init__(self, df=None, **kwargs):
         super().__init__(**kwargs)
 
-        if df is None or df.shape == (0,0):
+        if df is None or df.shape == (0, 0):
             df = self._empty_df()
         self.df = df
 
     def to_pd(self):
         return self.df
 
-    def from_pd(self, df):
+    def from_pd(self, df, **kwargs):
         self.df = df
 
     def connect_from(self, other):
-        if other.df is None or other.df.shape == (0,0):
+        if other.df is None or other.df.shape == (0, 0):
             self.df = self._empty_df()
         else:
             self.df = other.df
@@ -103,9 +103,9 @@ class SaDataSubject(DataSubject):
         to_sql_opts['index'] = to_sql_opts.get('index', False)
 
         df_to_sql = df.copy()
-        for f in self.schema.values():
-            if isinstance(f, JsonField):
-                df_to_sql[f.name] = df_to_sql[f.name].apply(lambda v: json.dumps(v))
+        for field in self.schema.values():
+            if isinstance(field, JsonField):
+                df_to_sql[field.name] = df_to_sql[field.name].apply(json.dumps)
 
         with self.engine.connect() as conn:
             df_to_sql.to_sql(self.table, conn, **to_sql_opts)
@@ -130,8 +130,8 @@ class SparkDataSubject(DataSubject):
 
         return pd_df
 
-    def from_pd(self, pd_df):
-        self.df = self.spark.createDataFrame(pd_df)
+    def from_pd(self, df, **kwargs):
+        self.df = self.spark.createDataFrame(df)
 
     def connect_from(self, other):
         self.spark = other.spark.builder.getOrCreate()

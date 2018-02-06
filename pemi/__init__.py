@@ -1,13 +1,15 @@
 '''
 Package containing core Pemi functionality
 '''
-from pemi.version import __version__ as version
-
 import logging
-log = logging.getLogger('pemi')
+#pylint: disable=wrong-import-position
+log = logging.getLogger('pemi') #pylint: disable=invalid-name
 log.setLevel(logging.WARN)
 
-work_dir = '.'
+work_dir = '.' #pylint: disable=invalid-name
+#pylint: enable=wrong-import-position
+
+from pemi.version import __version__ as version
 
 import pemi.schema
 from pemi.schema import Schema

@@ -2,14 +2,10 @@ from collections import OrderedDict
 from itertools import tee
 
 import os
-import re
-import io
-import unittest
 import sys
 
 import pytest
 import pandas as pd
-import pandas.util.testing
 
 import pemi
 import pemi.data
@@ -38,7 +34,10 @@ def assert_series_equal(actual, expected, **kwargs):
         msg += '\nExpected:\n{}'.format(expected)
         raise AssertionError(msg)
 
-class when:
+class when: #pylint: disable=invalid-name
+    #pylint: enable=invalid-name
+
+    @staticmethod
     def source_has_keys(source, case_keys):
         def gen_values(case):
             while True:
@@ -56,34 +55,37 @@ class when:
 
         return _when
 
+    @staticmethod
     def source_field_has_value(source, field, value):
         def _when(case):
-            n = len(source[case].data)
+            nrecords = len(source[case].data)
             if hasattr(value, '__next__'):
-                source[case].data[field] = pd.Series([next(value) for i in range(n)])
+                source[case].data[field] = pd.Series([next(value) for i in range(nrecords)])
             else:
-                source[case].data[field] = pd.Series([value]*n)
+                source[case].data[field] = pd.Series([value]*nrecords)
 
         return _when
 
+    @staticmethod
     def source_fields_have_values(source, mapping):
         def _when(case):
             for field, value in mapping.items():
-                n = len(source[case].data)
+                nrecords = len(source[case].data)
                 if hasattr(value, '__next__'):
-                    source[case].data[field] = pd.Series([next(value) for i in range(n)])
+                    source[case].data[field] = pd.Series([next(value) for i in range(nrecords)])
                 else:
-                    source[case].data[field] = pd.Series([value]*n)
+                    source[case].data[field] = pd.Series([value]*nrecords)
 
         return _when
 
-
+    @staticmethod
     def example_for_source(source, table):
         def _when(case):
             source[case].data = table.df
 
         return _when
 
+    @staticmethod
     def source_conforms_to_schema(source):
         def _when(case):
             data = pemi.data.Table(
@@ -95,17 +97,23 @@ class when:
         return _when
 
 
+class then: #pylint: disable=invalid-name
+    #pylint: enable=invalid-name
 
-class then:
+    @staticmethod
     def target_field_has_value(target, field, value):
         def _then(case):
             target_data = pd.Series(list(target[case].data[field]))
-            expected_data = pd.Series([value] * len(target_data), index = target_data.index)
+            expected_data = pd.Series([value] * len(target_data), index=target_data.index)
 
-            assert_series_equal(target_data, expected_data, check_names=False, check_dtype=False, check_datetimelike_compat=True)
+            assert_series_equal(target_data, expected_data,
+                                check_names=False,
+                                check_dtype=False,
+                                check_datetimelike_compat=True)
 
         return _then
 
+    @staticmethod
     def target_matches_example(target, expected_table, by=None):
         subject_fields = expected_table.defined_fields
 
@@ -124,6 +132,7 @@ class then:
 
         return _then
 
+    @staticmethod
     def field_is_copied(source, source_field, target, target_field, by=None):
         def _then(case):
             if by:
@@ -136,12 +145,15 @@ class then:
             try:
                 assert_series_equal(expected[source_field], actual[target_field], check_names=False)
             except AssertionError as err:
-                raise AssertionError('Source field {} not copied to target field {}: {}'.format(
-                    source_field, target_field, err)
+                raise AssertionError(
+                    'Source field {} not copied to target field {}: {}'.format(
+                        source_field, target_field, err
+                    )
                 )
 
         return _then
 
+    @staticmethod
     def fields_are_copied(source, target, mapping, by=None):
         source_fields = list(set([m[0] for m in mapping]))
         target_fields = list(set([m[1] for m in mapping]))
@@ -156,43 +168,61 @@ class then:
 
             for source_field, target_field in mapping:
                 try:
-                    assert_series_equal(expected[source_field], actual[target_field], check_names=False, check_dtype=False)
+                    assert_series_equal(expected[source_field], actual[target_field],
+                                        check_names=False, check_dtype=False)
                 except AssertionError as err:
-                    raise AssertionError('Source field {} not copied to target field {}: {}'.format(
-                        source_field, target_field, err)
+                    raise AssertionError(
+                        'Source field {} not copied to target field {}: {}'.format(
+                            source_field, target_field, err
+                        )
                     )
 
         return _then
 
 
+    @staticmethod
     def target_does_not_have_fields(target, *fields):
         def _then(case):
             unexpected_fields = set(fields) & set(target[case].data.columns)
             if len(unexpected_fields) > 0:
-                raise AssertionError("The fields '{}' were not expected to be found in the target".format(unexpected_fields))
+                raise AssertionError(
+                    "The fields '{}' were not expected to be found in the target".format(
+                        unexpected_fields
+                    )
+                )
 
         return _then
 
+    @staticmethod
     def target_is_empty(target):
         def _then(case):
             nrecords = len(target[case].data)
             if nrecords != 0:
-                 raise AssertionError('Expecting target to be empty, found {} records'.format(nrecords))
+                raise AssertionError(
+                    'Expecting target to be empty, found {} records'.format(
+                        nrecords
+                    )
+                )
 
         return _then
 
+    @staticmethod
     def target_has_n_records(target, expected_n):
         def _then(case):
             nrecords = len(target[case].data)
             if nrecords != expected_n:
-                raise AssertionError('Excpecting target to have {} records, found {} records'.format(expected_n, nrecords))
+                raise AssertionError(
+                    'Excpecting target to have {} records, found {} records'.format(
+                        expected_n, nrecords
+                    )
+                )
 
         return _then
 
 
 
 
-class SubscriptableLambda():
+class SubscriptableLambda: #pylint: disable=too-few-public-methods
     def __init__(self, func):
         self.func = func
 
@@ -200,7 +230,7 @@ class SubscriptableLambda():
         return self.func(cache)
 
 
-class CaseKeyTracker():
+class CaseKeyTracker:
     def __init__(self, case_key_gen):
         self.case = None
 
@@ -210,7 +240,7 @@ class CaseKeyTracker():
         self.subject_keys = {name: list(keys.keys()) for name, keys in next(case_key_gen).items()}
         self._build_synced_generators(case_key_gen)
 
-    def _next_case(self, case):
+    def next_case(self, case):
         self.cached = {}
         self.case = case
 
@@ -239,7 +269,7 @@ class CaseKeyTracker():
 
         try:
             return self.cached[cache][subject][field]
-        except KeyError as err:
+        except KeyError:
             msg = "No case key found for field '{}' and subject '{}'".format(field, subject)
             raise KeyError(msg)
 
@@ -248,7 +278,7 @@ class CaseKeyTracker():
 
 
 
-class CaseData():
+class CaseData: #pylint: disable=attribute-defined-outside-init,too-few-public-methods
     def __init__(self, case, test_subject):
         self.case = case
         self.test_subject = test_subject
@@ -265,7 +295,7 @@ class CaseData():
     def data(self, value):
         self._data = value
 
-class TestSubject():
+class TestSubject: #pylint: disable=too-few-public-methods
     def __init__(self, subject, name):
         self.subject = subject
         self.name = name
@@ -273,11 +303,11 @@ class TestSubject():
 
     def __getitem__(self, case):
         case_id = id(case)
-        if not(case_id in self.data):
+        if case_id not in self.data:
             self.data[case_id] = CaseData(case, self)
         return self.data[case_id]
 
-class Case():
+class Case:
     def __init__(self, name, scenario):
         self.name = name
         self.scenario = scenario
@@ -299,16 +329,16 @@ class Case():
         return self
 
     def setup(self):
-        for w in self.whens:
-            w(self)
+        for i_when in self.whens:
+            i_when(self)
 
     def assert_case(self):
         self.scenario.run()
 
         try:
-            for t in self.thens:
-                t(self)
-        except AssertionError as err:
+            for i_then in self.thens:
+                i_then(self)
+        except AssertionError:
             msg = '\nAssertion Error for {}'.format(self)
             for name, source in self.scenario.sources.items():
                 msg += '\nSource {}:\n{}'.format(name, source.subject.to_pd())
@@ -320,11 +350,21 @@ class Case():
     def __str__(self):
         return "<Case '{}' ({})>".format(self.name, id(self))
 
-class Scenario():
+class Scenario: #pylint: disable=too-many-instance-attributes
     def __init__(self, name, *selector, usefixtures=[]):
         self.name = name
         self.selector = selector
         self.usefixtures = usefixtures
+
+        self.runner = None
+        self.case_keys = None
+
+        self.cases = OrderedDict()
+        self.has_run = False
+
+        self.sources = None
+        self.targets = None
+
 
     def _register_test(self, module_name):
         @pytest.mark.usefixtures(*self.usefixtures)
@@ -338,16 +378,16 @@ class Scenario():
 
     def __exit__(self, *exc):
         import inspect
-        f = inspect.currentframe()
-        calling_module = inspect.getouterframes(f)[1].frame.f_locals['__name__']
+        current_frame = inspect.currentframe()
+        calling_module = inspect.getouterframes(current_frame)[1].frame.f_locals['__name__']
         self._register_test(calling_module)
 
-    def setup(self, runner, case_keys=None, sources={}, targets={}):
+    def setup(self, runner, case_keys=None, sources=None, targets=None):
+        sources = sources or {}
+        targets = targets or {}
+
         self.runner = runner
         self.case_keys = CaseKeyTracker(case_keys)
-
-        self.cases = OrderedDict()
-        self.has_run = False
 
         self.sources = {name: TestSubject(subject, name) for name, subject in sources.items()}
         self.targets = {name: TestSubject(subject, name) for name, subject in targets.items()}
@@ -355,7 +395,7 @@ class Scenario():
 
     def case(self, name):
         case = Case(name, self)
-        self.case_keys._next_case(case)
+        self.case_keys.next_case(case)
         self.cases[name] = case
         return case
 
@@ -366,9 +406,12 @@ class Scenario():
         self.load_test_data()
 
     def load_test_data(self):
-        for source_name, source in self.sources.items():
+        for _, source in self.sources.items():
             if len(source.data.values()) > 0:
-                all_case_data = pd.concat([cd.data for cd in source.data.values()], ignore_index=True)
+                all_case_data = pd.concat(
+                    [cd.data for cd in source.data.values()],
+                    ignore_index=True
+                )
                 source.subject.from_pd(all_case_data)
 
 
@@ -398,7 +441,9 @@ class Scenario():
                 target[case].data = pd.DataFrame(columns=all_target_data.columns)
 
             if len(all_target_data) > 0:
-                all_target_data['__pemi_case__'] = all_target_data.apply(assign_case(target_name), axis=1)
+                all_target_data['__pemi_case__'] = all_target_data.apply(
+                    assign_case(target_name), axis=1
+                )
                 for case, df in all_target_data.groupby(['__pemi_case__'], sort=False):
                     del df['__pemi_case__']
                     target[case].data = df
@@ -420,7 +465,7 @@ class Scenario():
 
 class MockPipe(pemi.Pipe):
     def flow(self):
-        pemi.log.debug('FLOWING mocked pipe: {}'.format(self))
+        pemi.log.debug('FLOWING mocked pipe: %s', self)
 
 def mock_pipe(parent_pipe, pipe_name):
     pipe = parent_pipe.pipes[pipe_name]

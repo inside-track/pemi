@@ -1,9 +1,5 @@
-import os
-import unittest
-
 import pytest
 
-import pandas as pd
 import pyspark
 
 import pemi
@@ -13,10 +9,6 @@ from pemi.fields import *
 
 pytestmark = pytest.mark.spark
 
-import sys
-this = sys.modules[__name__]
-
-
 class DenormalizeBeersPipe(pemi.Pipe):
     def __init__(self, spark_session, **params):
         super().__init__(**params)
@@ -25,9 +17,9 @@ class DenormalizeBeersPipe(pemi.Pipe):
             SparkDataSubject,
             name='sales',
             schema=pemi.Schema(
-                beer_id  = IntegerField(),
-                sold_at  = DateField(format='%m/%d/%Y'),
-                quantity = IntegerField()
+                beer_id=IntegerField(),
+                sold_at=DateField(format='%m/%d/%Y'),
+                quantity=IntegerField()
             ),
             spark=spark_session
         )
@@ -35,12 +27,12 @@ class DenormalizeBeersPipe(pemi.Pipe):
         self.source(
             SparkDataSubject,
             name='beers',
-            schema = pemi.Schema(
-                id    = IntegerField(),
-                name  = StringField(),
-                style = StringField(),
-                abv   = FloatField(),
-                price = DecimalField(precision=16, scale=2)
+            schema=pemi.Schema(
+                id=IntegerField(),
+                name=StringField(),
+                style=StringField(),
+                abv=FloatField(),
+                price=DecimalField(precision=16, scale=2)
             ),
             spark=spark_session
         )
@@ -49,13 +41,13 @@ class DenormalizeBeersPipe(pemi.Pipe):
             SparkDataSubject,
             name='beer_sales',
             schema=pemi.Schema(
-                beer_id    = IntegerField(),
-                name       = StringField(),
-                style      = StringField(),
-                sold_at    = DateField(format='%m/%d/%Y'),
-                quantity   = IntegerField(),
-                unit_price = DecimalField(precision=16, scale=2),
-                sell_price = DecimalField(precision=16, scale=2)
+                beer_id=IntegerField(),
+                name=StringField(),
+                style=StringField(),
+                sold_at=DateField(format='%m/%d/%Y'),
+                quantity=IntegerField(),
+                unit_price=DecimalField(precision=16, scale=2),
+                sell_price=DecimalField(precision=16, scale=2)
             ),
             spark=spark_session
         )
@@ -105,12 +97,12 @@ with pt.Scenario('DenormalizeBeersPipe') as scenario:
 
     scenario.setup(
         runner=pipe.flow,
-        case_keys = case_keys(),
-        sources = {
+        case_keys=case_keys(),
+        sources={
             'sales': pipe.sources['sales'],
             'beers': pipe.sources['beers']
         },
-        targets =  {
+        targets={
             'beer_sales': pipe.targets['beer_sales']
         }
     )
@@ -126,7 +118,7 @@ with pt.Scenario('DenormalizeBeersPipe') as scenario:
             | {b[4]}  | 01/04/2017 | 8        |
             | {b[5]}  | 01/04/2017 | 6        |
             | {b[1]}  | 01/06/2017 | 1        |
-            '''.format(b = scenario.case_keys.cache('sales', 'beer_id')),
+            '''.format(b=scenario.case_keys.cache('sales', 'beer_id')),
             schema=pipe.sources['sales'].schema
         )
 
@@ -138,11 +130,11 @@ with pt.Scenario('DenormalizeBeersPipe') as scenario:
             | {b[2]} | OldStyle      | Pale  |
             | {b[3]} | Pipewrench    | IPA   |
             | {b[4]} | AbstRedRibbon | Lager |
-            '''.format(b = scenario.case_keys.cache('beers', 'id')),
+            '''.format(b=scenario.case_keys.cache('beers', 'id')),
             schema=pipe.sources['beers'].schema,
             fake_with={
-                'abv': {'valid': lambda: pemi.data.fake.pydecimal(2, 2, positive=True)},
-                'price': {'valid': lambda: pemi.data.fake.pydecimal(2, 2, positive=True)}
+                'abv': {'valid': lambda: pemi.data.fake.pydecimal(2, 2, positive=True)}, #pylint: disable=no-member
+                'price': {'valid': lambda: pemi.data.fake.pydecimal(2, 2, positive=True)} #pylint: disable=no-member
             }
         )
 
@@ -156,7 +148,7 @@ with pt.Scenario('DenormalizeBeersPipe') as scenario:
             | {b[4]}  | 01/04/2017 | 8        | AbstRedRibbon | Lager |
             | {b[5]}  | 01/04/2017 | 6        |               |       |
             | {b[1]}  | 01/06/2017 | 1        | SpinCyle      | IPA   |
-            '''.format(b = scenario.case_keys.cache('beer_sales', 'beer_id')),
+            '''.format(b=scenario.case_keys.cache('beer_sales', 'beer_id')),
             schema=pipe.targets['beer_sales'].schema
         )
 

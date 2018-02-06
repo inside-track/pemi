@@ -2,8 +2,6 @@ import pytest
 
 import pandas as pd
 
-import pemi
-import pemi.pd_mapper
 import pemi.testing as pt
 from pemi.pd_mapper import *
 
@@ -32,13 +30,13 @@ def unknown_recoder(val):
     return 'Unknown: {}'.format(val)
 
 
-class TestCardinalities():
+class TestCardinalities:
 
     @pytest.fixture
     def df(self):
         return pd.DataFrame(
             {
-                'num': [1,2,3],
+                'num': [1, 2, 3],
                 'name': ['one', 'two', 'three'],
                 'num_name': ['1-one', '2-two', '3-three']
             }
@@ -138,11 +136,11 @@ class TestCardinalities():
             return _recorder
 
         saved = []
-        mapper = PdMapper(df, maps=[
+        PdMapper(df, maps=[
             PdMap(source='num', transform=recorder(saved)),
         ]).apply()
 
-        assert saved == [1,2,3]
+        assert saved == [1, 2, 3]
 
 
     def test_many_to_zero_map(self, df):
@@ -156,11 +154,11 @@ class TestCardinalities():
             return _recorder
 
         saved = []
-        mapper = PdMapper(df, maps=[
+        PdMapper(df, maps=[
             PdMap(source=['num', 'name'], transform=recorder(saved)),
         ]).apply()
 
-        assert saved == ['1-one','2-two','3-three']
+        assert saved == ['1-one', '2-two', '3-three']
 
 
     def test_zero_to_one_map(self, df):
@@ -172,19 +170,19 @@ class TestCardinalities():
         ]).apply()
 
         result_df = mapper.mapped_df
-        expected_df = pd.DataFrame({'my_constant': [5,5,5]})
+        expected_df = pd.DataFrame({'my_constant': [5, 5, 5]})
 
         pt.assert_frame_equal(result_df, expected_df)
 
 
 
-class TestHandlerModes():
+class TestHandlerModes:
 
     @pytest.fixture
     def df(self):
         return pd.DataFrame(
             {
-                'num': [1,20,3,40]
+                'num': [1, 20, 3, 40]
             }
         )
 
@@ -205,14 +203,15 @@ class TestHandlerModes():
         The warning handler replaces errors with None
         '''
         mapper = PdMapper(df, maps=[
-            PdMap(source='num', target='translated', transform=translate, handler=RowHandler('warn'))
+            PdMap(source='num', target='translated', transform=translate,
+                  handler=RowHandler('warn'))
         ]).apply()
 
         mapped_df = mapper.mapped_df
 
         expected_mapped_df = pd.DataFrame(
             {
-                'translated': ['UNO',None,'TRES',None]
+                'translated': ['UNO', None, 'TRES', None]
             }
         )
 
@@ -224,17 +223,18 @@ class TestHandlerModes():
         The warning handler records warning records in the errors dataframe
         '''
         mapper = PdMapper(df, maps=[
-            PdMap(source='num', target='translated', transform=translate, handler=RowHandler('warn'))
+            PdMap(source='num', target='translated', transform=translate,
+                  handler=RowHandler('warn'))
         ]).apply()
 
         errors_df = mapper.errors_df
 
         expected_errors_df = pd.DataFrame(
             {
-                '__error_index__': [1,3],
+                '__error_index__': [1, 3],
                 '__error_message__': ['Unknown translation: 20', 'Unknown translation: 40']
             },
-            index=[1,3]
+            index=[1, 3]
         )
 
         pt.assert_frame_equal(errors_df[expected_errors_df.columns], expected_errors_df)
@@ -245,14 +245,15 @@ class TestHandlerModes():
         The ignore handler replaces errors with None
         '''
         mapper = PdMapper(df, maps=[
-            PdMap(source='num', target='translated', transform=translate, handler=RowHandler('ignore'))
+            PdMap(source='num', target='translated', transform=translate,
+                  handler=RowHandler('ignore'))
         ]).apply()
 
         mapped_df = mapper.mapped_df
 
         expected_mapped_df = pd.DataFrame(
             {
-                'translated': ['UNO',None,'TRES',None]
+                'translated': ['UNO', None, 'TRES', None]
             }
         )
 
@@ -264,7 +265,8 @@ class TestHandlerModes():
         The ignore handler does not put data in the errors dataframe
         '''
         mapper = PdMapper(df, maps=[
-            PdMap(source='num', target='translated', transform=translate, handler=RowHandler('ignore'))
+            PdMap(source='num', target='translated', transform=translate,
+                  handler=RowHandler('ignore'))
         ]).apply()
 
         errors_df = mapper.errors_df
@@ -278,17 +280,17 @@ class TestHandlerModes():
         Errors are excluded from the mapped dataframe
         '''
         mapper = PdMapper(df, maps=[
-            PdMap(source='num', target='translated', transform=translate, handler=RowHandler('exclude'))
+            PdMap(source='num', target='translated', transform=translate,
+                  handler=RowHandler('exclude'))
         ]).apply()
 
         mapped_df = mapper.mapped_df
-        errors_df = mapper.errors_df
 
         expected_mapped_df = pd.DataFrame(
             {
-                'translated': ['UNO','TRES']
+                'translated': ['UNO', 'TRES']
             },
-            index=[0,2]
+            index=[0, 2]
         )
 
         pt.assert_frame_equal(mapped_df, expected_mapped_df)
@@ -299,19 +301,18 @@ class TestHandlerModes():
         Errors are captured in an errors dataframe
         '''
         mapper = PdMapper(df, maps=[
-            PdMap(source='num', target='translated', transform=translate, handler=RowHandler('exclude'))
+            PdMap(source='num', target='translated', transform=translate,
+                  handler=RowHandler('exclude'))
         ]).apply()
 
-        mapped_df = mapper.mapped_df
         errors_df = mapper.errors_df
-
 
         expected_errors_df = pd.DataFrame(
             {
-                '__error_index__': [1,3],
+                '__error_index__': [1, 3],
                 '__error_message__': ['Unknown translation: 20', 'Unknown translation: 40']
             },
-            index=[1,3]
+            index=[1, 3]
         )
 
         pt.assert_frame_equal(errors_df[expected_errors_df.columns], expected_errors_df)
@@ -326,7 +327,8 @@ class TestHandlerModes():
             return 'Unknown: {}'.format(str(val))
 
         mapper = PdMapper(df, maps=[
-            PdMap(source='num', target='translated', transform=translate, handler=RowHandler('recode', recode=recoder))
+            PdMap(source='num', target='translated', transform=translate,
+                  handler=RowHandler('recode', recode=recoder))
         ]).apply()
         mapped_df = mapper.mapped_df
 
@@ -345,7 +347,7 @@ class TestHandlerModes():
 
         given_df = pd.DataFrame(
             {
-                'num': ['1',2,'3'],
+                'num': ['1', 2, '3'],
                 'name': ['one', 'two', 'three']
             }
         )
@@ -353,7 +355,8 @@ class TestHandlerModes():
         recoder = lambda row: 'idk'
 
         mapper = PdMapper(given_df, maps=[
-            PdMap(source=('num','name'), target=('combined'), transform=concatenate, handler=RowHandler('recode', recode=recoder))
+            PdMap(source=('num', 'name'), target=('combined'), transform=concatenate,
+                  handler=RowHandler('recode', recode=recoder))
         ]).apply()
         mapped_df = mapper.mapped_df
 
@@ -375,36 +378,36 @@ class TestHandlerModes():
             }
         )
 
-        def recoder(row):
+        def recoder(_):
             return {'split_num': None, 'split_name': None}
 
         mapper = PdMapper(given_df, maps=[
-            PdMap(source='num_name', target=('split_num','split_name'), transform=mysplit, handler=RowHandler('recode', recode=recoder))
+            PdMap(source='num_name', target=('split_num', 'split_name'), transform=mysplit,
+                  handler=RowHandler('recode', recode=recoder))
         ]).apply()
 
         mapped_df = mapper.mapped_df
-        errors_df = mapper.errors_df
 
         expected_mapped_df = pd.DataFrame(
             {
                 'split_num': ['1', None, '3'],
                 'split_name': ['one', None, 'three']
             },
-            columns = ['split_num', 'split_name']
+            columns=['split_num', 'split_name']
         )
         pt.assert_frame_equal(mapped_df, expected_mapped_df)
 
 
-class TestPassthrough():
+class TestPassthrough:
 
     @pytest.fixture
     def df(self):
         return pd.DataFrame(
             {
-                'field1': [1,2,3],
-                'field2': [1,2,3],
-                'field3': [1,2,3],
-                'field4': [1,2,3]
+                'field1': [1, 2, 3],
+                'field2': [1, 2, 3],
+                'field3': [1, 2, 3],
+                'field4': [1, 2, 3]
             }
         )
 
@@ -416,13 +419,13 @@ class TestPassthrough():
 
         expected_mapped_df = pd.DataFrame(
             {
-                'field1': [1,2,3],
-                'field2': [1,2,3],
-                'field3': [11,12,13],
-                'field4': [1,2,3],
-                'field2p': [11,12,13]
+                'field1': [1, 2, 3],
+                'field2': [1, 2, 3],
+                'field3': [11, 12, 13],
+                'field4': [1, 2, 3],
+                'field2p': [11, 12, 13]
             },
-            columns = ['field1', 'field2', 'field3', 'field4', 'field2p']
+            columns=['field1', 'field2', 'field3', 'field4', 'field2p']
         )
 
         pt.assert_frame_equal(mapper.mapped_df, expected_mapped_df)

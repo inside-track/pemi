@@ -8,6 +8,8 @@ import pemi.connections
 import pemi.pipes.pd
 from pemi.fields import *
 
+#pylint: disable=too-few-public-methods
+
 class APipe(pemi.Pipe):
     def __init__(self, **params):
         super().__init__(**params)
@@ -148,7 +150,10 @@ class TestAa1a2ToXx1x2():
         pipe.flow()
 
         expected = ['a1 from APipe', 'a2 from APipe']
-        actual = [pipe.pipes['X'].sources['x1'].df['msg'][0], pipe.pipes['X'].sources['x2'].df['msg'][0]]
+        actual = [
+            pipe.pipes['X'].sources['x1'].df['msg'][0],
+            pipe.pipes['X'].sources['x2'].df['msg'][0]
+        ]
         assert actual == expected
 
 
@@ -185,7 +190,10 @@ class TestAa1Bb1ToXx1x2():
         pipe.flow()
 
         expected = ['a1 from APipe', 'b1 from BPipe']
-        actual = [pipe.pipes['X'].sources['x1'].df['msg'][0], pipe.pipes['X'].sources['x2'].df['msg'][0]]
+        actual = [
+            pipe.pipes['X'].sources['x1'].df['msg'][0],
+            pipe.pipes['X'].sources['x2'].df['msg'][0]
+        ]
         assert actual == expected
 
 # One-to-many pipes, one-to-one subjects
@@ -221,7 +229,10 @@ class TestAa1a2ToXx1Yy1():
         pipe.flow()
 
         expected = ['a1 from APipe', 'a2 from APipe']
-        actual = [pipe.pipes['X'].sources['x1'].df['msg'][0], pipe.pipes['Y'].sources['y1'].df['msg'][0]]
+        actual = [
+            pipe.pipes['X'].sources['x1'].df['msg'][0],
+            pipe.pipes['Y'].sources['y1'].df['msg'][0]
+        ]
         assert actual == expected
 
 
@@ -291,7 +302,10 @@ class TestAa1ToXx1Yy1():
         pipe.flow()
 
         expected = ['a1 from APipe', 'a1 from APipe']
-        actual = [pipe.pipes['X'].sources['x1'].df['msg'][0], pipe.pipes['Y'].sources['y1'].df['msg'][0]]
+        actual = [
+            pipe.pipes['X'].sources['x1'].df['msg'][0],
+            pipe.pipes['Y'].sources['y1'].df['msg'][0]
+        ]
         assert actual == expected
 
     def test_fails_without_a_fork(self):
@@ -513,7 +527,9 @@ class TestExternalSourceAndTargetPipes():
             self.connections.group('from_sources').flow()
 
             self.targets['to_x1'].df = pd.DataFrame()
-            self.targets['to_x1'].df['msg'] = self.sources['from_a1'].df['msg'].apply(lambda v: '{} via self'.format(v))
+            self.targets['to_x1'].df['msg'] = self.sources['from_a1'].df['msg'].apply(
+                '{} via self'.format
+            )
 
             self.connections.group('to_targets').flow()
 

@@ -15,7 +15,8 @@ def default_column_normalizer(name):
 
 
 class LocalCsvFileSourcePipe(SourcePipe):
-    def __init__(self, *, paths, csv_opts={}, filename_field=None, filename_full_path=False, normalize_columns=True, **params):
+    def __init__(self, *, paths, csv_opts={},
+                 filename_field=None, filename_full_path=False, normalize_columns=True, **params):
         super().__init__(**params)
 
         self.paths = paths
@@ -37,7 +38,8 @@ class LocalCsvFileSourcePipe(SourcePipe):
     def extract(self):
         return self.paths
 
-    def parse(self, filepaths):
+    def parse(self, data):
+        filepaths = data
         mapped_dfs = []
         error_dfs = []
         for filepath in filepaths:
@@ -57,10 +59,9 @@ class LocalCsvFileSourcePipe(SourcePipe):
     def _build_csv_opts(self, user_csv_opts):
         file_fieldnames = [k for k in self.schema.keys() if k != self.filename_field]
 
-        normalizer = lambda x: column_normalizer(x) in file_fieldnames
-
         mandatory_opts = {
-            'converters': {idx:str for idx in range(10000)}, # Assumes we'll never get a csv with more than 10000 columns
+            # Assumes we'll never get a csv with > 10000 columns
+            'converters': {idx:str for idx in range(10000)},
             'usecols':    lambda col: self.column_normalizer(col) in file_fieldnames
         }
 
@@ -80,7 +81,7 @@ class LocalCsvFileSourcePipe(SourcePipe):
                 raw_df[self.filename_field] = filepath
             else:
                 raw_df[self.filename_field] = os.path.basename(filepath)
-        mapper = pemi.pd_mapper.PdMapper(raw_df, maps = self.field_maps).apply()
+        mapper = pemi.pd_mapper.PdMapper(raw_df, maps=self.field_maps).apply()
         return mapper
 
 
@@ -94,11 +95,13 @@ class LocalCsvFileTargetPipe(TargetPipe):
     def encode(self):
         return self.sources['main'].df
 
-    def load(self, df):
+    def load(self, encoded_data):
+        df = encoded_data
         df.to_csv(self.path, **self.csv_opts)
         return self.path
 
-    def _build_csv_opts(self, user_csv_opts):
+    @staticmethod
+    def _build_csv_opts(user_csv_opts):
         mandatory_opts = {}
 
         default_opts = {

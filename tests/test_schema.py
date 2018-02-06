@@ -4,21 +4,21 @@ import pemi
 from pemi.fields import *
 
 
-class TestSchema():
+class TestSchema:
     def test_create_schema_from_list(self):
         '''
         Creating a schema from a list of fields
         '''
-        f1 = IntegerField('id')
-        f2 = StringField('name')
-        f3 = DateField('sell_at', format='%m/%d/%Y')
+        field1 = IntegerField('id')
+        field2 = StringField('name')
+        field3 = DateField('sell_at', format='%m/%d/%Y')
 
 
-        schema = pemi.Schema(f1, f2, f3)
+        schema = pemi.Schema(field1, field2, field3)
         expected_fields = {
-            'id': f1,
-            'name': f2,
-            'sell_at': f3
+            'id': field1,
+            'name': field2,
+            'sell_at': field3
         }
         assert schema.fields == expected_fields
 
@@ -26,20 +26,20 @@ class TestSchema():
         '''
         Creating a schema from field keywords
         '''
-        f1 = IntegerField()
-        f2 = StringField()
-        f3 = DateField(format='%m/%d/%Y')
+        field1 = IntegerField()
+        field2 = StringField()
+        field3 = DateField(format='%m/%d/%Y')
 
 
         schema = pemi.Schema(
-            id=f1,
-            name=f2,
-            sell_at=f3
+            id=field1,
+            name=field2,
+            sell_at=field3
         )
         expected_fields = {
-            'id': f1,
-            'name': f2,
-            'sell_at': f3
+            'id': field1,
+            'name': field2,
+            'sell_at': field3
         }
         assert schema.fields == expected_fields
 
@@ -53,7 +53,7 @@ class TestSchema():
             DateField('sell_at', format='%m/%d/%Y')
         )
 
-        assert schema['sell_at'].metadata['format'] == '%m/%d/%Y'
+        assert schema['sell_at'].metadata['format'] == '%m/%d/%Y' #pylint: disable=no-member
 
 
     def test_schema_merge(self):
@@ -61,19 +61,19 @@ class TestSchema():
         Schemas and the field metadata can be merged
         '''
 
-        s1f1 = IntegerField('id')
-        s1f2 = StringField('name', from_s1='yep', whoami='s1')
-        s1 = pemi.Schema(s1f1, s1f2)
+        src1field1 = IntegerField('id')
+        src1field2 = StringField('name', from_src1='yep', whoami='src1')
+        src1 = pemi.Schema(src1field1, src1field2)
 
-        s2f2 = StringField('name', from_s2='certainly', whoami='s2')
-        s2f3 = DateField('sell_at', format='%m/%d/%Y')
-        s2 = pemi.Schema(s2f2, s2f3)
+        src2field2 = StringField('name', from_src2='certainly', whoami='src2')
+        src2field3 = DateField('sell_at', format='%m/%d/%Y')
+        src2 = pemi.Schema(src2field2, src2field3)
 
-        merged = s1.merge(s2)
+        merged = src1.merge(src2)
         expected = pemi.Schema(
-            s1f1,
-            StringField('name', from_s1='yep', from_s2='certainly', whoami='s2'),
-            s2f3
+            src1field1,
+            StringField('name', from_src1='yep', from_src2='certainly', whoami='src2'),
+            src2field3
         )
         assert merged == expected
 
@@ -83,15 +83,15 @@ class TestSchema():
         '''
 
         schema = pemi.Schema(
-            f1 = StringField(),
-            f2 = StringField(),
-            f3 = StringField()
+            field1=StringField(),
+            field2=StringField(),
+            field3=StringField()
         )
 
-        actual = schema[['f1','f3']]
+        actual = schema[['field1', 'field3']]
         expected = pemi.Schema(
-            f1 = StringField(),
-            f3 = StringField()
+            field1=StringField(),
+            field3=StringField()
         )
 
         assert actual == expected
@@ -102,13 +102,13 @@ class TestSchema():
         '''
 
         schema = pemi.Schema(
-            f1 = StringField(),
-            f2 = StringField(),
-            f3 = StringField()
+            field1=StringField(),
+            field2=StringField(),
+            field3=StringField()
         )
 
         with pytest.raises(KeyError):
-            schema[['f1', 'f4']]
+            assert schema[['field1', 'field4']]
 
     def test_schema_rename(self):
         '''
@@ -116,20 +116,20 @@ class TestSchema():
         '''
 
         schema = pemi.Schema(
-            f1 = StringField(),
-            f2 = StringField(),
-            f3 = StringField()
+            field1=StringField(),
+            field2=StringField(),
+            field3=StringField()
         )
 
         actual = schema.rename({
-            'f1': 'new_f1',
-            'f3': 'new_f3'
+            'field1': 'new_field1',
+            'field3': 'new_field3'
         })
 
         expected = pemi.Schema(
-            new_f1 = StringField(),
-            f2     = StringField(),
-            new_f3 = StringField()
+            new_field1=StringField(),
+            field2=StringField(),
+            new_field3=StringField()
         )
 
         assert actual == expected
@@ -140,17 +140,17 @@ class TestSchema():
         '''
 
         schema = pemi.Schema(
-            f1 = StringField(awesome=True),
-            f2 = StringField(),
-            f3 = StringField(awesome=True),
-            f4 = StringField(awesome=False),
+            field1=StringField(awesome=True),
+            field2=StringField(),
+            field3=StringField(awesome=True),
+            field4=StringField(awesome=False),
         )
 
         actual = schema.select(lambda m: m.metadata.get('awesome', False))
 
         expected = pemi.Schema(
-            f1 = StringField(awesome=True),
-            f3 = StringField(awesome=True)
+            field1=StringField(awesome=True),
+            field3=StringField(awesome=True)
         )
 
         assert actual == expected

@@ -1,8 +1,7 @@
 import os
+import sys
+import logging
 
-import pytest
-
-import pandas as pd
 import sqlalchemy as sa
 
 import pemi
@@ -10,10 +9,8 @@ import pemi.testing as pt
 from pemi.data_subject import SaDataSubject
 from pemi.fields import *
 
-import logging
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARN)
 
-import sys
 this = sys.modules[__name__]
 
 this.params = {
@@ -106,9 +103,9 @@ class DenormalizeBeersPipe(pemi.Pipe):
             SaDataSubject,
             name='sales',
             schema=pemi.Schema(
-                beer_id  = IntegerField(),
-                sold_at  = DateField(format='%m/%d/%Y'),
-                quantity = IntegerField()
+                beer_id=IntegerField(),
+                sold_at=DateField(format='%m/%d/%Y'),
+                quantity=IntegerField()
             ),
             engine=sa_engine,
             table='dumb_sales'
@@ -117,12 +114,12 @@ class DenormalizeBeersPipe(pemi.Pipe):
         self.source(
             SaDataSubject,
             name='beers',
-            schema = pemi.Schema(
-                id    = IntegerField(),
-                name  = StringField(),
-                style = StringField(),
-                abv   = FloatField(),
-                price = DecimalField(precision=16, scale=2)
+            schema=pemi.Schema(
+                id=IntegerField(),
+                name=StringField(),
+                style=StringField(),
+                abv=FloatField(),
+                price=DecimalField(precision=16, scale=2)
             ),
             engine=sa_engine,
             table='dumb_beers'
@@ -132,6 +129,7 @@ class DenormalizeBeersPipe(pemi.Pipe):
             SaDataSubject,
             name='beer_sales',
             schema=pemi.Schema(
+                #pylint: disable=bad-whitespace
                 beer_id    = IntegerField(),
                 name       = StringField(),
                 style      = StringField(),
@@ -139,6 +137,7 @@ class DenormalizeBeersPipe(pemi.Pipe):
                 quantity   = IntegerField(),
                 unit_price = DecimalField(precision=16, scale=2),
                 sell_price = DecimalField(precision=16, scale=2)
+                #pylint: enable=bad-whitespace
             ),
             engine=sa_engine,
             table='beer_sales'
@@ -212,8 +211,8 @@ with pt.Scenario('DenormalizeBeersPipe') as scenario:
             }
 
     scenario.setup(
-        runner = pipe.flow,
-        case_keys = case_keys(),
+        runner=pipe.flow,
+        case_keys=case_keys(),
         sources={
             'dumb_sales': pipe.pipes['dumb_sales'].targets['main'],
             'dumb_beers': pipe.pipes['dumb_beers'].targets['main']
@@ -234,7 +233,7 @@ with pt.Scenario('DenormalizeBeersPipe') as scenario:
             | {b[4]}  | 01/04/2017 | 8        |
             | {b[5]}  | 01/04/2017 | 6        |
             | {b[1]}  | 01/06/2017 | 1        |
-            '''.format(b = scenario.case_keys.cache('dumb_sales', 'beer_id')),
+            '''.format(b=scenario.case_keys.cache('dumb_sales', 'beer_id')),
             schema=pipe.sources['sales'].schema
         )
 
@@ -246,11 +245,11 @@ with pt.Scenario('DenormalizeBeersPipe') as scenario:
             | {b[2]} | OldStyle      | Pale  |
             | {b[3]} | Pipewrench    | IPA   |
             | {b[4]} | AbstRedRibbon | Lager |
-            '''.format(b = scenario.case_keys.cache('dumb_beers', 'id')),
+            '''.format(b=scenario.case_keys.cache('dumb_beers', 'id')),
             schema=pipe.sources['beers'].schema,
             fake_with={
-                'abv': {'valid': lambda: pemi.data.fake.pydecimal(2, 2, positive=True)},
-                'price': {'valid': lambda: pemi.data.fake.pydecimal(2, 2, positive=True)}
+                'abv': {'valid': lambda: pemi.data.fake.pydecimal(2, 2, positive=True)}, #pylint: disable=no-member
+                'price': {'valid': lambda: pemi.data.fake.pydecimal(2, 2, positive=True)} #pylint: disable=no-member
             }
         )
 
@@ -264,7 +263,7 @@ with pt.Scenario('DenormalizeBeersPipe') as scenario:
             | {b[4]}  | 01/04/2017 | 8        | AbstRedRibbon | Lager |
             | {b[5]}  | 01/04/2017 | 6        |               |       |
             | {b[1]}  | 01/06/2017 | 1        | SpinCyle      | IPA   |
-            '''.format(b = scenario.case_keys.cache('beer_sales', 'beer_id')),
+            '''.format(b=scenario.case_keys.cache('beer_sales', 'beer_id')),
             schema=pipe.targets['beer_sales'].schema
         )
 

@@ -13,8 +13,7 @@ class Schema:
     def __getitem__(self, key):
         if isinstance(key, list):
             return Schema(**{self[k].name: self[k] for k in key})
-        else:
-            return self.fields[key]
+        return self.fields[key]
 
     def keys(self):
         return list(self.fields.keys())
@@ -29,7 +28,9 @@ class Schema:
         return {f.name: f.coerce for f in self.fields.values()}
 
     def __str__(self):
-        return "\n".join(['{} -> {}'.format(name, meta.__str__()) for name, meta in self.fields.items()])
+        return "\n".join(
+            ['{} -> {}'.format(name, meta.__str__()) for name, meta in self.fields.items()]
+        )
 
     def __repr__(self):
         return '<{}({}):\n{}\n>'.format(self.__class__.__name__, id(self), self.__str__())
@@ -58,11 +59,11 @@ class Schema:
 
     def rename(self, mapper):
         new_fields = []
-        for f in self.fields.values():
-            new_field = type(f)(mapper.get(f.name, f.name), **f.metadata)
+        for field in self.fields.values():
+            new_field = type(field)(mapper.get(field.name, field.name), **field.metadata)
             new_fields.append(new_field)
         return Schema(*new_fields)
 
     def select(self, func):
         'Returns a new schema with the fields selected via a function (func) of the field'
-        return Schema(**{name:field for name,field in self.items() if func(field)})
+        return Schema(**{name:field for name, field in self.items() if func(field)})

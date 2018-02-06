@@ -1,7 +1,4 @@
-import pandas as pd
-
 import pemi
-from pemi.data_subject import PdDataSubject
 
 class SourcePipe(pemi.Pipe):
     '''
@@ -27,14 +24,14 @@ class SourcePipe(pemi.Pipe):
         )
 
     def extract(self):
-        #e.g., S3SourceExtractor.extract()
+        # e.g., S3SourceExtractor.extract()
+        # return extracted_data_that_can_be_parsed
         raise NotImplementedError
-        return extracted_data_that_can_be_parsed
 
     def parse(self, data):
-        #e.g., CsvParser.parse(data)
+        # e.g., CsvParser.parse(data)
+        # return parsed_data
         raise NotImplementedError
-        return parsed_data
 
     def flow(self):
         self.parse(self.extract())
@@ -68,14 +65,14 @@ class TargetPipe(pemi.Pipe):
         )
 
     def encode(self):
-        #e.g., CsvTargetEncoder.encode()
+        # e.g., CsvTargetEncoder.encode()
+        # return source_main_data_encoded_for_loader
         raise NotImplementedError
-        return source_main_data_encoded_for_loader
 
     def load(self, encoded_data):
-        #e.g., S3Loader.load()
+        # e.g., S3Loader.load()
+        # return results_from_load_operation
         raise NotImplementedError
-        return results_from_load_operation
 
     def flow(self):
         self.load(self.encode())
@@ -83,15 +80,13 @@ class TargetPipe(pemi.Pipe):
 
 class ForkPipe(pemi.Pipe):
     ''' A fork pipe accepts a single source and delivers it to multiple named targets '''
-    def __init__(self, *, subject_class=pemi.PdDataSubject, forks=[], **params):
+    def __init__(self, *, subject_class=pemi.PdDataSubject, forks=None, **params):
         super().__init__(**params)
+        forks = forks or []
 
         self.source(subject_class, name='main')
         for fork in forks:
             self.target(subject_class, name=fork)
-
-    def fork(self, source, target):
-        raise NotImplementedError
 
     def flow(self):
         raise NotImplementedError
@@ -99,8 +94,9 @@ class ForkPipe(pemi.Pipe):
 
 class ConcatPipe(pemi.Pipe):
     ''' A concat pipe accepts multiple sources and combines them into a single target '''
-    def __init__(self, subject_class=pemi.PdDataSubject, sources=[], **params):
+    def __init__(self, subject_class=pemi.PdDataSubject, sources=None, **params):
         super().__init__(**params)
+        sources = sources or []
         self.named_sources = sources
 
         for source in sources:
