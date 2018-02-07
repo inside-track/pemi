@@ -82,10 +82,11 @@ class PdDataSubject(DataSubject):
         return pd.DataFrame(columns=self.schema.keys())
 
 class SaDataSubject(DataSubject):
-    def __init__(self, engine, table, **kwargs):
+    def __init__(self, engine, table, sql_schema=None, **kwargs):
         super().__init__(**kwargs)
         self.engine = engine
         self.table = table
+        self.sql_schema = sql_schema
 
     def to_pd(self):
         with self.engine.connect() as conn:
@@ -101,6 +102,8 @@ class SaDataSubject(DataSubject):
     def from_pd(self, df, **to_sql_opts):
         to_sql_opts['if_exists'] = to_sql_opts.get('if_exists', 'append')
         to_sql_opts['index'] = to_sql_opts.get('index', False)
+        if self.sql_schema:
+            to_sql_opts['schema'] = self.sql_schema
 
         df_to_sql = df.copy()
         for field in self.schema.values():
