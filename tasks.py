@@ -79,9 +79,13 @@ def shell(ctx):
 @task
 def pip_compile(ctx):
     'Compile pip resources.  This should only be run in the container.'
-    ctx.run('pip-compile requirements.in')
+    ctx.run('pip-compile requirements/base.in')
+    ctx.run('pip-compile requirements/doc.in')
+    ctx.run('pip-compile requirements/all.in')
 
 @task
 def pip_compile_upgrade(ctx):
     'Upgrate pip resources.  This should only be run in the container.'
-    ctx.run('pip-compile -U requirements.in')
+    ctx.run('pip-compile -U requirements/base.in')
+    ctx.run('pip-compile -U requirements/doc.in')
+    ctx.run('pip-compile -U requirements/all.in')

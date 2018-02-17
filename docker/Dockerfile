@@ -54,9 +54,9 @@ ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
 ENV PYTHONUNBUFFERED 1
 WORKDIR /app
-COPY ./requirements.txt requirements.txt
+COPY ./requirements/all.txt requirements/all.txt
 RUN pip install pip-tools invoke && rm -rf /root/.cache
-RUN pip install -r requirements.txt && rm -rf /root/.cache
+RUN pip install -r requirements/all.txt && rm -rf /root/.cache
 
 # Configure Jupyterlab
 ENV PYTHONPATH /app
