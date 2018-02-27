@@ -114,6 +114,17 @@ class then: #pylint: disable=invalid-name
         return _then
 
     @staticmethod
+    def target_fields_have_values(target, mapping):
+        def _then(case):
+            actual = target[case].data[list(mapping.keys())]
+            expected = pd.DataFrame(index=actual.index)
+            for k, v in mapping.items():
+                expected[k] = pd.Series([v] * len(actual), index=actual.index)
+
+            assert_frame_equal(actual, expected, check_names=False, check_dtype=False)
+        return _then
+
+    @staticmethod
     def target_matches_example(target, expected_table, by=None):
         subject_fields = expected_table.defined_fields
 
