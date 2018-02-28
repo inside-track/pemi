@@ -205,6 +205,19 @@ class then: #pylint: disable=invalid-name
         return _then
 
     @staticmethod
+    def target_has_fields(target, *fields):
+        def _then(case):
+            missing_fields = set(fields) - set(target[case].data.columns)
+            if len(missing_fields) > 0:
+                raise AssertionError(
+                    "The fields '{}' were expected to be found in the target".format(
+                        missing_fields
+                    )
+                )
+
+        return _then
+
+    @staticmethod
     def target_is_empty(target):
         def _then(case):
             nrecords = len(target[case].data)
