@@ -228,6 +228,14 @@ with pt.Scenario('Testing Basics') as scenario:
                                                 'glerbo', 'mcstuffins')
         )
 
+    with scenario.case('Using then.target_has_fields') as case:
+        case.when(
+            pt.when.source_has_keys(scenario.sources['mysource'], scenario.case_keys),
+        ).then(
+            pt.then.target_has_fields(scenario.targets['mytarget'],
+                                      'last_name', 'first_name', 'full_name')
+        )
+
     with scenario.case('Using then.target_is_empty') as case:
         case.then(
             pt.then.target_is_empty(scenario.targets['mytarget'])
