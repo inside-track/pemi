@@ -96,6 +96,20 @@ with pt.Scenario('Testing Basics') as scenario:
             pt.then.target_field_has_value(scenario.targets['mytarget'], 'full_name', 'Joe Jones')
         )
 
+    with scenario.case('Using then.target_fields_have_values') as case:
+        case.when(
+            pt.when.source_fields_have_values(scenario.sources['mysource'], mapping={
+                'id': scenario.case_keys.cache('mysource', 'id')[1],
+                'first_name': 'Joe',
+                'last_name': 'Jones'
+            })
+        ).then(
+            pt.then.target_fields_have_values(scenario.targets['mytarget'], {
+                'first_name': 'Joe',
+                'last_name': 'Jones'
+            })
+        )
+
     with scenario.case('Using when.source_has_keys') as case:
         case.when(
             pt.when.source_has_keys(scenario.sources['mysource'], scenario.case_keys),
@@ -212,6 +226,14 @@ with pt.Scenario('Testing Basics') as scenario:
         ).then(
             pt.then.target_does_not_have_fields(scenario.targets['mytarget'],
                                                 'glerbo', 'mcstuffins')
+        )
+
+    with scenario.case('Using then.target_has_fields') as case:
+        case.when(
+            pt.when.source_has_keys(scenario.sources['mysource'], scenario.case_keys),
+        ).then(
+            pt.then.target_has_fields(scenario.targets['mytarget'],
+                                      'last_name', 'first_name', 'full_name')
         )
 
     with scenario.case('Using then.target_is_empty') as case:

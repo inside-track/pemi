@@ -114,6 +114,17 @@ class then: #pylint: disable=invalid-name
         return _then
 
     @staticmethod
+    def target_fields_have_values(target, mapping):
+        def _then(case):
+            actual = target[case].data[list(mapping.keys())]
+            expected = pd.DataFrame(index=actual.index)
+            for k, v in mapping.items():
+                expected[k] = pd.Series([v] * len(actual), index=actual.index)
+
+            assert_frame_equal(actual, expected, check_names=False, check_dtype=False)
+        return _then
+
+    @staticmethod
     def target_matches_example(target, expected_table, by=None):
         subject_fields = expected_table.defined_fields
 
@@ -188,6 +199,19 @@ class then: #pylint: disable=invalid-name
                 raise AssertionError(
                     "The fields '{}' were not expected to be found in the target".format(
                         unexpected_fields
+                    )
+                )
+
+        return _then
+
+    @staticmethod
+    def target_has_fields(target, *fields):
+        def _then(case):
+            missing_fields = set(fields) - set(target[case].data.columns)
+            if len(missing_fields) > 0:
+                raise AssertionError(
+                    "The fields '{}' were expected to be found in the target".format(
+                        missing_fields
                     )
                 )
 
