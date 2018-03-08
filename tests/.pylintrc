@@ -137,7 +137,8 @@ disable=print-statement,
         no-self-use, # Needed for pytest
         redefined-outer-name, # Needed for pytest
         unused-wildcard-import, # No other nice way for fields - spark does this too
-        len-as-condition # just really don't like inferred truthiness - problematic for pandas
+        len-as-condition, # just really don't like inferred truthiness - problematic for pandas
+        no-member # too many false-positives
 
 
 # Enable the message, report, category or checker with the given id(s). You can
