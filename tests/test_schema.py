@@ -134,6 +134,25 @@ class TestSchema:
 
         assert actual == expected
 
+    def test_schema_rename_copies_metadata(self):
+        '''
+        Rename deep copies the field metadata
+        '''
+
+        schema = pemi.Schema(
+            field1=StringField(awesome={'sauce': 'yes'}),
+            field2=StringField(),
+            field3=StringField()
+        )
+
+        renamed_schema = schema.rename({
+            'field1': 'new_field1',
+            'field3': 'new_field3'
+        })
+
+        assert schema['field1'].metadata['awesome'] \
+            is not renamed_schema['new_field1'].metadata['awesome']
+
     def test_select(self):
         '''
         Given a metadata selector function, returns a subset of fields as a new schema
@@ -154,3 +173,53 @@ class TestSchema:
         )
 
         assert actual == expected
+
+    def test_select_gives_new_field(self):
+        '''
+        After selecting, the original schema fields are not modified by changes to the new
+        '''
+
+        original = pemi.Schema(
+            field1=StringField(required=True),
+            field2=StringField(required=True)
+        )
+
+        selected = original.select(lambda field: field.name == 'field1')
+        selected['field1'].metadata.pop('required', None)
+        assert original['field1'].metadata['required']
+
+    def test_copy_returns_copy(self):
+        'Returns a copy of the schema'
+
+        original = pemi.Schema(
+            field1=StringField(required=True),
+            field2=StringField(required=True)
+        )
+        copy = original.copy()
+
+        assert copy == original
+        assert copy is not original
+
+    def test_copy_returns_copy_of_fields(self):
+        'Returns a copy of the schema'
+
+        original = pemi.Schema(
+            field1=StringField(required=True),
+            field2=StringField(required=True)
+        )
+        copy = original.copy()
+
+        assert copy['field1'] == original['field1']
+        assert copy['field1'] is not original['field1']
+
+    def test_copy_returns_copy_of_field_metadata(self):
+        'Returns a copy of the schema'
+
+        original = pemi.Schema(
+            field1=StringField(awesome={'sauce': 'yes'}),
+            field2=StringField(required=True)
+        )
+        copy = original.copy()
+
+        assert copy['field1'].metadata['awesome'] == original['field1'].metadata['awesome']
+        assert copy['field1'].metadata['awesome'] is not original['field1'].metadata['awesome']
