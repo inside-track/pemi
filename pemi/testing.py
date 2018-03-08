@@ -192,7 +192,7 @@ class then: #pylint: disable=invalid-name
 
 
     @staticmethod
-    def target_does_not_have_fields(target, *fields):
+    def target_does_not_have_fields(target, fields):
         def _then(case):
             unexpected_fields = set(fields) & set(target[case].data.columns)
             if len(unexpected_fields) > 0:
@@ -205,13 +205,22 @@ class then: #pylint: disable=invalid-name
         return _then
 
     @staticmethod
-    def target_has_fields(target, *fields):
+    def target_has_fields(target, fields, only=False):
         def _then(case):
             missing_fields = set(fields) - set(target[case].data.columns)
+            extra_fields = set(target[case].data.columns) - set(fields)
+
             if len(missing_fields) > 0:
                 raise AssertionError(
                     "The fields '{}' were expected to be found in the target".format(
                         missing_fields
+                    )
+                )
+
+            if len(extra_fields) > 0 and only:
+                raise AssertionError(
+                    "The fields '{}' were not expected to be found on the target".format(
+                        extra_fields
                     )
                 )
 
