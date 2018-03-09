@@ -1,3 +1,5 @@
+import copy
+
 from collections import OrderedDict
 
 class Schema:
@@ -43,12 +45,12 @@ class Schema:
 
         for name, field in merged_fields.items():
             if name in self.fields:
-                self_meta = self.fields[name].metadata
+                self_meta = copy.deepcopy(self.fields[name].metadata)
             else:
                 self_meta = {}
 
             if name in other.fields:
-                other_meta = other.fields[name].metadata
+                other_meta = copy.deepcopy(other.fields[name].metadata)
             else:
                 other_meta = {}
 
@@ -57,13 +59,17 @@ class Schema:
 
         return Schema(**merged_fields)
 
+    def copy(self):
+        return copy.deepcopy(self)
+
     def rename(self, mapper):
         new_fields = []
         for field in self.fields.values():
-            new_field = type(field)(mapper.get(field.name, field.name), **field.metadata)
+            new_field = copy.deepcopy(field)
+            new_field.name = mapper.get(field.name, field.name)
             new_fields.append(new_field)
         return Schema(*new_fields)
 
     def select(self, func):
         'Returns a new schema with the fields selected via a function (func) of the field'
-        return Schema(**{name:field for name, field in self.items() if func(field)})
+        return Schema(**{name:copy.deepcopy(field) for name, field in self.items() if func(field)})

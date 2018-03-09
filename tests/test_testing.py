@@ -225,15 +225,28 @@ with pt.Scenario('Testing Basics') as scenario:
             pt.when.source_has_keys(scenario.sources['mysource'], scenario.case_keys),
         ).then(
             pt.then.target_does_not_have_fields(scenario.targets['mytarget'],
-                                                'glerbo', 'mcstuffins')
+                                                ['glerbo', 'mcstuffins'])
         )
 
     with scenario.case('Using then.target_has_fields') as case:
         case.when(
             pt.when.source_has_keys(scenario.sources['mysource'], scenario.case_keys),
         ).then(
-            pt.then.target_has_fields(scenario.targets['mytarget'],
-                                      'last_name', 'first_name', 'full_name')
+            pt.then.target_has_fields(
+                scenario.targets['mytarget'],
+                ['last_name', 'first_name', 'full_name']
+            )
+        )
+
+    with scenario.case('Using then.target_has_fields with only option') as case:
+        case.when(
+            pt.when.source_has_keys(scenario.sources['mysource'], scenario.case_keys),
+        ).then(
+            pt.then.target_has_fields(
+                scenario.targets['mytarget'],
+                ['tid', 'last_name', 'first_name', 'full_name'],
+                only=True
+            )
         )
 
     with scenario.case('Using then.target_is_empty') as case:
