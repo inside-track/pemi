@@ -40,6 +40,9 @@ class Schema:
     def __eq__(self, other):
         return self.fields == other.fields
 
+    def __contains__(self, key):
+        return key in self.fields
+
     def merge(self, other):
         merged_fields = {**self.fields, **other.fields}
 
