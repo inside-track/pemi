@@ -208,6 +208,8 @@ with pt.Scenario('Testing Basics') as scenario:
                                     scenario.targets['mytarget'], 'first_name')
         )
 
+
+
     with scenario.case('Using then.fields_are_copied') as case:
         case.when(
             pt.when.source_conforms_to_schema(scenario.sources['mysource']),
@@ -400,6 +402,135 @@ with pt.Scenario('Testing with multiple keys') as scenario:
 
 
 
+with pt.Scenario('Testing with sorted data') as scenario:
+    mysource = pemi.PdDataSubject(
+        schema=pemi.Schema(
+            id=IntegerField(),
+            order=StringField(),
+            name=StringField(),
+        )
+    )
+
+    mytarget = pemi.PdDataSubject(
+        schema=pemi.Schema(
+            tid=StringField(),
+            order=StringField(),
+            target_order=StringField(),
+            name=StringField(),
+        )
+    )
+
+    # The only rule with this generator is that each set of keys must be unique
+    # All variables that could be present in a key for a source must be present on every call
+    class SortedScenario:
+        @staticmethod
+        def case_keys():
+            ids = list(range(1000))
+            random.shuffle(ids)
+            for i in ids:
+                yield {
+                    'mysource': {'id': i},
+                    'mytarget': {'tid': 'T{}'.format(i)}
+                }
+
+        @staticmethod
+        def runner(source, target):
+            def _runner():
+                target.df = pd.DataFrame(columns=list(target.schema.keys()))
+
+                if len(source.df) > 0:
+                    target.df['tid'] = source.df['id'].apply('T{}'.format)
+                    target.df['name'] = source.df['name']
+                    target.df['order'] = source.df['order']
+                    target.df['target_order'] = source.df['order']
+                    target.df.sort_values(['order'], inplace=True)
+            return _runner
+
+        @staticmethod
+        def background(scenario):
+            return [
+                pt.when.source_has_keys(scenario.sources['mysource'], scenario.case_keys),
+                pt.when.source_field_has_value(scenario.sources['mysource'],
+                                               'name', 'Background')
+            ]
+
+
+    scenario.setup(
+        runner=SortedScenario.runner(mysource, mytarget),
+        case_keys=SortedScenario.case_keys(),
+        sources={
+            'mysource': mysource
+        },
+        targets={
+            'mytarget': mytarget
+        }
+    )
+
+    with scenario.case('Using then.field_is_copied with by') as case:
+        source_table = pemi.data.Table(
+            '''
+            | id        | order |
+            | -         | -     |
+            | {sid[1]}  | o2    |
+            | {sid[2]}  | o1    |
+            '''.format(sid=scenario.case_keys.cache('mysource', 'id')),
+            schema=mysource.schema
+        )
+
+        case.when(
+            pt.when.example_for_source(scenario.sources['mysource'], source_table),
+        ).then(
+            pt.then.field_is_copied(scenario.sources['mysource'], 'name',
+                                    scenario.targets['mytarget'], 'name',
+                                    by=['order'])
+        )
+
+
+    with scenario.case('Using then.fields_are_copied with by') as case:
+        source_table = pemi.data.Table(
+            '''
+            | id        | order |
+            | -         | -     |
+            | {sid[1]}  | o2    |
+            | {sid[2]}  | o1    |
+            '''.format(sid=scenario.case_keys.cache('mysource', 'id')),
+            schema=mysource.schema
+        )
+
+        case.when(
+            pt.when.example_for_source(scenario.sources['mysource'], source_table),
+        ).then(
+            pt.then.fields_are_copied(scenario.sources['mysource'],
+                                      scenario.targets['mytarget'],
+                                      mapping=[('name', 'name'), ('order', 'order')],
+                                      by=['order'])
+        )
+
+
+    with scenario.case('Using then.fields_are_copied with source_by and target_by') as case:
+        source_table = pemi.data.Table(
+            '''
+            | id        | order |
+            | -         | -     |
+            | {sid[1]}  | o2    |
+            | {sid[2]}  | o1    |
+            '''.format(sid=scenario.case_keys.cache('mysource', 'id')),
+            schema=mysource.schema
+        )
+
+        case.when(
+            pt.when.example_for_source(scenario.sources['mysource'], source_table),
+        ).then(
+            pt.then.fields_are_copied(
+                scenario.sources['mysource'],
+                scenario.targets['mytarget'],
+                mapping=[('name', 'name'), ('order', 'order')],
+                source_by=['order'],
+                target_by=['target_order']
+            )
+        )
+
+
 
 class ChildPipe(pemi.Pipe):
     def __init__(self, **kwargs):
@@ -455,6 +586,9 @@ class ParentPipe(pemi.Pipe):
 
     def flow(self):
         pass
+
+
+
 
 
 class GrandPipe(pemi.Pipe):
