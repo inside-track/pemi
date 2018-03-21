@@ -223,3 +223,19 @@ class TestSchema:
 
         assert copy['field1'].metadata['awesome'] == original['field1'].metadata['awesome']
         assert copy['field1'].metadata['awesome'] is not original['field1'].metadata['awesome']
+
+    def test_contains_when_present(self):
+        schema = pemi.Schema(
+            field1=StringField(),
+            field2=StringField()
+        )
+
+        assert 'field1' in schema
+
+    def test_contains_when_not_present(self):
+        schema = pemi.Schema(
+            field1=StringField(),
+            field2=StringField()
+        )
+
+        assert 'field3' not in schema
