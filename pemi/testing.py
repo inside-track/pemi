@@ -144,11 +144,17 @@ class then: #pylint: disable=invalid-name
         return _then
 
     @staticmethod
-    def field_is_copied(source, source_field, target, target_field, by=None):
+    def field_is_copied(source, source_field, target, target_field, by=None, #pylint: disable=too-many-arguments
+                        source_by=None, target_by=None):
+        source_by = source_by or by
+        target_by = target_by or by or source_by
+
         def _then(case):
-            if by:
-                expected = source[case].data.sort_values(by).reset_index(drop=True)[[source_field]]
-                actual = target[case].data.sort_values(by).reset_index(drop=True)[[target_field]]
+            if source_by:
+                expected = source[case].data.sort_values(source_by)\
+                                            .reset_index(drop=True)[[source_field]]
+                actual = target[case].data.sort_values(target_by)\
+                                          .reset_index(drop=True)[[target_field]]
             else:
                 expected = source[case].data[[source_field]]
                 actual = target[case].data[[target_field]]
@@ -165,14 +171,19 @@ class then: #pylint: disable=invalid-name
         return _then
 
     @staticmethod
-    def fields_are_copied(source, target, mapping, by=None):
+    def fields_are_copied(source, target, mapping, by=None, source_by=None, target_by=None): #pylint: disable=too-many-arguments
         source_fields = list(set([m[0] for m in mapping]))
         target_fields = list(set([m[1] for m in mapping]))
 
+        source_by = source_by or by
+        target_by = target_by or by or source_by
+
         def _then(case):
-            if by:
-                expected = source[case].data.sort_values(by).reset_index(drop=True)[source_fields]
-                actual = target[case].data.sort_values(by).reset_index(drop=True)[target_fields]
+            if source_by:
+                expected = source[case].data.sort_values(source_by)\
+                                            .reset_index(drop=True)[source_fields]
+                actual = target[case].data.sort_values(target_by)\
+                                          .reset_index(drop=True)[target_fields]
             else:
                 expected = source[case].data[source_fields]
                 actual = target[case].data[target_fields]
