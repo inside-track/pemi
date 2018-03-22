@@ -61,6 +61,14 @@ class TestStringField:
         coerced = field.coerce(None)
         assert coerced is None
 
+    def test_strips_blanks(self):
+        '''
+        Surrouding empty spaces is stripped
+        '''
+        field = StringField()
+        coerced = field.coerce('  annoying   ')
+        assert coerced == 'annoying'
+
 
 
 
