@@ -67,7 +67,7 @@ class StringField(Field):
     def coerce(self, value):
         if pemi.transforms.isblank(value):
             return self.null
-        return str(value)
+        return str(value).strip()
 
 
 class IntegerField(Field):
