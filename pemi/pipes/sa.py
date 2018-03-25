@@ -16,7 +16,7 @@ class SaSqlSourcePipe(pemi.pipes.patterns.SourcePipe):
         pemi.log.info("Extracting '%s' via:\n%s", self.name, self.sql)
         with self.engine.connect() as conn:
             sql_df = pd.DataFrame()
-            for chunk in  pd.read_sql(self.sql, conn, chunksize = 30000):
+            for chunk in  pd.read_sql(self.sql, conn, chunksize=30000):
                 if len(sql_df):
                     sql_df = sql_df.append(chunk)
                 else:
