@@ -44,7 +44,6 @@ class Field:
     def __init__(self, name=None, **metadata):
         self.name = name
         self.metadata = metadata
-
         default_metadata = {'null': None}
         self.metadata = {**default_metadata, **metadata}
         self.null = self.metadata['null']
@@ -61,6 +60,8 @@ class Field:
             and self.metadata == other.metadata \
             and self.name == other.name
 
+    def get_type_as(self, db_schema, **kwargs):
+        raise NotImplementedError
 
 class StringField(Field):
     def __init__(self, name=None, **metadata):
@@ -73,6 +74,18 @@ class StringField(Field):
             return self.null
         return str(value).strip()
 
+    def get_type_as(self, db_schema, **kwargs):
+        ret_val = ''
+
+        if db_schema == 'redshift':
+            if 'length' in self.metadata:
+                ret_val = 'varchar (%i)' % self.metadata['length']
+            else:
+                ret_val = 'TEXT'
+        elif db_schema == 'postgres':
+            ret_val = 'TEXT'
+
+        return ret_val
 
 class IntegerField(Field):
     def __init__(self, name=None, **metadata):
@@ -87,6 +100,23 @@ class IntegerField(Field):
             return int(float(value))
         return int(value)
 
+    def get_type_as(self, db_schema, **kwargs):
+        ret_val = ''
+
+        if db_schema == 'redshift':
+            if 'size' in self.metadata:
+                if self.metadata['size'].lower() == 'big':
+                    ret_val = 'INT8'
+                elif self.metadata['size'].lower() == 'small':
+                    ret_val = 'INT2'
+                else:
+                    ret_val = 'INTEGER'
+            else:
+                ret_val = 'INTEGER'
+        elif db_schema == 'postgres':
+            ret_val = 'INT'
+
+        return ret_val
 
 class FloatField(Field):
     @convert_exception
@@ -95,6 +125,23 @@ class FloatField(Field):
             return self.null
         return float(value)
 
+    def get_type_as(self, db_schema, **kwargs):
+        ret_val = ''
+
+        if db_schema == 'redshift':
+            if 'size' in self.metadata:
+                if kwargs['size'].lower() == 'big':
+                    ret_val = 'DOUBLE'
+                elif kwargs['size'].lower() == 'small':
+                    ret_val = 'FLOAT'
+                else:
+                    ret_val = 'DOUBLE'
+            else:
+                ret_val = 'DOUBLE'
+        elif db_schema == 'postgres':
+            ret_val = 'FLOAT'
+
+        return ret_val
 
 class DateField(Field):
     def __init__(self, name=None, **metadata):
@@ -121,6 +168,9 @@ class DateField(Field):
             return datetime.datetime.strptime(value, self.format).date()
         return dateutil.parser.parse(value).date()
 
+    def get_type_as(self, db_schema, **kwargs):
+        return 'DATE'
+
 class DateTimeField(Field):
     def __init__(self, name=None, **metadata):
         super().__init__(name=name, **metadata)
@@ -146,9 +196,19 @@ class DateTimeField(Field):
             return datetime.datetime.strptime(value, self.format)
         return dateutil.parser.parse(value)
 
+    def get_type_as(self, db_schema, **kwargs):
+        ret_val = ''
+
+        if db_schema == 'redshift':
+            ret_val = 'TIMESTAMP '
+        elif db_schema == 'postgres':  # this logic is duplicated because postgres has a bunch of other time features
+            ret_val = 'DATETIME'       # that we might want to implement at a later point: EG: TIMESTAMPZ, TIME, INTERVAL
+
+        return ret_val
+
 
 class BooleanField(Field):
-    # TODOC: Point out that if unknown_truthiness is set,
+    # TODO: Point out that if unknown_truthiness is set,
     #        then that is used when no matching value is found (see tests)
     def __init__(self, name=None, **metadata):
         super().__init__(name=name, **metadata)
@@ -183,6 +243,8 @@ class BooleanField(Field):
             return self.metadata['unknown_truthiness']
         else:
             raise ValueError('Not a boolean value')
+    def get_type_as(self, db_schema, **kwargs):
+        return 'BOOLEAN'
 
 class DecimalField(Field):
     def __init__(self, name=None, **metadata):
@@ -226,15 +288,32 @@ class DecimalField(Field):
 
         return dec
 
+    def get_type_as(self, db_schema, **kwargs):
+        ret_val = ''
+
+        if db_schema == 'redshift':
+            ret_val = 'DOUBLE'
+        elif db_schema == 'postgres':  # this logic is duplicated because postgres has a bunch of other time features
+            ret_val = 'FLOAT'
+
+        return ret_val
+
 class JsonField(Field):
     @convert_exception
     def coerce(self, value):
         if pemi.transforms.isblank(value):
             return self.null
-
         try:
             return json.loads(value)
         except TypeError:
             return value
 
+    def get_type_as(self, db_schema, **kwargs):
+        ret_val = ''
+        if db_schema == 'redshift':
+            ret_val = 'varchar(65535)'
+        elif db_schema == 'postgres':  # this logic is duplicated because postgres has a bunch of other time features
+            ret_val = 'JSONB'
+
+        return ret_val
 #pylint: enable=too-few-public-methods
