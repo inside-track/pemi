@@ -78,10 +78,6 @@ Index
    schema.rst
 
 
-.. automodule:: pemi.data_subject
-   :members:
-
-
 Indices and tables
 ==================
 
