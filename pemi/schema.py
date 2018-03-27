@@ -3,6 +3,10 @@ import copy
 from collections import OrderedDict
 
 class Schema:
+    '''
+    A schema is a thing.
+
+    '''
     def __init__(self, *args, **kwargs):
         self.fields = OrderedDict()
         for field in args:

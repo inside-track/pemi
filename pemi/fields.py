@@ -37,6 +37,10 @@ def convert_exception(fun):
 
 #pylint: disable=too-few-public-methods
 class Field:
+    '''
+    A field is a thing that is inherited
+    '''
+
     def __init__(self, name=None, **metadata):
         self.name = name
         self.metadata = metadata
