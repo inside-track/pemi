@@ -10,6 +10,9 @@ import pandas as pd
 import pemi
 import pemi.data
 
+# Imported here for backwards compatiblity
+from pemi.pipe import mock_pipe #pylint: disable=unused-import
+
 pd.set_option('display.expand_frame_repr', False)
 
 #TODO: Organize and doc
@@ -505,23 +508,3 @@ class Scenario: #pylint: disable=too-many-instance-attributes
         self.collect_results()
 
         self.has_run = True
-
-
-class MockPipe(pemi.Pipe):
-    def flow(self):
-        pemi.log.debug('FLOWING mocked pipe: %s', self)
-
-def mock_pipe(parent_pipe, pipe_name):
-    pipe = parent_pipe.pipes[pipe_name]
-    mocked = MockPipe(name=pipe.name)
-    for source in pipe.sources:
-        mocked.sources[source] = pipe.sources[source]
-        mocked.sources[source].pipe = mocked
-
-    for target in pipe.targets:
-        mocked.targets[target] = pipe.targets[target]
-        mocked.targets[target].pipe = mocked
-
-    #TODO: optionally copy some attributes of mocked pipe
-
-    parent_pipe.pipes[pipe_name] = mocked

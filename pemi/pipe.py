@@ -274,3 +274,23 @@ class Pipe:
 
     def __str__(self):
         return "<{}({}) {}>".format(self.__class__.__name__, self.name, id(self))
+
+
+class MockPipe(Pipe):
+    def flow(self):
+        pemi.log.debug('FLOWING mocked pipe: %s', self)
+
+def mock_pipe(parent_pipe, pipe_name):
+    pipe = parent_pipe.pipes[pipe_name]
+    mocked = MockPipe(name=pipe.name)
+    for source in pipe.sources:
+        mocked.sources[source] = pipe.sources[source]
+        mocked.sources[source].pipe = mocked
+
+    for target in pipe.targets:
+        mocked.targets[target] = pipe.targets[target]
+        mocked.targets[target].pipe = mocked
+
+    #TODO: optionally copy some attributes of mocked pipe
+
+    parent_pipe.pipes[pipe_name] = mocked

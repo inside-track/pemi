@@ -617,7 +617,7 @@ class TestPipeMock:
         return pipe
 
     def test_parent_is_mocked(self, mock_pipe):
-        assert isinstance(mock_pipe.pipes['parent'], pt.MockPipe)
+        assert isinstance(mock_pipe.pipes['parent'], pemi.pipe.MockPipe)
 
     def test_parent_source_reassigned(self, real_pipe, mock_pipe):
         assert real_pipe.pipes['parent'].sources['parent_source'].schema \
