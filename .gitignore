@@ -6,3 +6,4 @@
 dist
 build
 pemi.egg-info
+.pytest_cache
