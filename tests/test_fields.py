@@ -111,6 +111,15 @@ class TestFloatField: #pylint: disable=too-few-public-methods
         coerced = field.coerce('42.3')
         assert coerced == 42.3
 
+    def test_convert_to_float_with_space(self):
+        '''
+        String values should be converted into floats
+        '''
+
+        field = FloatField()
+        coerced = field.coerce('42.3    ')
+        assert coerced == 42.3
+
 
 class TestDateField:
     def test_convert_to_date(self):
@@ -119,6 +128,14 @@ class TestDateField:
         '''
         field = DateField()
         coerced = field.coerce('2016-02-14')
+        assert coerced == datetime.date(2016, 2, 14)
+
+    def test_convert_to_date_with_space(self):
+        '''
+        String values should convert to Python dates even with dumb spaces
+        '''
+        field = DateField()
+        coerced = field.coerce('2016-02-14    ')
         assert coerced == datetime.date(2016, 2, 14)
 
     def test_custom_format(self):
@@ -181,6 +198,14 @@ class TestDateTimeField:
         coerced = field.coerce('2016-02-14 04:33:00')
         assert coerced == datetime.datetime(2016, 2, 14, 4, 33, 0)
 
+    def test_convert_to_datetime_with_space(self):
+        '''
+        String values should convert to Python datetimes even with dumb spaces
+        '''
+        field = DateTimeField()
+        coerced = field.coerce('2016-02-14 04:33:00  ')
+        assert coerced == datetime.datetime(2016, 2, 14, 4, 33, 0)
+
     def test_custom_format(self):
         '''
         String values should convert to Python datetimes using a custom format
@@ -239,6 +264,14 @@ class TestBooleanField:
         '''
         field = BooleanField()
         coerced = field.coerce('y')
+        assert coerced is True
+
+    def test_convert_to_true_with_space(self):
+        '''
+        Convert a truthy string value to True even with dumb spaces
+        '''
+        field = BooleanField()
+        coerced = field.coerce('   y')
         assert coerced is True
 
     def test_convert_to_false(self):
@@ -313,6 +346,14 @@ class TestDecimalField:
         coerced = field.coerce('3.14159')
         assert coerced == decimal.Decimal('3.14159')
 
+    def test_convert_to_decimal_with_space(self):
+        '''
+        String values should convert to a decimal given an expected precision and scale with spaces
+        '''
+        field = DecimalField(precision=6, scale=5)
+        coerced = field.coerce('3.14159     ')
+        assert coerced == decimal.Decimal('3.14159')
+
     def test_raise_precision(self):
         '''
         Raise en error if the precision is too small for the string
@@ -356,6 +397,15 @@ class TestJsonField:
 
         field = JsonField()
         coerced = field.coerce('{"a": "alpha"}')
+        assert coerced == {'a': 'alpha'}
+
+    def test_convert_to_json_with_space(self):
+        '''
+        String values should be converted into python objects with dumb spaces
+        '''
+
+        field = JsonField()
+        coerced = field.coerce('{"a": "alpha"}    ')
         assert coerced == {'a': 'alpha'}
 
     def test_convert_to_json_when_already_parsed(self):
