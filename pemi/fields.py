@@ -101,6 +101,9 @@ class DateField(Field):
 
     @convert_exception
     def coerce(self, value):
+        if hasattr(value, 'strip'):
+            value = value.strip()
+
         if pemi.transforms.isblank(value):
             return self.null
         return self.parse(value)
@@ -123,6 +126,9 @@ class DateTimeField(Field):
 
     @convert_exception
     def coerce(self, value):
+        if hasattr(value, 'strip'):
+            value = value.strip()
+
         if pemi.transforms.isblank(value):
             return self.null
         return self.parse(value)
@@ -154,6 +160,9 @@ class BooleanField(Field):
 
     @convert_exception
     def coerce(self, value):
+        if hasattr(value, 'strip'):
+            value = value.strip()
+
         if isinstance(value, bool):
             return value
         elif pemi.transforms.isblank(value):
