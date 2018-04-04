@@ -185,6 +185,27 @@ with pt.Scenario('PdLookupJoinPipe IgnoreHandler') as scenario:
             pt.then.target_is_empty(scenario.targets['errors'])
         )
 
+    with scenario.case('it works when the lookup is REALLY empty') as case:
+        expected = pemi.data.Table(
+            '''
+            | key    | words |
+            | -      | -     |
+            | {k[1]} | words |
+            | {k[1]} | words |
+            | {k[3]} | more  |
+            | {k[7]} | words |
+            | {k[4]} | even  |
+            | {k[4]} | more  |
+            '''.format(
+                k=scenario.case_keys.cache('main_target', 'key')
+            )
+        )
+
+        case.when(
+            pt.when.example_for_source(scenario.sources['main_source'], factory.ex_main()),
+        ).then(
+            pt.then.target_is_empty(scenario.targets['errors'])
+        )
 
 
 with pt.Scenario('PdLookupJoinPipe FillNa') as scenario:
@@ -433,6 +454,40 @@ with pt.Scenario('PdLookupJoinPipe Blank Keys') as scenario:
             pt.then.target_matches_example(scenario.targets['main_target'], expected),
             pt.then.target_matches_example(scenario.targets['errors'], errors),
         )
+
+
+
+
+
+def test_pd_lookup_join_pipe_multiple_key_empty_lookup(): #pylint: disable=invalid-name
+    # This covers a rather bizarre edge case that used to happen with empty lookup dataframes
+
+    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+        main_key=['key1', 'key2'],
+        lookup_key=['lkey1', 'lkey2'],
+        missing_handler=RowHandler('ignore')
+    )
+
+    pipe.sources['main'].df = pd.DataFrame({
+        'key1': ['k11', 'k12'],
+        'key2': ['k21', 'k22']
+    })
+
+    pipe.sources['lookup'].df = pemi.PdDataSubject(schema=pemi.Schema(
+        lkey1=StringField(),
+        lkey2=StringField()
+    )).df
+
+    pipe.flow()
+
+    expected_df = pd.DataFrame({
+        'key1': ['k11', 'k12'],
+        'key2': ['k21', 'k22'],
+        'lkey1': np.nan,
+        'lkey2': np.nan
+    })
+
+    pt.assert_frame_equal(pipe.targets['main'].df, expected_df, check_dtype=False)
 
 
 
