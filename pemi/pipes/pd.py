@@ -69,7 +69,7 @@ class PdLookupJoinPipe(pemi.Pipe):
         pemi.log.debug('PdLookupJoinPipe - main lookup columns: %s',
                        self.sources['lookup'].df.columns)
 
-        lkp_df = self.sources['lookup'].df
+        lkp_df = self.sources['lookup'].df.drop_duplicates(self.lookup_key)
 
         if self.lookup_prefix != '':
             lkp_df = lkp_df.rename(
@@ -83,15 +83,9 @@ class PdLookupJoinPipe(pemi.Pipe):
         if len(missing_keys) > 0:
             lkp_df = lkp_df[~missing_keys]
 
-        uniq_lkp_df = lkp_df.sort_values(
-            self.lookup_key
-        ).groupby(
-            self.lookup_key
-        ).first().reset_index()
-
         merged_df = pd.merge(
             self.sources['main'].df,
-            uniq_lkp_df,
+            lkp_df,
             left_on=self.main_key,
             right_on=self.lookup_key,
             how='left',
