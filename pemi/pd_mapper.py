@@ -9,6 +9,8 @@ __all__ = [
     'PdMap'
 ]
 
+class MissingSourceFieldError(Exception): pass
+
 
 class RowHandler:
     def __init__(self, mode='raise', recode=None):
@@ -150,6 +152,10 @@ class PdMap: #pylint: disable=too-many-instance-attributes,too-few-public-method
         return self.handler.apply(self._transform, row, row.name)
 
     def apply(self):
+        for source in self.sources:
+            if source not in self.source_df:
+                raise MissingSourceFieldError('"{}" field not in source dataframe'.format(source))
+
         if len(self.source_df) > 0:
             self._apply()
         else:
