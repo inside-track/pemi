@@ -47,6 +47,9 @@ class Schema:
     def __contains__(self, key):
         return key in self.fields
 
+    def __len__(self):
+        return len(self.fields)
+
     def merge(self, other):
         merged_fields = {**self.fields, **other.fields}
 
