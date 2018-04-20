@@ -39,6 +39,8 @@ class LocalCsvFileSourcePipe(SourcePipe):
         return self.paths
 
     def parse(self, data):
+        pemi.log.debug('Parsing files at %s', data)
+
         filepaths = data
         mapped_dfs = []
         error_dfs = []
@@ -54,6 +56,7 @@ class LocalCsvFileSourcePipe(SourcePipe):
             self.targets['main'].df = pd.DataFrame(columns=list(self.schema.keys()))
             self.targets['errors'].df = pd.DataFrame(columns=list(self.schema.keys()))
 
+        pemi.log.debug('Parsed %i records', len(self.targets['main'].df))
         return self.targets['main'].df
 
     def _build_csv_opts(self, user_csv_opts):
@@ -73,7 +76,11 @@ class LocalCsvFileSourcePipe(SourcePipe):
         return {**default_opts, **user_csv_opts, **mandatory_opts}
 
     def _parse_one(self, filepath):
+        pemi.log.debug('Parsing file at %s', filepath)
+
         raw_df = pd.read_csv(filepath, **self.csv_opts)
+        pemi.log.debug('Found %i raw records', len(raw_df))
+
         raw_df.columns = [self.column_normalizer(col) for col in raw_df.columns]
 
         if self.filename_field:

@@ -4,6 +4,7 @@ import pandas as pd
 
 import pemi.testing as pt
 from pemi.pd_mapper import *
+from pemi.pd_mapper import MissingSourceFieldError
 
 def translate(val):
     if val == 1:
@@ -429,3 +430,24 @@ class TestPassthrough:
         )
 
         pt.assert_frame_equal(mapper.mapped_df, expected_mapped_df)
+
+
+class TestMissingFields:
+
+    def test_mapping_a_missing_field(self):
+        df = pd.DataFrame({
+            'field1': [1, 2, 3]
+        })
+
+        with pytest.raises(MissingSourceFieldError):
+            PdMapper(df, maps=[
+                PdMap(source='somefield', target='somefield')
+            ]).apply()
+
+    def test_mapping_a_missing_field_when_dataframe_is_empty(self):
+        df = pd.DataFrame([])
+
+        with pytest.raises(MissingSourceFieldError):
+            PdMapper(df, maps=[
+                PdMap(source='somefield', target='somefield')
+            ]).apply()
