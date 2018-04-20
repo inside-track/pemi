@@ -91,8 +91,9 @@ class PipeConnections:
     def group(self, group):
         return self.__class__([c for c in self.connections if c.group == group])
 
-    def flow(self):
-        return dask.get(self.dask_dag(), list(self.dask_dag().keys()))
+    def flow(self, dask_get=dask.get):
+        dask_dag = self.dask_dag()
+        return dask_get(dask_dag, list(dask_dag.keys()))
 
 
     def graph(self):
