@@ -82,25 +82,41 @@ class PdDataSubject(DataSubject):
         return pd.DataFrame(columns=self.schema.keys())
 
 class SaDataSubject(DataSubject):
-    def __init__(self, engine, table, **kwargs):
+    def __init__(self, engine, table, sql_schema=None, **kwargs):
         super().__init__(**kwargs)
         self.engine = engine
         self.table = table
+        self.sql_schema = sql_schema
+
+        self.cached_test_df = None
 
     def to_pd(self):
+        if self.cached_test_df is not None:
+            return self.cached_test_df
+
         with self.engine.connect() as conn:
-            sql_df = pd.read_sql(self.table, conn, columns=self.schema.keys())
+            sql_df = pd.read_sql_table(
+                self.table,
+                conn,
+                schema=self.sql_schema,
+                columns=self.schema.keys()
+            )
 
             df = pd.DataFrame()
             for column in list(sql_df):
                 df[column] = sql_df[column].apply(self.schema[column].coerce)
 
+            self.cached_test_df = df
         return df
 
     # TODO: Need to figure out how to translate field data types into db data types
     def from_pd(self, df, **to_sql_opts):
+        self.cached_test_df = df
+
         to_sql_opts['if_exists'] = to_sql_opts.get('if_exists', 'append')
         to_sql_opts['index'] = to_sql_opts.get('index', False)
+        if self.sql_schema:
+            to_sql_opts['schema'] = self.sql_schema
 
         df_to_sql = df.copy()
         for field in self.schema.values():
@@ -122,13 +138,18 @@ class SparkDataSubject(DataSubject):
         self.spark = spark
         self.df = df
 
-    def to_pd(self):
-        converted_df = self.df.toPandas()
-        pd_df = pd.DataFrame()
-        for column in list(converted_df):
-            pd_df[column] = converted_df[column].apply(self.schema[column].coerce)
+        self.cached_test_df = None
 
-        return pd_df
+    def to_pd(self):
+        if self.cached_test_df is not None:
+            return self.cached_test_df
+
+        converted_df = self.df.toPandas()
+        self.cached_test_df = pd.DataFrame()
+        for column in list(converted_df):
+            self.cached_test_df[column] = converted_df[column].apply(self.schema[column].coerce)
+
+        return self.cached_test_df
 
     def from_pd(self, df, **kwargs):
         self.df = self.spark.createDataFrame(df)

@@ -47,6 +47,9 @@ class Schema:
     def __contains__(self, key):
         return key in self.fields
 
+    def __len__(self):
+        return len(self.fields)
+
     def merge(self, other):
         merged_fields = {**self.fields, **other.fields}
 
@@ -76,6 +79,36 @@ class Schema:
             new_field.name = mapper.get(field.name, field.name)
             new_fields.append(new_field)
         return Schema(*new_fields)
+
+    def metapply(self, elem, func):
+        '''
+        Allows one to create/modify metadata elements using a function
+
+        Args:
+            elem (str): Name of the metadata element to create or modify
+            func (func): Function that accepts a single ``pemi.Field`` argument and returns
+              the value of the metadata element indicated by ``elem``
+
+        Returns:
+            pemi.Schema: A new ``pemi.Schema`` with the updated metadata
+
+        Example:
+            Suppose we wanted to add some metadata to a schema that will be used to
+            construct a SQL statement::
+
+                pemi.schema.Schema(
+                    id=StringField(),
+                    name=StringField()
+                ).metapply(
+                    'sql',
+                    lambda field: 'students.{} AS student_{}'.format(field.name, field.name)
+                )
+        '''
+
+        new_schema = self.copy()
+        for _, field in new_schema.items():
+            field.metadata[elem] = func(field)
+        return new_schema
 
     def select(self, func):
         'Returns a new schema with the fields selected via a function (func) of the field'

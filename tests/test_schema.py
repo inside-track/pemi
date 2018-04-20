@@ -239,3 +239,19 @@ class TestSchema:
         )
 
         assert 'field3' not in schema
+
+    def test_metapply(self):
+        actual = pemi.Schema(
+            id=StringField(),
+            name=StringField()
+        ).metapply(
+            'sql',
+            lambda field: 'students.{} AS student_{}'.format(field.name, field.name)
+        )
+
+        expected = pemi.Schema(
+            id=StringField(sql='students.id AS student_id'),
+            name=StringField(sql='students.name AS student_name')
+        )
+
+        assert actual == expected

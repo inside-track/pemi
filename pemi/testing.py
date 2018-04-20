@@ -468,7 +468,7 @@ class Scenario: #pylint: disable=too-many-instance-attributes
                 subject_case_keys = self.case_keys.subject_case_keys[target_name]
             except KeyError:
                 raise KeyError('''No case keys assigned for target '{}'.
-                     This usually means you forgot to build source data with case keys.
+                     This usually means you forgot to build source or target case keys.
                      '''.format(target_name))
 
             key_fields = list(subject_case_keys[0]['key'].keys())
