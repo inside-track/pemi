@@ -570,3 +570,22 @@ class TestPdFieldValueForkPipe: #pylint: disable=no-self-use
         expected_df = pd.DataFrame(columns=['target', 'values'])
         actual_df = pipe.targets['empty'].df
         pt.assert_frame_equal(actual_df, expected_df)
+
+class TestPdLambdaPipe: #pylint: disable=too-few-public-methods
+    def test_it_runs_a_simple_function(self):
+        pipe = pemi.pipes.pd.PdLambdaPipe(
+            lambda df: df.rename(columns={'oldname': 'newname'})
+        )
+
+        pipe.sources['main'].df = pd.DataFrame({
+            'something': [1, 2, 3],
+            'oldname': [1, 2, 3],
+        })
+
+        pipe.flow()
+
+        expected_df = pd.DataFrame({
+            'something': [1, 2, 3],
+            'newname': [1, 2, 3],
+        })
+        pt.assert_frame_equal(pipe.targets['main'].df, expected_df)

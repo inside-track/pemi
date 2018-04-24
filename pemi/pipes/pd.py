@@ -160,3 +160,39 @@ class PdFieldValueForkPipe(pemi.Pipe):
             self.targets['remainder'].df = pd.concat(
                 [grouped.get_group(r) for r in remainder]
             ).sort_index()
+
+class PdLambdaPipe(pemi.Pipe):
+    '''
+    This pipe is used to build quick Pandas transformations where building a full pipe class
+    may feel like overkill.  You would use this pipe if you don't need to test it in isolation
+    (e.g., it only makes sense in a larger context), or you don't need control over the schemas.
+
+    Args:
+      fun (function): A function that accepts a dataframe as argument (source) and returns
+        a dataframe (target).
+
+    :Data Sources:
+      **main** (*pemi.PdDataSubject*) - The source dataframe that gets pass to ``fun``.
+
+    :Data Targets:
+      **main** (*pemi.PdDataSubject*) - The target dataframe that gets populated from
+        the return value of ``fun``.
+
+    '''
+    def __init__(self, fun):
+        super().__init__()
+
+        self.fun = fun
+
+        self.source(
+            pemi.PdDataSubject,
+            name='main'
+        )
+
+        self.target(
+            pemi.PdDataSubject,
+            name='main'
+        )
+
+    def flow(self):
+        self.targets['main'].df = self.fun(self.sources['main'].df)
