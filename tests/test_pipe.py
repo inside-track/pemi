@@ -1,4 +1,7 @@
+import os
+
 import pytest
+import sqlalchemy as sa
 
 from pandas.util.testing import assert_frame_equal
 
@@ -134,3 +137,47 @@ class TestPickling():
 
         assert unpickled_job.pipes['s1'].targets['main'].pipe.__class__ \
             == job.pipes['s1'].targets['main'].pipe.__class__
+
+
+    def test_pickles_w_sa_data_subject(self):
+        class WithSaSubjectPipe(pemi.Pipe):
+            def __init__(self):
+                super().__init__()
+
+                engine = sa.create_engine(
+                    'postgresql://{user}:{password}@{host}/{dbname}'.format(
+                        user=os.environ.get('POSTGRES_USER'),
+                        password=os.environ.get('POSTGRES_PASSWORD'),
+                        host=os.environ.get('POSTGRES_HOST'),
+                        dbname=os.environ.get('POSTGRES_DB')
+                    )
+                )
+
+                self.source(
+                    pemi.SaDataSubject,
+                    name='mytable',
+                    schema=pemi.Schema(),
+                    engine=engine,
+                    table='mytable'
+                )
+
+                self.pipe(
+                    name='s1',
+                    pipe=SomeSourcePipe(addone=lambda v: v + 1)
+                )
+
+
+            def flow(self):
+                self.pipes['s1'].flow()
+
+
+        job = WithSaSubjectPipe()
+        job.flow()
+
+        pickled = job.to_pickle()
+        unpickled_job = WithSaSubjectPipe().from_pickle(pickled)
+
+        assert_frame_equal(
+            job.pipes['s1'].targets['main'].df,
+            unpickled_job.pipes['s1'].targets['main'].df
+        )

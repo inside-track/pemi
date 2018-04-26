@@ -197,13 +197,11 @@ class Pipe:
         for name, source in self.sources.items():
             psource = copy.copy(source)
             psource.pipe = picklepipe
-            picklepipe.source(psource.__class__, name=name)
             picklepipe.sources[name] = psource
 
         for name, target in self.targets.items():
             ptarget = copy.copy(target)
             ptarget.pipe = picklepipe
-            picklepipe.target(ptarget.__class__, name=name)
             picklepipe.targets[name] = ptarget
 
         for name, nestedpipe in self.pipes.items():
