@@ -1,6 +1,7 @@
 import json
 
 import pandas as pd
+import sqlalchemy as sa
 
 import pemi
 from pemi.fields import *
@@ -129,6 +130,22 @@ class SaDataSubject(DataSubject):
     def connect_from(self, other):
         self.engine.dispose()
         self.validate_schema()
+
+    def __getstate__(self):
+        return (
+            [],
+            {
+                'url': self.engine.url,
+                'table': self.table,
+                'sql_schema': self.sql_schema
+            }
+        )
+
+    def __setstate__(self, state):
+        _args, kwargs = state
+        self.engine = sa.create_engine(kwargs['url'])
+        self.table = kwargs['table']
+        self.sql_schema = kwargs['sql_schema']
 
 
 
