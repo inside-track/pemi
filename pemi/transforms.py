@@ -10,7 +10,12 @@ def validate_no_null(field):
     return _validate
 
 def isblank(value):
-    return value is not False and (value is None or pd.isnull(value) or not value)
+    return (
+        value is not False
+        and value != 0
+        and value != float(0)
+        and (value is None or pd.isnull(value) or not value)
+    )
 
 def concatenate(delimiter=''):
     def _concatenate(row):

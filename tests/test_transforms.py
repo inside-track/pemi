@@ -39,11 +39,21 @@ class TestIsBlank:
     def test_float(self):
         assert pemi.transforms.isblank(3.2) is False
 
+    def test_float_zero(self):
+        assert pemi.transforms.isblank(0.0) is False
+
+    def test_int(self):
+        assert pemi.transforms.isblank(1) is False
+
+    def test_int_zero(self):
+        assert pemi.transforms.isblank(0) is False
+
     def test_true(self):
         assert pemi.transforms.isblank(True) is False
 
     def test_false(self):
         assert pemi.transforms.isblank(False) is False
+
 
 class TestConcatenate:
     def test_it_concatenates(self):
