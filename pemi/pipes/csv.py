@@ -9,20 +9,21 @@ from pemi.pipes.patterns import SourcePipe
 from pemi.pipes.patterns import TargetPipe
 
 def default_column_normalizer(name):
+    name = str(name)
     name = re.sub(r'\s+', '_', name).lower()
     name = re.sub(r'[^a-z0-9_]', '_', name)
     return name
 
 
 class LocalCsvFileSourcePipe(SourcePipe):
-    def __init__(self, *, paths, csv_opts={},
+    def __init__(self, *, paths, csv_opts=None,
                  filename_field=None, filename_full_path=False, normalize_columns=True, **params):
         super().__init__(**params)
 
         self.paths = paths
         self.filename_field = filename_field
         self.filename_full_path = filename_full_path
-        self.csv_opts = self._build_csv_opts(csv_opts)
+        self.csv_opts = self._build_csv_opts(csv_opts or {})
 
         #TODO: Tests for this
         if callable(normalize_columns):
@@ -93,11 +94,11 @@ class LocalCsvFileSourcePipe(SourcePipe):
 
 
 class LocalCsvFileTargetPipe(TargetPipe):
-    def __init__(self, *, path, csv_opts={}, **params):
+    def __init__(self, *, path, csv_opts=None, **params):
         super().__init__(**params)
 
         self.path = path
-        self.csv_opts = self._build_csv_opts(csv_opts)
+        self.csv_opts = self._build_csv_opts(csv_opts or {})
 
     def encode(self):
         return self.sources['main'].df
