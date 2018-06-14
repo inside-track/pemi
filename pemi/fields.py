@@ -187,8 +187,8 @@ class BooleanField(Field):
 class DecimalField(Field):
     def __init__(self, name=None, **metadata):
         super().__init__(name=name, **metadata)
-        self.precision = self.metadata['precision']
-        self.scale = self.metadata['scale']
+        self.precision = self.metadata.get('precision', 16)
+        self.scale = self.metadata.get('scale', 2)
         self.truncate_decimal = self.metadata.get('truncate_decimal', False)
         self.enforce_decimal = self.metadata.get('enforce_decimal', True)
 
