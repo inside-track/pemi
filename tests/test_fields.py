@@ -389,6 +389,16 @@ class TestDecimalField:
         coerced = field.coerce('3.55')
         assert coerced == decimal.Decimal('3.6')
 
+    def test_defaults_provided(self):
+        '''
+        Reasonable defaults are supplied if not explicitly given
+        '''
+        field = DecimalField()
+        assert field.precision == 16
+        assert field.scale == 2
+        assert field.truncate_decimal is False
+        assert field.enforce_decimal is True
+
 class TestJsonField:
     def test_convert_to_json(self):
         '''
