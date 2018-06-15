@@ -1,5 +1,5 @@
 invoke
-pandas==0.22
+pandas>=0.23
 dask
 graphviz
 faker

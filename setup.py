@@ -83,7 +83,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['pandas', 'dask', 'graphviz', 'faker'],
+    install_requires=['pandas>=0.23', 'dask>=0.18', 'graphviz>=0.8', 'faker>=0.8'],
 
     python_requires='>=3',
 

@@ -97,8 +97,8 @@ class TestCardinalities:
 
         result_df = mapper.mapped_df
         expected_df = pd.DataFrame({
+            'split_name': ['one', 'two', 'three'],
             'split_num': ['1', '2', '3'],
-            'split_name': ['one', 'two', 'three']
         })
 
         pt.assert_frame_equal(result_df, expected_df)

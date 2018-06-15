@@ -510,7 +510,7 @@ class TestPdConcatPipe: #pylint: disable=no-self-use
         expected_df = pd.DataFrame({
             'origin': ['s1', 's1', 's1', 's2', 's2'],
             'f1': [1, 2, 3, np.nan, np.nan],
-            'f2': [np.nan, np.nan, np.nan, 1, 2]
+            'f2': [np.nan, np.nan, np.nan, 1, 2],
         }, index=[0, 1, 2, 0, 1])
         actual_df = pipe.targets['main'].df
         pt.assert_frame_equal(actual_df, expected_df)

@@ -22,7 +22,7 @@ class PdConcatPipe(pemi.pipes.patterns.ConcatPipe):
         if len(source_dfs) == 0:
             self.targets['main'].df = pd.DataFrame()
         else:
-            self.targets['main'].df = pd.concat(source_dfs, **self.concat_opts)
+            self.targets['main'].df = pd.concat(source_dfs, **self.concat_opts, sort=False)
 
 # TODOC: Note that RowHandler('recode') will not work here
 class PdLookupJoinPipe(pemi.Pipe):

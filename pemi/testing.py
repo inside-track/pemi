@@ -457,7 +457,8 @@ class Scenario: #pylint: disable=too-many-instance-attributes
             if len(source.data.values()) > 0:
                 all_case_data = pd.concat(
                     [cd.data for cd in source.data.values()],
-                    ignore_index=True
+                    ignore_index=True,
+                    sort=False
                 )
                 source.subject.from_pd(all_case_data)
 
