@@ -131,11 +131,10 @@ with pt.Scenario('DenormalizeBeersPipe') as scenario:
             | {b[3]} | Pipewrench    | IPA   |
             | {b[4]} | AbstRedRibbon | Lager |
             '''.format(b=scenario.case_keys.cache('beers', 'id')),
-            schema=pipe.sources['beers'].schema,
-            fake_with={
-                'abv': {'valid': lambda: pemi.data.fake.pydecimal(2, 2, positive=True)}, #pylint: disable=no-member
-                'price': {'valid': lambda: pemi.data.fake.pydecimal(2, 2, positive=True)} #pylint: disable=no-member
-            }
+            schema=pipe.sources['beers'].schema.merge(pemi.Schema(
+                abv=DecimalField(faker=lambda: pemi.data.fake.pydecimal(2, 2, positive=True)),
+                price=DecimalField(faker=lambda: pemi.data.fake.pydecimal(2, 2, positive=True)),
+            ))
         )
 
         beer_sales_table = pemi.data.Table(

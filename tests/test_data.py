@@ -71,11 +71,8 @@ class TestTableConvertMarkdown():
             schema=pemi.Schema(
                 id=IntegerField(),
                 name=StringField(),
-                name_alt=StringField()
-            ),
-            fake_with={
-                'name_alt': {'valid': lambda: next(fake_data)}
-            }
+                name_alt=StringField(faker=lambda: next(fake_data))
+            )
         )
 
         expected_df = pd.DataFrame({
@@ -94,13 +91,9 @@ class TestTableConvertMarkdown():
         given_table = pemi.data.Table(
             nrows=3,
             schema=pemi.Schema(
-                name=StringField(),
-                name_alt=StringField()
-            ),
-            fake_with={
-                'name': {'valid': lambda: next(fake_name)},
-                'name_alt': {'valid': lambda: next(fake_name_alt)}
-            }
+                name=StringField(faker=lambda: next(fake_name)),
+                name_alt=StringField(faker=lambda: next(fake_name_alt))
+            )
         )
 
         expected_df = pd.DataFrame({
@@ -115,12 +108,9 @@ class TestTableConvertMarkdown():
         given_table = pemi.data.Table(
             nrows=10,
             schema=pemi.Schema(
-                id=IntegerField(),
+                id=IntegerField(faker=pemi.data.UniqueIdGenerator()),
                 name=StringField()
-            ),
-            fake_with={
-                'id': {'valid': lambda: pemi.data.fake.random_int(1, 5), 'unique': True} #pylint: disable=no-member
-            }
+            )
         )
 
         ids = [id for id in given_table.df['id'] if not math.isnan(id)]

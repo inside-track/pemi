@@ -19,10 +19,16 @@ class UniqueIdGenerator: #pylint: disable=too-few-public-methods
 
     Example:
       students = UniqueIdGenerator(lambda i: 'S{i}'.format(i))
-      [next(students) for x in range(5)]
+      [next(students) for x in range(10)]
+      #=> ['S6', 'S5', 'S3', 'S1', 'S4', 'S7', 'S9', 'S2', 'S8', 'S16']
+
+    This generator also supports the call method, which operates the same as ``next``.
+
+    Example:
+      [UniqueIdGenerator()() for x in range(10)]
       #=> ['S6', 'S5', 'S3', 'S1', 'S4', 'S7', 'S9', 'S2', 'S8', 'S16']
     '''
-    def __init__(self, fmt):
+    def __init__(self, fmt=int):
         self.fmt = fmt
         self.size = 1
         self.gen_sample()
@@ -38,6 +44,8 @@ class UniqueIdGenerator: #pylint: disable=too-few-public-methods
             self.gen_sample()
         return self.fmt(i)
 
+    def __call__(self):
+        return next(self)
 
 class InvalidHeaderSeparatorError(Exception): pass
 
@@ -55,11 +63,10 @@ default_fakers = { #pylint: disable=invalid-name
 
 class Table: #pylint: disable=too-many-arguments,too-few-public-methods
     def __init__(self, markdown=None, nrows=10,
-                 schema=pemi.Schema(), fake_with=None, coerce_with=None):
+                 schema=pemi.Schema(), coerce_with=None):
         self.markdown = markdown
         self.schema = schema
         self.nrows = nrows
-        self.fake_with = fake_with or {}
         self.coerce_with = coerce_with or {}
 
         if self.markdown:
@@ -111,18 +118,9 @@ class Table: #pylint: disable=too-many-arguments,too-few-public-methods
 
     def _fake_series(self, column, nsample=5):
         default_faker = default_fakers.get(type(self.schema[column]))
-        valid_faker = self.fake_with.get(column, {}).get('valid')
-        faker_func = valid_faker or default_faker
-
-        if self.fake_with.get(column, {}).get('unique'):
-            fake_data_dupes = [faker_func() for i in range(nsample * 3)]
-            fake_data = list(set(fake_data_dupes))[0:nsample]
-            random.shuffle(fake_data)
-        else:
-            fake_data = [faker_func() for i in range(nsample)]
-
+        faker_func = self.schema[column].metadata.get('faker', default_faker)
+        fake_data = [faker_func() for i in range(nsample)]
         return pd.Series(fake_data)
-
 
     @property
     def df(self):
