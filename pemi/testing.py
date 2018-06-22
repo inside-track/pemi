@@ -15,8 +15,6 @@ from pemi.pipe import mock_pipe #pylint: disable=unused-import
 
 pd.set_option('display.expand_frame_repr', False)
 
-#TODO: Organize and doc
-
 def assert_frame_equal(actual, expected, **kwargs):
     try:
         pd.util.testing.assert_frame_equal(actual, expected, **kwargs)

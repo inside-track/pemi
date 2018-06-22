@@ -1,7 +1,6 @@
 import pandas as pd
 
 import pemi
-import pemi.pd_mapper
 import pemi.pipes.patterns
 
 class SaSqlSourcePipe(pemi.pipes.patterns.SourcePipe):
@@ -10,7 +9,6 @@ class SaSqlSourcePipe(pemi.pipes.patterns.SourcePipe):
 
         self.sql = sql
         self.engine = engine
-        self.field_maps = pemi.pd_mapper.schema_maps(self.schema)
 
     def extract(self):
         pemi.log.info("Extracting '%s' via:\n%s", self.name, self.sql)
@@ -27,9 +25,14 @@ class SaSqlSourcePipe(pemi.pipes.patterns.SourcePipe):
 
     def parse(self, data):
         pemi.log.info("Parsing '%s' results", self.name)
-        mapper = pemi.pd_mapper.PdMapper(data, maps=self.field_maps).apply()
-        self.targets['main'].df = mapper.mapped_df
-        self.targets['errors'].df = mapper.errors_df
+
+        mapper = data.mapping(
+            [(name, name, field.coerce) for name, field in self.schema.items()],
+            on_error='raise'
+        )
+
+        self.targets['main'].df = mapper.mapped
+        self.targets['errors'].df = mapper.errors
         return self.targets['main'].df
 
     def flow(self):

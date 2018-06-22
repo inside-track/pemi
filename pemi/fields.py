@@ -148,8 +148,7 @@ class DateTimeField(Field):
 
 
 class BooleanField(Field):
-    # TODOC: Point out that if unknown_truthiness is set,
-    #        then that is used when no matching value is found (see tests)
+    # when defined, the value of unknown_truthiness is used when no matching is found
     def __init__(self, name=None, **metadata):
         super().__init__(name=name, **metadata)
 

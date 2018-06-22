@@ -4,7 +4,6 @@ import re
 import pandas as pd
 
 import pemi
-import pemi.pd_mapper
 from pemi.pipes.patterns import SourcePipe
 from pemi.pipes.patterns import TargetPipe
 
@@ -25,7 +24,6 @@ class LocalCsvFileSourcePipe(SourcePipe):
         self.filename_full_path = filename_full_path
         self.csv_opts = self._build_csv_opts(csv_opts or {})
 
-        #TODO: Tests for this
         if callable(normalize_columns):
             self.column_normalizer = normalize_columns
         elif normalize_columns:
@@ -34,7 +32,6 @@ class LocalCsvFileSourcePipe(SourcePipe):
             self.column_normalizer = lambda col: col
 
         self.targets['main'].schema = self.schema
-        self.field_maps = pemi.pd_mapper.schema_maps(self.schema)
 
     def extract(self):
         return self.paths
@@ -47,8 +44,8 @@ class LocalCsvFileSourcePipe(SourcePipe):
         error_dfs = []
         for filepath in filepaths:
             parsed_dfs = self._parse_one(filepath)
-            mapped_dfs.append(parsed_dfs.mapped_df)
-            error_dfs.append(parsed_dfs.errors_df)
+            mapped_dfs.append(parsed_dfs.mapped)
+            error_dfs.append(parsed_dfs.errors)
 
         if len(filepaths) > 0:
             self.targets['main'].df = pd.concat(mapped_dfs)
@@ -89,8 +86,11 @@ class LocalCsvFileSourcePipe(SourcePipe):
                 raw_df[self.filename_field] = filepath
             else:
                 raw_df[self.filename_field] = os.path.basename(filepath)
-        mapper = pemi.pd_mapper.PdMapper(raw_df, maps=self.field_maps).apply()
-        return mapper
+
+        return raw_df.mapping(
+            [(name, name, field.coerce) for name, field in self.schema.items()],
+            on_error='redirect'
+        )
 
 
 class LocalCsvFileTargetPipe(TargetPipe):

@@ -19,7 +19,6 @@ class SourcePipe(pemi.Pipe):
         self.target(
             pemi.PdDataSubject,
             name='errors',
-            # TODO: Merge this with standard error fields
             schema=self.schema
         )
 

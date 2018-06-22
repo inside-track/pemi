@@ -5,6 +5,7 @@ graphviz
 faker
 sqlalchemy
 psycopg2
+pandas-mapper
 
 jupyter>=0.30
 jupyterlab
