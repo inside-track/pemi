@@ -626,8 +626,3 @@ class TestPipeMock:
     def test_parent_target_reassigned(self, real_pipe, mock_pipe):
         assert real_pipe.pipes['parent'].targets['parent_target'].schema \
             == mock_pipe.pipes['parent'].targets['parent_target'].schema
-
-    #TODO: not sure if traversing nested pipes is necessary or desired.
-    @pytest.mark.skip
-    def test_child_is_mocked(self, mock_pipe):
-        assert isinstance(mock_pipe.pipes['parent'].pipes['child'], pt.MockPipe)

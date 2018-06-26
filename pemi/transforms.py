@@ -1,14 +1,5 @@
 import pandas as pd
 
-# TODO: prefix, postfix, ifblank, blankif
-
-def validate_no_null(field):
-    def _validate(value):
-        if value == field.null:
-            raise ValueError("null is not allowed for field '{}'".format(field.name))
-        return value
-    return _validate
-
 def isblank(value):
     return (
         value is not False

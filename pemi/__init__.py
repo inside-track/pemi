@@ -9,7 +9,11 @@ log.setLevel(logging.WARN)
 work_dir = '.' #pylint: disable=invalid-name
 #pylint: enable=wrong-import-position
 
+import pandas
+import pandas_mapper
+
 from pemi.version import __version__ as version
+
 
 import pemi.schema
 from pemi.schema import Schema
