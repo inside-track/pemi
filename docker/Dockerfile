@@ -18,6 +18,7 @@ RUN cd /tmp && \
     $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
     $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
     $CONDA_DIR/bin/conda update --all && \
+    conda install -y python=3.6.5 && \
     conda clean -tipsy
 
 # JAVA 8
