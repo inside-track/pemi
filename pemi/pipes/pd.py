@@ -26,7 +26,7 @@ class PdConcatPipe(pemi.pipes.patterns.ConcatPipe):
 class PdLookupJoinPipe(pemi.Pipe):
     def __init__(self, main_key, lookup_key,
                  suffixes=('', '_lkp'),
-                 on_missing='redirect',
+                 on_missing='redirect', #redirect, ignore, warn
                  indicator=None,
                  lookup_prefix='',
                  fillna=None,
@@ -102,13 +102,20 @@ class PdLookupJoinPipe(pemi.Pipe):
         return merged_df
 
     def _direct_targets(self, merged_df):
+        matches = (merged_df['__indicator__'] == 'both')
         if self.on_missing == 'redirect':
-            matches = (merged_df['__indicator__'] == 'both')
             self.targets['main'].df = merged_df[matches].copy()
             self.targets['errors'].df = merged_df[~matches].copy()
         else:
             self.targets['main'].df = merged_df
             self.targets['errors'].df = pd.DataFrame([], columns=merged_df.columns)
+
+        if self.on_missing == 'warn':
+            merged_df[~matches][self.main_key].apply(
+                lambda row: pemi.log.warning('No lookup values found for %s', dict(row)),
+                axis=1
+            )
+
         return None
 
     def _remove_indicator(self, _na):
