@@ -5,28 +5,30 @@
 #    pip-compile --output-file requirements/doc.txt requirements/doc.in
 #
 alabaster==0.7.10         # via sphinx
-astroid==1.6.2            # via pylint
-attrs==17.4.0             # via pytest
-babel==2.5.3              # via sphinx
+astroid==1.6.5            # via pylint
+atomicwrites==1.1.5       # via pytest
+attrs==18.1.0             # via pytest
+babel==2.6.0              # via sphinx
+backcall==0.1.0           # via ipython
 bleach==2.1.3             # via nbconvert
-certifi==2018.1.18        # via requests
+certifi==2018.4.16        # via requests
 chardet==3.0.4            # via requests
-dask==0.17.2
-decorator==4.2.1          # via ipython, traitlets
+dask==0.18.0
+decorator==4.3.0          # via ipython, traitlets
 docutils==0.14            # via sphinx
 entrypoints==0.2.3        # via nbconvert
-faker==0.8.12
-graphviz==0.8.2
+faker==0.8.15
+graphviz==0.8.3
 html5lib==1.0.1           # via bleach
-idna==2.6                 # via requests
+idna==2.7                 # via requests
 imagesize==1.0.0          # via sphinx
-invoke==0.22.1
+invoke==1.0.0
 ipykernel==4.8.2          # via ipywidgets, jupyter, jupyter-console, notebook, qtconsole
 ipython-genutils==0.2.0   # via jupyterlab, nbformat, notebook, qtconsole, traitlets
-ipython==6.2.1            # via ipykernel, ipywidgets, jupyter-console
-ipywidgets==7.1.2         # via jupyter
+ipython==6.4.0            # via ipykernel, ipywidgets, jupyter-console
+ipywidgets==7.2.1         # via jupyter
 isort==4.3.4              # via pylint
-jedi==0.11.1              # via ipython
+jedi==0.12.0              # via ipython
 jinja2==2.10              # via nbconvert, notebook, sphinx
 jsonschema==2.6.0         # via jupyterlab-launcher, nbformat
 jupyter-client==5.2.3     # via ipykernel, jupyter-console, notebook, qtconsole
@@ -34,21 +36,22 @@ jupyter-console==5.2.0    # via jupyter
 jupyter-core==4.4.0       # via jupyter-client, nbconvert, nbformat, notebook, qtconsole
 jupyter==1.0.0
 jupyterlab-launcher==0.10.5  # via jupyterlab
-jupyterlab==0.31.12
+jupyterlab==0.32.1
 lazy-object-proxy==1.3.1  # via astroid
 markupsafe==1.0           # via jinja2
 mccabe==0.6.1             # via pylint
 mistune==0.8.3            # via nbconvert
-more-itertools==4.1.0     # via pytest
+more-itertools==4.2.0     # via pytest
 nbconvert==5.3.1          # via jupyter, notebook
 nbformat==4.4.0           # via ipywidgets, nbconvert, notebook
-notebook==5.4.1           # via jupyter, jupyterlab, jupyterlab-launcher, widgetsnbextension
-numpy==1.14.2             # via pandas
+notebook==5.5.0           # via jupyter, jupyterlab, jupyterlab-launcher, widgetsnbextension
+numpy==1.14.5             # via pandas
 packaging==17.1           # via sphinx
-pandas==0.22
+pandas-mapper==0.1.0
+pandas==0.23.1
 pandocfilters==1.4.2      # via nbconvert
-parso==0.1.1              # via jedi
-pexpect==4.4.0            # via ipython
+parso==0.2.1              # via jedi
+pexpect==4.6.0            # via ipython
 pickleshare==0.7.4        # via ipython
 pluggy==0.6.0             # via pytest
 prompt-toolkit==1.0.15    # via ipython, jupyter-console
@@ -56,29 +59,29 @@ psycopg2==2.7.4
 ptyprocess==0.5.2         # via pexpect, terminado
 py==1.5.3                 # via pytest
 pygments==2.2.0           # via ipython, jupyter-console, nbconvert, qtconsole, sphinx
-pylint==1.8.3
+pylint==1.9.2
 pyparsing==2.2.0          # via packaging
-pytest==3.5.0
-python-dateutil==2.7.2    # via faker, jupyter-client, pandas
-pytz==2018.3              # via babel, pandas
-pyzmq==17.0.0             # via jupyter-client
+pytest==3.6.1
+python-dateutil==2.7.3    # via faker, jupyter-client, pandas
+pytz==2018.4              # via babel, pandas
+pyzmq==17.0.0             # via jupyter-client, notebook
 qtconsole==4.3.1          # via jupyter
-requests==2.18.4          # via sphinx
+requests==2.19.1          # via sphinx
 send2trash==1.5.0         # via notebook
 simplegeneric==0.8.1      # via ipython
 six==1.11.0               # via astroid, bleach, faker, html5lib, more-itertools, packaging, prompt-toolkit, pylint, pytest, python-dateutil, sphinx, traitlets
 snowballstemmer==1.2.1    # via sphinx
-sphinx-rtd-theme==0.2.4
-sphinx==1.7.2
-sphinxcontrib-websupport==1.0.1  # via sphinx
-sqlalchemy==1.2.5
+sphinx-rtd-theme==0.4.0
+sphinx==1.7.5
+sphinxcontrib-websupport==1.1.0  # via sphinx
+sqlalchemy==1.2.8
 terminado==0.8.1          # via notebook
 testpath==0.3.1           # via nbconvert
 text-unidecode==1.2       # via faker
-tornado==5.0.1            # via ipykernel, jupyter-client, notebook, terminado
+tornado==5.0.2            # via ipykernel, jupyter-client, notebook, terminado
 traitlets==4.3.2          # via ipykernel, ipython, ipywidgets, jupyter-client, jupyter-core, nbconvert, nbformat, notebook, qtconsole
-urllib3==1.22             # via requests
+urllib3==1.23             # via requests
 wcwidth==0.1.7            # via prompt-toolkit
 webencodings==0.5.1       # via html5lib
-widgetsnbextension==3.1.4  # via ipywidgets
+widgetsnbextension==3.2.1  # via ipywidgets
 wrapt==1.10.11            # via astroid

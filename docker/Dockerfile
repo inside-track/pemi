@@ -7,11 +7,11 @@ RUN apt-get update && apt-get install -y\
     && rm -rf /var/lib/apt/lists/*
 ENV CONDA_DIR /opt/conda
 ENV PATH $CONDA_DIR/bin:$PATH
-ENV MINICONDA_VERSION 4.3.21
+ENV MINICONDA_VERSION 4.5.4
 RUN cd /tmp && \
     mkdir -p $CONDA_DIR && \
     wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-    echo "c1c15d3baba15bf50293ae963abef853 *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+    echo "a946ea1d0c4a642ddf0c3a26a18bb16d *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
     /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
     rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
     $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
@@ -41,7 +41,8 @@ RUN apt-get update && apt-get install -y \
 
 
 # Tini
-ARG TINI_VERSION
+## See https://github.com/krallin/tini/releases for latest release number
+ENV TINI_VERSION=v0.18.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
 RUN chmod +x /tini
 
@@ -55,6 +56,7 @@ ENV LANG C.UTF-8
 ENV PYTHONUNBUFFERED 1
 WORKDIR /app
 COPY ./requirements/all.txt requirements/all.txt
+RUN pip install --upgrade pip
 RUN pip install pip-tools invoke && rm -rf /root/.cache
 RUN pip install -r requirements/all.txt && rm -rf /root/.cache
 

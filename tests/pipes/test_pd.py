@@ -7,10 +7,6 @@ import pemi.data
 import pemi.testing as pt
 import pemi.pipes.pd
 from pemi.fields import *
-from pemi.pd_mapper import *
-
-#TODO: Can I remove this?
-#pylint: disable=redefined-outer-name
 
 class PdLookupJoinPipeScenarioFactory():
     def __init__(self, scenario, pipe):
@@ -133,11 +129,11 @@ with pt.Scenario('PdLookupJoinPipe Basics') as scenario:
         )
 
 
-with pt.Scenario('PdLookupJoinPipe IgnoreHandler') as scenario:
+with pt.Scenario('PdLookupJoinPipe on_missing=ignore') as scenario:
     pipe = pemi.pipes.pd.PdLookupJoinPipe(
         main_key=['key'],
         lookup_key=['lkey'],
-        missing_handler=RowHandler('ignore')
+        on_missing='ignore'
     )
 
     factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
@@ -212,7 +208,7 @@ with pt.Scenario('PdLookupJoinPipe FillNa') as scenario:
     pipe = pemi.pipes.pd.PdLookupJoinPipe(
         main_key=['key'],
         lookup_key=['lkey'],
-        missing_handler=RowHandler('ignore'),
+        on_missing='ignore',
         fillna={'value': 'EMPTY'}
     )
     factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
@@ -281,7 +277,7 @@ with pt.Scenario('PdLookupJoinPipe Prefix Missing') as scenario:
         main_key=['key'],
         lookup_key=['lkey'],
         lookup_prefix='existing_',
-        missing_handler=RowHandler('ignore')
+        on_missing='ignore'
     )
 
     factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
@@ -332,7 +328,7 @@ with pt.Scenario('PdLookupJoinPipe Indicator') as scenario:
     pipe = pemi.pipes.pd.PdLookupJoinPipe(
         main_key=['key'],
         lookup_key=['lkey'],
-        missing_handler=RowHandler('ignore'),
+        on_missing='ignore',
         indicator='lkp_found'
     )
 
@@ -465,7 +461,7 @@ def test_pd_lookup_join_pipe_multiple_key_empty_lookup(): #pylint: disable=inval
     pipe = pemi.pipes.pd.PdLookupJoinPipe(
         main_key=['key1', 'key2'],
         lookup_key=['lkey1', 'lkey2'],
-        missing_handler=RowHandler('ignore')
+        on_missing='ignore'
     )
 
     pipe.sources['main'].df = pd.DataFrame({
@@ -510,7 +506,7 @@ class TestPdConcatPipe: #pylint: disable=no-self-use
         expected_df = pd.DataFrame({
             'origin': ['s1', 's1', 's1', 's2', 's2'],
             'f1': [1, 2, 3, np.nan, np.nan],
-            'f2': [np.nan, np.nan, np.nan, 1, 2]
+            'f2': [np.nan, np.nan, np.nan, 1, 2],
         }, index=[0, 1, 2, 0, 1])
         actual_df = pipe.targets['main'].df
         pt.assert_frame_equal(actual_df, expected_df)

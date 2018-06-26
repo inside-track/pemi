@@ -3,7 +3,6 @@ import pandas as pd
 import pemi
 import pemi.pipes.patterns
 import pemi.transforms
-from pemi.pd_mapper import *
 
 class PdForkPipe(pemi.pipes.patterns.ForkPipe):
     def flow(self):
@@ -22,13 +21,12 @@ class PdConcatPipe(pemi.pipes.patterns.ConcatPipe):
         if len(source_dfs) == 0:
             self.targets['main'].df = pd.DataFrame()
         else:
-            self.targets['main'].df = pd.concat(source_dfs, **self.concat_opts)
+            self.targets['main'].df = pd.concat(source_dfs, **self.concat_opts, sort=False)
 
-# TODOC: Note that RowHandler('recode') will not work here
 class PdLookupJoinPipe(pemi.Pipe):
     def __init__(self, main_key, lookup_key,
                  suffixes=('', '_lkp'),
-                 missing_handler=None,
+                 on_missing='redirect', #redirect, ignore, warn
                  indicator=None,
                  lookup_prefix='',
                  fillna=None,
@@ -38,7 +36,7 @@ class PdLookupJoinPipe(pemi.Pipe):
         self.main_key = main_key
         self.lookup_key = lookup_key
         self.suffixes = suffixes
-        self.missing_handler = missing_handler or RowHandler('exclude')
+        self.on_missing = on_missing
         self.indicator = indicator
         self.lookup_prefix = lookup_prefix
         self.fillna = fillna
@@ -63,27 +61,29 @@ class PdLookupJoinPipe(pemi.Pipe):
             name='errors'
         )
 
-    def flow(self):
-        pemi.log.debug('PdLookupJoinPipe - main source columns: %s',
-                       self.sources['main'].df.columns)
-        pemi.log.debug('PdLookupJoinPipe - main lookup columns: %s',
-                       self.sources['lookup'].df.columns)
 
-        lkp_df = self.sources['lookup'].df.drop_duplicates(self.lookup_key)
+    def _drop_lookup_duplicates(self, _na):
+        return self.sources['lookup'].df.drop_duplicates(self.lookup_key)
 
-        if self.lookup_prefix != '':
-            lkp_df = lkp_df.rename(
-                columns={col: self.lookup_prefix + col
-                         for col in lkp_df.columns if not col in self.lookup_key},
-            )
+    def _prefix_lookup_columns(self, lkp_df):
+        if self.lookup_prefix == '':
+            return lkp_df
 
+        return lkp_df.rename(columns={
+            col: self.lookup_prefix + col
+            for col in lkp_df.columns if not col in self.lookup_key
+        })
+
+    def _drop_missing_lookup_keys(self, lkp_df):
         missing_keys = lkp_df[self.lookup_key].apply(
             lambda v: v.apply(pemi.transforms.isblank).any(), axis=1
         )
         if len(missing_keys) > 0:
-            lkp_df = lkp_df[~missing_keys]
+            return lkp_df[~missing_keys]
+        return lkp_df
 
-        merged_df = pd.merge(
+    def _perform_lookup_merge(self, lkp_df):
+        return pd.merge(
             self.sources['main'].df,
             lkp_df,
             left_on=self.main_key,
@@ -93,30 +93,60 @@ class PdLookupJoinPipe(pemi.Pipe):
             indicator='__indicator__'
         )
 
-        def raise_on_mismatch(row):
-            if row['__indicator__'] == 'left_only':
-                raise KeyError('Lookup key "{}" not found'.format(dict(row[self.main_key])))
-            return row
+    def _fill_missing(self, merged_df):
+        if not self.fillna:
+            return merged_df
 
+        merged_df['__indicator__'] = merged_df['__indicator__'].astype('str')
+        merged_df.fillna(**self.fillna, inplace=True)
+        return merged_df
 
-        mapper = PdMapper(merged_df, mapped_df=merged_df, maps=[
-            PdMap(source=[*self.main_key, '__indicator__'], transform=raise_on_mismatch,
-                  handler=self.missing_handler)
-        ]).apply()
-
-        if not self.indicator:
-            del mapper.mapped_df['__indicator__']
+    def _direct_targets(self, merged_df):
+        matches = (merged_df['__indicator__'] == 'both')
+        if self.on_missing == 'redirect':
+            self.targets['main'].df = merged_df[matches].copy()
+            self.targets['errors'].df = merged_df[~matches].copy()
         else:
-            indicator_map = lambda v: True if v == 'both' else False
-            mapper.mapped_df[self.indicator] = mapper.mapped_df['__indicator__'].apply(
-                indicator_map
+            self.targets['main'].df = merged_df
+            self.targets['errors'].df = pd.DataFrame([], columns=merged_df.columns)
+
+        if self.on_missing == 'warn':
+            merged_df[~matches][self.main_key].apply(
+                lambda row: pemi.log.warning('No lookup values found for %s', dict(row)),
+                axis=1
+            )
+
+        return None
+
+    def _remove_indicator(self, _na):
+        if self.indicator:
+            indicator_bool = self.targets['main'].df['__indicator__'].apply(
+                lambda v: True if v == 'both' else False
             ).astype('bool')
 
-        if self.fillna:
-            mapper.mapped_df.fillna(**self.fillna, inplace=True)
+            self.targets['main'].df[self.indicator] = indicator_bool
 
-        self.targets['main'].df = mapper.mapped_df
-        self.targets['errors'].df = mapper.errors_df
+        del self.targets['main'].df['__indicator__']
+        del self.targets['errors'].df['__indicator__']
+
+    def flow(self):
+        pemi.log.debug('PdLookupJoinPipe - main source columns: %s',
+                       self.sources['main'].df.columns)
+        pemi.log.debug('PdLookupJoinPipe - main lookup columns: %s',
+                       self.sources['lookup'].df.columns)
+
+        arg = None
+        for func in [
+                self._drop_lookup_duplicates,
+                self._prefix_lookup_columns,
+                self._drop_missing_lookup_keys,
+                self._perform_lookup_merge,
+                self._fill_missing,
+                self._direct_targets,
+                self._remove_indicator
+        ]:
+            arg = func(arg)
+
 
         pemi.log.debug('PdLookupJoinPipe - main target columns: %s',
                        self.targets['main'].df.columns)

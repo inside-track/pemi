@@ -49,7 +49,6 @@ class TestPdDataSubject():
         ds2.connect_from(ds1)
         assert_frame_equal(ds2.df, pd.DataFrame(columns=['f1', 'f3']))
 
-#TODO: Fill out more tests and clean up the fixture
 class TestSaDataSubject:
 
     @pytest.fixture

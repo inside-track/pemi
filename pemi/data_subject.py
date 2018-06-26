@@ -14,7 +14,6 @@ __all__ = [
 
 class MissingFieldsError(Exception): pass
 
-# TODOC: Note that to_pd and from_pd are only strictly needed for testing
 class DataSubject:
     '''
     A data subject is mostly just a schema and a generic data object
@@ -22,10 +21,8 @@ class DataSubject:
     and can be converted from and to a pandas dataframe (really only needed for testing to work)
     '''
 
-    def __init__(self, schema=pemi.Schema(), data=None, name=None, pipe=None):
+    def __init__(self, schema=pemi.Schema(), name=None, pipe=None):
         self.schema = schema
-        #TODO: I think I can get rid of self.data
-        self.data = data
         self.name = name
         self.pipe = pipe
 
@@ -41,7 +38,7 @@ class DataSubject:
     def from_pd(self, df, **kwargs):
         raise NotImplementedError
 
-    def connect_from(self, other): #pylint: disable=unused-argument
+    def connect_from(self, _other):
         self.validate_schema()
         raise NotImplementedError
 
@@ -110,7 +107,6 @@ class SaDataSubject(DataSubject):
             self.cached_test_df = df
         return df
 
-    # TODO: Need to figure out how to translate field data types into db data types
     def from_pd(self, df, **to_sql_opts):
         self.cached_test_df = df
 
@@ -127,7 +123,7 @@ class SaDataSubject(DataSubject):
         with self.engine.connect() as conn:
             df_to_sql.to_sql(self.table, conn, **to_sql_opts)
 
-    def connect_from(self, other):
+    def connect_from(self, _other):
         self.engine.dispose()
         self.validate_schema()
 

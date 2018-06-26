@@ -1,24 +1,9 @@
-import pytest
-
 import numpy as np
 import pandas as pd
 
 import pemi
 import pemi.transforms
 from pemi.fields import *
-
-class TestValidateNoNull:
-    @pytest.fixture
-    def transform(self):
-        field = StringField('Warf')
-        return pemi.transforms.validate_no_null(field)
-
-    def test_it_raises_an_error_if_null(self, transform):
-        with pytest.raises(ValueError):
-            transform('')
-
-    def test_it_raises_no_error_if_not_null(self, transform):
-        assert transform('hello') == 'hello'
 
 class TestIsBlank:
     def test_np_nan(self):

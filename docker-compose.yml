@@ -6,8 +6,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-      args:
-        TINI_VERSION:
     env_file: .env
     image: pemi-app
     container_name: pemi-app

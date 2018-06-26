@@ -1,10 +1,11 @@
 invoke
-pandas==0.22
+pandas>=0.23
 dask
 graphviz
 faker
 sqlalchemy
 psycopg2
+pandas-mapper
 
 jupyter>=0.30
 jupyterlab

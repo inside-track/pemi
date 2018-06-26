@@ -6,10 +6,10 @@ RUN apt-get update && apt-get -y install \
     && rm -rf /var/lib/apt/lists/*
 
 # SPARK
-ARG SPARK_ARCHIVE=https://d3kbcqa49mib13.cloudfront.net/spark-2.2.0-bin-hadoop2.7.tgz
+ARG SPARK_ARCHIVE=https://archive.apache.org/dist/spark/spark-2.3.1/spark-2.3.1-bin-hadoop2.7.tgz
 RUN curl -s $SPARK_ARCHIVE | tar -xz -C /usr/local/
 
-ENV SPARK_HOME /usr/local/spark-2.2.0-bin-hadoop2.7
+ENV SPARK_HOME /usr/local/spark-2.3.1-bin-hadoop2.7
 ENV PATH $PATH:$SPARK_HOME/bin
 
 # for High-availability like zoo-keeper's leader election

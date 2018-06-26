@@ -128,7 +128,6 @@ disable=print-statement,
         dict-keys-not-iterating,
         dict-values-not-iterating,
 # CUSTOMIZED - should work to re-enable these
-        fixme,
         missing-docstring,
         cyclic-import,
         duplicate-code,

@@ -289,6 +289,4 @@ def mock_pipe(parent_pipe, pipe_name):
         mocked.targets[target] = pipe.targets[target]
         mocked.targets[target].pipe = mocked
 
-    #TODO: optionally copy some attributes of mocked pipe
-
     parent_pipe.pipes[pipe_name] = mocked
