@@ -48,8 +48,8 @@ class LocalCsvFileSourcePipe(SourcePipe):
             error_dfs.append(parsed_dfs.errors)
 
         if len(filepaths) > 0:
-            self.targets['main'].df = pd.concat(mapped_dfs)
-            self.targets['errors'].df = pd.concat(error_dfs)
+            self.targets['main'].df = pd.concat(mapped_dfs, sort=False)
+            self.targets['errors'].df = pd.concat(error_dfs, sort=False)
         else:
             self.targets['main'].df = pd.DataFrame(columns=list(self.schema.keys()))
             self.targets['errors'].df = pd.DataFrame(columns=list(self.schema.keys()))
