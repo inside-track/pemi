@@ -41,7 +41,7 @@ class TestIsBlank:
         assert pemi.transforms.isblank(False) is False
 
     def test_empty_array(self):
-            assert pemi.transforms.isblank([]) is True
+        assert pemi.transforms.isblank([]) is True
 
     def test_array_one_element(self):
         assert pemi.transforms.isblank([1]) is False
