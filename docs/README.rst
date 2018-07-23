@@ -345,3 +345,33 @@ Where to go from here
 =====================
 
 `Full documentation on readthedocs <http://pemi.readthedocs.io/en/latest/index.html>`_
+
+
+Contributing
+============
+
+If you want to contribute to the development of Pemi, you'll need to be able to run the test
+suite locally.  To get started, copy the example environment file to a file you can
+edit locally if needed:
+
+    >>> cp example.env .env
+
+All of the tests are run inside of a docker container, which you can build using
+
+    >>> inv build
+
+Once the containers are built, spin up the containers to run the tests
+
+    >>> inv up
+
+And then run the tests using something like (you may prefer different pytest options):
+
+    >>> inv test --pytest="-s -x -vv --tb=short --color=yes tests"
+
+The test container also launches a local Jupyter notebook server.  This can be a convenient tool to
+have when developing Pemi.  To access the notebook severs, just visit http://localhost:8890/lab
+in a web browser (the specific port can be configured in the ``.env`` file).
+
+Take down the container using
+
+    >>> inv down
