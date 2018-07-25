@@ -5,6 +5,7 @@ import pemi
 import pemi.transforms
 from pemi.fields import *
 
+
 class TestIsBlank:
     def test_np_nan(self):
         assert pemi.transforms.isblank(np.nan) is True
@@ -39,6 +40,24 @@ class TestIsBlank:
     def test_false(self):
         assert pemi.transforms.isblank(False) is False
 
+    def test_empty_array(self):
+        assert pemi.transforms.isblank([]) is True
+
+    def test_array_one_element(self):
+        assert pemi.transforms.isblank([1]) is False
+
+    def test_array_more_elements(self):
+        assert pemi.transforms.isblank([1, 2, 3, 4]) is False
+
+    def test_empty_dict(self):
+        assert pemi.transforms.isblank({}) is True
+
+    def test_dict_one_element(self):
+        assert pemi.transforms.isblank({'a': 'a'}) is False
+
+    def test_dict_many_elements(self):
+        assert pemi.transforms.isblank({'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd'}) is False
+
 
 class TestConcatenate:
     def test_it_concatenates(self):
@@ -48,6 +67,7 @@ class TestConcatenate:
     def test_it_concatenates_w_delimiter(self):
         row = pd.Series(['ab', 'c', 'd'])
         assert pemi.transforms.concatenate('-')(row) == 'ab-c-d'
+
 
 class TestNvl:
     def test_it_picks_the_first_non_blank(self):
