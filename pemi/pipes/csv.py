@@ -4,7 +4,6 @@ import re
 import pandas as pd
 
 import pemi
-from pemi.pipes.patterns import SourcePipe
 from pemi.pipes.patterns import TargetPipe
 
 def default_column_normalizer(name):
@@ -14,12 +13,20 @@ def default_column_normalizer(name):
     return name
 
 
-class LocalCsvFileSourcePipe(SourcePipe):
-    def __init__(self, *, paths, csv_opts=None,
+class StrConverter(dict):
+    def __contains__(self, key):
+        return True
+
+    def __getitem__(self, key):
+        return str
+
+class LocalCsvFileSourcePipe(pemi.Pipe):
+    def __init__(self, *, paths, schema=None, csv_opts=None,
                  filename_field=None, filename_full_path=False, normalize_columns=True, **params):
         super().__init__(**params)
 
         self.paths = paths
+        self.schema = schema
         self.filename_field = filename_field
         self.filename_full_path = filename_full_path
         self.csv_opts = self._build_csv_opts(csv_opts or {})
@@ -31,7 +38,17 @@ class LocalCsvFileSourcePipe(SourcePipe):
         else:
             self.column_normalizer = lambda col: col
 
-        self.targets['main'].schema = self.schema
+        self.target(
+            pemi.PdDataSubject,
+            name='main',
+            schema=self.schema
+        )
+
+        self.target(
+            pemi.PdDataSubject,
+            name='errors',
+            schema=self.schema
+        )
 
     def extract(self):
         return self.paths
@@ -50,20 +67,26 @@ class LocalCsvFileSourcePipe(SourcePipe):
         if len(filepaths) > 0:
             self.targets['main'].df = pd.concat(mapped_dfs, sort=False)
             self.targets['errors'].df = pd.concat(error_dfs, sort=False)
-        else:
+        elif self.schema:
             self.targets['main'].df = pd.DataFrame(columns=list(self.schema.keys()))
             self.targets['errors'].df = pd.DataFrame(columns=list(self.schema.keys()))
+        else:
+            self.targets['main'].df = pd.DataFrame()
+            self.targets['errors'].df = pd.DataFrame()
 
         pemi.log.debug('Parsed %i records', len(self.targets['main'].df))
         return self.targets['main'].df
 
     def _build_csv_opts(self, user_csv_opts):
-        file_fieldnames = [k for k in self.schema.keys() if k != self.filename_field]
+        if self.schema:
+            file_fieldnames = [k for k in self.schema.keys() if k != self.filename_field]
+            usecols = lambda col: self.column_normalizer(col) in file_fieldnames
+        else:
+            usecols = None
 
         mandatory_opts = {
-            # Assumes we'll never get a csv with > 10000 columns
-            'converters': {idx:str for idx in range(10000)},
-            'usecols':    lambda col: self.column_normalizer(col) in file_fieldnames
+            'converters': StrConverter(),
+            'usecols': usecols
         }
 
         default_opts = {
@@ -87,10 +110,15 @@ class LocalCsvFileSourcePipe(SourcePipe):
             else:
                 raw_df[self.filename_field] = os.path.basename(filepath)
 
-        return raw_df.mapping(
-            [(name, name, field.coerce) for name, field in self.schema.items()],
-            on_error='redirect'
-        )
+        if self.schema:
+            return raw_df.mapping(
+                [(name, name, field.coerce) for name, field in self.schema.items()],
+                on_error='redirect'
+            )
+        return raw_df.mapping([], inplace=True)
+
+    def flow(self):
+        self.parse(self.extract())
 
 
 class LocalCsvFileTargetPipe(TargetPipe):

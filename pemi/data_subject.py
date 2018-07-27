@@ -21,8 +21,8 @@ class DataSubject:
     and can be converted from and to a pandas dataframe (really only needed for testing to work)
     '''
 
-    def __init__(self, schema=pemi.Schema(), name=None, pipe=None):
-        self.schema = schema
+    def __init__(self, schema=None, name=None, pipe=None):
+        self.schema = schema or pemi.Schema()
         self.name = name
         self.pipe = pipe
 
