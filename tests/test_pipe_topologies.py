@@ -426,11 +426,11 @@ class TestExternalSourcePipes():
         def __init__(self, **params):
             super().__init__(**params)
 
-            self.source(
-                pemi.PdDataSubject,
-                name='from_a1',
-                schema=pemi.Schema(msg=StringField())
+            self.pipe(
+                name='A',
+                pipe=APipe()
             )
+            self.connect('A', 'a1').to('self', 'main')
 
             self.target(
                 pemi.PdDataSubject,
@@ -438,16 +438,9 @@ class TestExternalSourcePipes():
                 schema=pemi.Schema(msg=StringField())
             )
 
-            self.pipe(
-                name='A',
-                pipe=APipe()
-            )
-
-            self.connect('A', 'a1').to('self', 'from_a1')
 
         def flow(self):
             self.connections.flow()
-            self.targets['main'].df = self.sources['from_a1'].df
 
 
     def test_connections(self):
@@ -465,21 +458,21 @@ class TestExternalTargetPipes():
         def __init__(self, **params):
             super().__init__(**params)
 
-            self.target(
+            self.source(
                 pemi.PdDataSubject,
                 name='main',
                 schema=pemi.Schema(msg=StringField())
             )
+            self.connect('self', 'main').to('X', 'x1')
 
             self.pipe(
                 name='X',
                 pipe=XPipe()
             )
 
-            self.connect('self', 'main').to('X', 'x1')
 
         def flow(self):
-            self.targets['main'].df = pd.DataFrame({'msg': ['generated in self']})
+            self.sources['main'].df = pd.DataFrame({'msg': ['generated in self']})
             self.connections.flow()
 
 
@@ -498,46 +491,24 @@ class TestExternalSourceAndTargetPipes():
         def __init__(self, **params):
             super().__init__(**params)
 
-            self.source(
-                pemi.PdDataSubject,
-                name='from_a1',
-                schema=pemi.Schema(msg=StringField())
-            )
-
-            self.target(
-                pemi.PdDataSubject,
-                name='to_x1',
-                schema=pemi.Schema(msg=StringField())
-            )
-
             self.pipe(
                 name='A',
                 pipe=APipe()
             )
+            self.connect('A', 'a1').to('X', 'x1')
 
             self.pipe(
                 name='X',
                 pipe=XPipe()
             )
 
-            self.connect('A', 'a1').to('self', 'from_a1').group_as('from_sources')
-            self.connect('self', 'to_x1').to('X', 'x1').group_as('to_targets')
-
         def flow(self):
-            self.connections.group('from_sources').flow()
-
-            self.targets['to_x1'].df = pd.DataFrame()
-            self.targets['to_x1'].df['msg'] = self.sources['from_a1'].df['msg'].apply(
-                '{} via self'.format
-            )
-
-            self.connections.group('to_targets').flow()
-
+            self.connections.flow()
 
     def test_connections(self):
         pipe = self.FromAa1ToXx1Pipe()
         pipe.flow()
 
-        expected = 'a1 from APipe via self'
+        expected = 'a1 from APipe'
         actual = pipe.pipes['X'].sources['x1'].df['msg'][0]
         assert actual == expected
