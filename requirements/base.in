@@ -12,3 +12,4 @@ jupyterlab
 
 pytest
 pylint
+factory_boy
