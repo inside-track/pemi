@@ -83,7 +83,7 @@ class IntegerField(Field):
     def coerce(self, value):
         if pemi.transforms.isblank(value):
             return self.null
-        elif self.coerce_float:
+        if self.coerce_float:
             return int(float(value))
         return int(value)
 
@@ -115,9 +115,9 @@ class DateField(Field):
     def parse(self, value):
         if isinstance(value, datetime.datetime):
             return value.date()
-        elif isinstance(value, datetime.date):
+        if isinstance(value, datetime.date):
             return value
-        elif not self.infer_format:
+        if not self.infer_format:
             return datetime.datetime.strptime(value, self.format).date()
         return dateutil.parser.parse(value).date()
 
@@ -140,9 +140,9 @@ class DateTimeField(Field):
     def parse(self, value):
         if isinstance(value, datetime.datetime):
             return value
-        elif isinstance(value, datetime.date):
+        if isinstance(value, datetime.date):
             return datetime.datetime.combine(value, datetime.time.min)
-        elif not self.infer_format:
+        if not self.infer_format:
             return datetime.datetime.strptime(value, self.format)
         return dateutil.parser.parse(value)
 
@@ -168,7 +168,7 @@ class BooleanField(Field):
 
         if isinstance(value, bool):
             return value
-        elif pemi.transforms.isblank(value):
+        if pemi.transforms.isblank(value):
             return self.null
         return self.parse(value)
 
@@ -176,12 +176,11 @@ class BooleanField(Field):
         value = str(value).lower()
         if value in self.true_values:
             return True
-        elif value in self.false_values:
+        if value in self.false_values:
             return False
-        elif 'unknown_truthiness' in self.metadata:
+        if 'unknown_truthiness' in self.metadata:
             return self.metadata['unknown_truthiness']
-        else:
-            raise ValueError('Not a boolean value')
+        raise ValueError('Not a boolean value')
 
 class DecimalField(Field):
     def __init__(self, name=None, **metadata):
@@ -200,7 +199,7 @@ class DecimalField(Field):
     def parse(self, value):
         dec = decimal.Decimal(str(value))
 
-        if dec != dec:
+        if dec != dec: #pylint: disable=comparison-with-itself
             return dec
 
         if self.truncate_decimal:

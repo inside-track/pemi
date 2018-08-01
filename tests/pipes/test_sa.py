@@ -1,6 +1,7 @@
 import os
 
 import pytest
+import factory
 
 import sqlalchemy as sa
 
@@ -53,51 +54,48 @@ def db_case_clean(case, db_schema_init):
         yield
 #pylint: enable=unused-argument
 
-with pt.Scenario('SaSqlSourcePipe', usefixtures=['db_case_clean']) as scenario:
-    sales_schema = pemi.Schema(
+
+class BeersKeyFactory(factory.Factory):
+    class Meta:
+        model = dict
+    id = factory.Sequence(lambda n: n)
+
+sa_pipe = pemi.pipes.sa.SaSqlSourcePipe(
+    engine=sa_engine,
+    schema=pemi.Schema(
         beer_id=IntegerField(),
         name=StringField(),
         sold_at=DateField(),
         quantity=IntegerField()
-    )
+    ),
+    sql='SELECT * FROM sales_fact;'
+)
 
-    pipe = pemi.Pipe()
-    pipe.pipe(
-        name='sql_source',
-        pipe=pemi.pipes.sa.SaSqlSourcePipe(
-            engine=sa_engine,
-            schema=sales_schema,
-            sql='SELECT * FROM sales_fact;'
-        )
-    )
+sa_pipe.source(
+    pemi.SaDataSubject,
+    name='dummy_source',
+    schema=sa_pipe.schema,
+    engine=sa_engine,
+    table='sales_fact'
+)
 
-    pipe.source(
-        pemi.SaDataSubject,
-        name='sales',
-        schema=sales_schema,
-        engine=sa_engine,
-        table='sales_fact'
-    )
-
-
-    def case_keys():
-        ids = list(range(1000))
-        for i in ids:
-            yield {
-                'sales': {'beer_id': i},
-                'sql_source': {'beer_id': i}
-            }
-
-    scenario.setup(
-        runner=pipe.pipes['sql_source'].flow,
-        case_keys=case_keys(),
-        sources={
-            'sales': pipe.sources['sales']
-        },
-        targets={
-            'sql_source': pipe.pipes['sql_source'].targets['main']
-        }
-    )
+with pt.Scenario(
+    name='SaSqlSourcePipe',
+    pipe=sa_pipe,
+    factories={
+        'beers': BeersKeyFactory
+    },
+    sources={
+        'dummy_source': lambda pipe: pipe.sources['dummy_source']
+    },
+    targets={
+        'main': lambda pipe: pipe.targets['main']
+    },
+    target_case_collectors={
+        'main': pt.CaseCollector(subject_field='beer_id', factory='beers', factory_field='id')
+    },
+    usefixtures=['db_case_clean']
+) as scenario:
 
     with scenario.case('it queries data stored') as case:
         ex_sales = pemi.data.Table(
@@ -107,14 +105,16 @@ with pt.Scenario('SaSqlSourcePipe', usefixtures=['db_case_clean']) as scenario:
             | {b[1]}  | 2017-01-01 | 3        |
             | {b[2]}  | 2017-01-02 | 2        |
             | {b[3]}  | 2017-01-03 | 5        |
-            '''.format(b=scenario.case_keys.cache('sales', 'beer_id')),
-            schema=pipe.sources['sales'].schema
+            '''.format(
+                b=scenario.factories['beers']['id']
+            ),
+            schema=scenario.sources['dummy_source'].schema
         )
 
         case.when(
-            pt.when.example_for_source(scenario.sources['sales'], ex_sales)
+            pt.when.example_for_source(scenario.sources['dummy_source'], ex_sales)
         ).then(
-            pt.then.target_matches_example(scenario.targets['sql_source'], ex_sales)
+            pt.then.target_matches_example(scenario.targets['main'], ex_sales)
         )
 
     with scenario.case('it works with na') as case:
@@ -125,12 +125,14 @@ with pt.Scenario('SaSqlSourcePipe', usefixtures=['db_case_clean']) as scenario:
             | {b[1]}  | 2017-01-01 | 3        |
             | {b[2]}  | 2017-01-02 |          |
             | {b[3]}  | 2017-01-03 | 5        |
-            '''.format(b=scenario.case_keys.cache('sales', 'beer_id')),
-            schema=pipe.sources['sales'].schema
+            '''.format(
+                b=scenario.factories['beers']['id']
+            ),
+            schema=scenario.sources['dummy_source'].schema
         )
 
         case.when(
-            pt.when.example_for_source(scenario.sources['sales'], ex_sales)
+            pt.when.example_for_source(scenario.sources['dummy_source'], ex_sales)
         ).then(
-            pt.then.target_matches_example(scenario.targets['sql_source'], ex_sales)
+            pt.then.target_matches_example(scenario.targets['main'], ex_sales)
         )

@@ -1,6 +1,13 @@
 Pemi Changelog
 ==============
 
+v0.5.0
+------
+
+* **BREAKING** Substantial refactoring of the way that test scenarios are configured.  See docs
+  for details.
+
+
 v0.4.0
 ------
 

@@ -46,7 +46,8 @@ class SaSqlSourcePipe(pemi.Pipe):
 
         if data is None:
             return None
-        elif self.schema is None:
+
+        if self.schema is None:
             self.targets['main'].df = data
         else:
             mapper = data.mapping(
