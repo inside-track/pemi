@@ -1,6 +1,28 @@
 Pemi Changelog
 ==============
 
+v0.4.0
+------
+
+* **BREAKING** Allows one to make more natural connections to nested pipes.  The sources
+  of a pipe can now be connected to the sources of nested pipes and the targets of
+  nested pipes can now be connected to the targets of the parent pipe.  This will break
+  code that has workarounds for this issue.
+* Prevents Pandas from raising a warning when concatenating CSV files
+
+v0.3.2.1
+--------
+* pemi.transforms.isblank now treats pandas.NaT as blank
+
+v0.3.2
+------
+* pemi.transforms.isblank no longer raises an error when given an array or dict with
+  more than 1 element.
+
+v0.3.1
+------
+* Allow CSV and SqlAlchemy pipes to work without defining a Pemi schema
+
 v0.3.0
 ------
 * Removed ``fake_with`` option when constructing test data tables.  Custom data fakers should
