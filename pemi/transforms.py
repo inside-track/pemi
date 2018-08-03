@@ -1,12 +1,12 @@
 import math
 import numpy as np
-
+import pandas as pd
 
 def isblank(value):
     try:
         return math.isnan(value)
     except TypeError:
-        blank = [np.nan, np.datetime64("NaT"), [], {}, None, '']
+        blank = [np.nan, pd.NaT, np.datetime64("NaT"), [], {}, None, '']
         return value in blank
 
 
