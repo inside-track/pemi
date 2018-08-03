@@ -109,6 +109,7 @@ class SaDataSubject(DataSubject):
 
     def from_pd(self, df, **to_sql_opts):
         self.cached_test_df = df
+        pemi.log.debug('loading SaDataSubject with:\n%s', self.cached_test_df)
 
         to_sql_opts['if_exists'] = to_sql_opts.get('if_exists', 'append')
         to_sql_opts['index'] = to_sql_opts.get('index', False)
