@@ -58,6 +58,12 @@ class TestIsBlank:
     def test_dict_many_elements(self):
         assert pemi.transforms.isblank({'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd'}) is False
 
+    def test_np_nat(self):
+        assert pemi.transforms.isblank(np.datetime64('NaT')) is True
+
+    def test_pd_nat(self):
+        assert pemi.transforms.isblank(pd.NaT) is True
+
 
 class TestConcatenate:
     def test_it_concatenates(self):
