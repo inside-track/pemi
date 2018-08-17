@@ -1,3 +1,4 @@
+import datetime
 import numpy as np
 import pandas as pd
 
@@ -6,7 +7,7 @@ import pemi.transforms
 from pemi.fields import *
 
 
-class TestIsBlank:
+class TestIsBlank: #pylint: disable=too-many-public-methods
     def test_np_nan(self):
         assert pemi.transforms.isblank(np.nan) is True
 
@@ -57,6 +58,12 @@ class TestIsBlank:
 
     def test_dict_many_elements(self):
         assert pemi.transforms.isblank({'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd'}) is False
+
+    def test_date(self):
+        assert pemi.transforms.isblank(datetime.datetime.now().date()) is False
+
+    def test_datetime(self):
+        assert pemi.transforms.isblank(datetime.datetime.now()) is False
 
     def test_np_nat(self):
         assert pemi.transforms.isblank(np.datetime64('NaT')) is True
