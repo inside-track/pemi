@@ -2,12 +2,27 @@ import math
 import numpy as np
 import pandas as pd
 
-def isblank(value):
+def _isnan(value):
     try:
         return math.isnan(value)
     except TypeError:
-        blank = [np.nan, pd.NaT, np.datetime64("NaT"), [], {}, None, '']
-        return value in blank
+        return None
+
+def _isnat(value):
+    try:
+        return bool(np.isnat(value))
+    except TypeError:
+        return None
+
+def isblank(value):
+    isnan = _isnan(value)
+    isnat = _isnat(value)
+
+    if isnan is not None: return isnan
+    if isnat is not None: return isnat
+
+    blank = [np.nan, pd.NaT, [], {}, None, '']
+    return value in blank
 
 
 def concatenate(delimiter=''):
