@@ -381,6 +381,8 @@ class Case:
         self.scenario.run()
 
         try:
+            if len(self.thens) < 1:
+                raise CaseStructureError
             for i_then in self.thens:
                 i_then(self)
         except AssertionError:
@@ -390,6 +392,10 @@ class Case:
             for name, target in self.scenario.targets.items():
                 msg += '\nTarget {}:\n{}'.format(name, target.subject.to_pd())
             raise AssertionError(msg)
+        except CaseStructureError:
+            msg = '\nCase Structure Error for {}'.format(self)
+            msg += '\tNo .then clause found in test case'
+            raise CaseStructureError(msg)
 
 
     def __str__(self):
@@ -507,3 +513,7 @@ class Scenario: #pylint: disable=too-many-instance-attributes
         self.collect_results()
 
         self.has_run = True
+
+
+class CaseStructureError(Exception):
+    pass
