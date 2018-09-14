@@ -20,6 +20,7 @@ class KeyFactoryFieldError(Exception): pass
 class CaseStructureError(Exception): pass
 class NoTargetCaseCollectorError(Exception): pass
 
+
 def assert_frame_equal(actual, expected, **kwargs):
     try:
         pd.util.testing.assert_frame_equal(actual, expected, **kwargs)
@@ -271,162 +272,15 @@ class then: #pylint: disable=invalid-name
 
 
 
-
-
 CaseCollector = namedtuple('CaseCollector', ['subject_field', 'factory', 'factory_field'])
 
-class KeyFactoryField:
-    '''
-    Used to access a particular field from a given key factory.
-
-    Example::
-
-        kff = KeyFactoryField(keyfactory, 'id')
-        kff[2] #=> Returns the 'id' field from the keyfactory instance referenced by then integer 2
-    '''
-
-    def __init__(self, keyfactory, field):
-        self.keyfactory = keyfactory
-        self.field = field
-
-    def __getitem__(self, ref=None):
-        '''
-        Args:
-          ref (Object) - Any hashable object used to reference a particular key factory instance.
-        '''
-        instance = self.keyfactory.instance(ref)
-        if self.field in instance:
-            return instance[self.field]
-        else:
-            raise KeyFactoryFieldError(
-                'Key field "{}" not defined for factory {}'.format(
-                    self.field, self.keyfactory.factory
-                )
-            )
-
-class KeyFactory:
-    # TODO: document
-    def __init__(self, factory):
-        self.factory = factory
-        self.case = None
-        self.cached = {}
-        self.next_case(None)
-
-    def next_case(self, case):
-        self.case = case
-        self.cached[self.case] = {}
-
-    def __getitem__(self, field):
-        return KeyFactoryField(self, field)
-
-    def instance(self, ref=None):
-        ref = os.urandom(32) if ref is None else ref
-
-        if ref not in self.cached[self.case]:
-            self.cached[self.case][ref] = self.factory()
-        return self.cached[self.case][ref]
-
-    def case_lookup(self, factory_field):
-        lkp = {}
-        for case_id, cached_keys in self.cached.items():
-            for keys in cached_keys.values():
-                if factory_field not in keys:
-                    raise KeyFactoryField(
-                        '"{}" is not a known factory fields for {}'.format(
-                            factory_field, self.factory
-                        )
-                    )
-                lkp[keys[factory_field]] = case_id
-        return lkp
-
-
-
-class CaseData: #pylint: disable=attribute-defined-outside-init,too-few-public-methods
-    # TODO: document
-
-    def __init__(self, case, test_subject):
-        self.case = case
-        self.test_subject = test_subject
-
-    @property
-    def data(self):
-        if not hasattr(self, '_data'):
-            cols = self.test_subject.subject.schema.keys()
-            self._data = pd.DataFrame([[None] * len(cols)], columns=cols)
-
-        return self._data
-
-    @data.setter
-    def data(self, value):
-        self._data = value
-
-class TestSubject: #pylint: disable=too-few-public-methods
-    # TODO: document
-
-    def __init__(self, subject, name):
-        self.subject = subject
-        self.name = name
-        self.data = {}
-        self.schema = self.subject.schema
-
-    def __getitem__(self, case):
-        if case not in self.data:
-            self.data[case] = CaseData(case, self)
-        return self.data[case]
-
-class Case:
-    # TODO: document
-
-    def __init__(self, name, scenario):
-        self.name = name
-        self.scenario = scenario
-        self.whens = []
-        self.thens = []
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        pass
-
-    def when(self, *funcs):
-        self.whens.extend(funcs)
-        return self
-
-    def then(self, *funcs):
-        self.thens.extend(funcs)
-        return self
-
-    def setup(self):
-        for i_when in self.whens:
-            i_when(self)
-
-    def assert_case(self):
-        self.scenario.run()
-
-        try:
-            if len(self.thens) < 1:
-                raise CaseStructureError
-            for i_then in self.thens:
-                i_then(self)
-        except AssertionError:
-            msg = '\nAssertion Error for {}'.format(self)
-            for name, source in self.scenario.sources.items():
-                msg += '\nSource {}:\n{}'.format(name, source.subject.to_pd())
-            for name, target in self.scenario.targets.items():
-                msg += '\nTarget {}:\n{}'.format(name, target.subject.to_pd())
-            raise AssertionError(msg)
-        except CaseStructureError:
-            msg = '\nCase Structure Error for {}'.format(self)
-            msg += '\tNo .then clause found in test case'
-            raise CaseStructureError(msg)
-
-
-    def __str__(self):
-        return "<Case '{}' ({})>".format(self.name, id(self))
-
 class Scenario:
-    # TODO: document
+    '''
+    A scenario blah blah.
+
+    Args::
+       blah blah
+    '''
 
     def __init__(self, name, pipe, factories, sources, targets, target_case_collectors,
                  flow='flow', selector=None, usefixtures=[]):
@@ -522,3 +376,193 @@ class Scenario:
                 for case, df in all_target_data.groupby(['__pemi_case__'], sort=False):
                     del df['__pemi_case__']
                     target[case].data = df
+
+class Case:
+    '''
+    A case blah blah....
+    '''
+
+    def __init__(self, name, scenario):
+        self.name = name
+        self.scenario = scenario
+        self.whens = []
+        self.thens = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def when(self, *funcs):
+        self.whens.extend(funcs)
+        return self
+
+    def then(self, *funcs):
+        self.thens.extend(funcs)
+        return self
+
+    def setup(self):
+        for i_when in self.whens:
+            i_when(self)
+
+    def assert_case(self):
+        self.scenario.run()
+
+        try:
+            if len(self.thens) < 1:
+                raise CaseStructureError
+            for i_then in self.thens:
+                i_then(self)
+        except AssertionError:
+            msg = '\nAssertion Error for {}'.format(self)
+            for name, source in self.scenario.sources.items():
+                msg += '\nSource {}:\n{}'.format(name, source.subject.to_pd())
+            for name, target in self.scenario.targets.items():
+                msg += '\nTarget {}:\n{}'.format(name, target.subject.to_pd())
+            raise AssertionError(msg)
+        except CaseStructureError:
+            msg = '\nCase Structure Error for {}'.format(self)
+            msg += '\tNo .then clause found in test case'
+            raise CaseStructureError(msg)
+
+
+    def __str__(self):
+        return "<Case '{}' ({})>".format(self.name, id(self))
+
+
+
+
+
+
+class KeyFactoryField:
+    '''
+    For internal use only.
+
+    Used to access a particular field from a given key factory.
+
+    Example::
+
+        kff = KeyFactoryField(keyfactory, 'id')
+        kff[2] #=> Returns the 'id' field from the keyfactory instance referenced by then integer 2
+    '''
+
+    def __init__(self, keyfactory, field):
+        self.keyfactory = keyfactory
+        self.field = field
+
+    def __getitem__(self, ref=None):
+        '''
+        Args:
+          ref (Object) - Any hashable object used to reference a particular key factory instance.
+        '''
+        instance = self.keyfactory.instance(ref)
+        if self.field in instance:
+            return instance[self.field]
+        else:
+            raise KeyFactoryFieldError(
+                'Key field "{}" not defined for factory {}'.format(
+                    self.field, self.keyfactory.factory
+                )
+            )
+
+class KeyFactory:
+    '''
+    For internal use only.
+
+    Wrapper around a FactoryBoy factory that caches any factory instances created.
+
+    Example::
+
+        class BeersKeyFactory(factory.Factory):
+            class Meta:
+                model = dict
+            beer_id = factory.Sequence(lambda n: n)
+
+        keyfactory = KeyFactory(BeersKeyFactory)
+
+        keyfactory.instance('a') #=> generates a new instance of BeersKeyFactory cached with key 'a'
+        keyfactory['beer_id']['a'] #=> Returns field 'beer_id' from cache referenced by 'a'
+
+        keyfactory.instance('z') #=> generates a new instance of BeersKeyFactory cached with key 'z'
+        keyfactory['beer_id']['z'] #=> Returns field 'beer_id' from cache referenced by 'z'
+    '''
+
+    def __init__(self, factory):
+        self.factory = factory
+        self.case = None
+        self.cached = {}
+        self.next_case(None)
+
+    def next_case(self, case):
+        self.case = case
+        self.cached[self.case] = {}
+
+    def __getitem__(self, field):
+        return KeyFactoryField(self, field)
+
+    def instance(self, ref=None):
+        ref = os.urandom(32) if ref is None else ref
+
+        if ref not in self.cached[self.case]:
+            self.cached[self.case][ref] = self.factory()
+        return self.cached[self.case][ref]
+
+    def case_lookup(self, factory_field):
+        lkp = {}
+        for case_id, cached_keys in self.cached.items():
+            for keys in cached_keys.values():
+                if factory_field not in keys:
+                    raise KeyFactoryField(
+                        '"{}" is not a known factory fields for {}'.format(
+                            factory_field, self.factory
+                        )
+                    )
+                lkp[keys[factory_field]] = case_id
+        return lkp
+
+
+
+class CaseData: #pylint: disable=attribute-defined-outside-init,too-few-public-methods
+    '''
+    For internal use only.
+
+    Creates a dataframe for a specific test case.
+    All of the ``when`` conditions in a case will add or modify this dataframe
+    before it gets concatenated with other cases and run through the pipe that
+    is the subject of the scenario.
+    '''
+
+    def __init__(self, case, test_subject):
+        self.case = case
+        self.test_subject = test_subject
+
+    @property
+    def data(self):
+        if not hasattr(self, '_data'):
+            cols = self.test_subject.subject.schema.keys()
+            self._data = pd.DataFrame([[None] * len(cols)], columns=cols)
+
+        return self._data
+
+    @data.setter
+    def data(self, value):
+        self._data = value
+
+class TestSubject: #pylint: disable=too-few-public-methods
+    '''
+    For internal use only.
+
+    Wrapper around an actual pipe data subject.  Used to set or fetch case-specific data records.
+    '''
+
+    def __init__(self, subject, name):
+        self.subject = subject
+        self.name = name
+        self.data = {}
+        self.schema = self.subject.schema
+
+    def __getitem__(self, case):
+        if case not in self.data:
+            self.data[case] = CaseData(case, self)
+        return self.data[case]
