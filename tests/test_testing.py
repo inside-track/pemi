@@ -1,5 +1,3 @@
-import random
-
 import pytest
 import factory
 import pandas as pd
@@ -14,13 +12,13 @@ from pemi.fields import *
 class StudentKeyFactory(factory.Factory):
     class Meta:
         model = dict
-    id = factory.Sequence(lambda n: 'stu{}'.format(n))
+    id = factory.Sequence('stu{}'.format)
     tid = factory.LazyAttribute(lambda obj: 'T{}'.format(obj.id))
 
 class TermKeyFactory(factory.Factory):
     class Meta:
         model = dict
-    id = factory.Sequence(lambda n: 'Term{}'.format(n))
+    id = factory.Sequence('Term{}'.format)
 
 
 

@@ -89,7 +89,7 @@ class BlackBoxPipe(pemi.Pipe):
 
     def deduce_style(self, name):
         for style, re_name in self.re_map.items():
-            if re.search(re_name, name) != None:
+            if re.search(re_name, name) is not None:
                 return style
         return 'Unknown Style'
 

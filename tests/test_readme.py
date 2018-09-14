@@ -35,7 +35,7 @@ class HelloNamePipe(pemi.Pipe):
 class KeyFactory(factory.Factory):
     class Meta:
         model = dict
-    id = factory.Sequence(lambda n: 'scooby-{}'.format(n))
+    id = factory.Sequence('scooby-{}'.format)
 
 
 with pt.Scenario(

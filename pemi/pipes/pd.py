@@ -94,12 +94,11 @@ class PdLookupJoinPipe(pemi.Pipe):
         )
 
     def _fill_missing(self, merged_df):
-        if not self.fillna:
-            return merged_df
-
-        merged_df['__indicator__'] = merged_df['__indicator__'].astype('str')
-        merged_df.fillna(**self.fillna, inplace=True)
+        if self.fillna:
+            merged_df['__indicator__'] = merged_df['__indicator__'].astype('str')
+            merged_df.fillna(**self.fillna, inplace=True)
         return merged_df
+
 
     def _direct_targets(self, merged_df):
         matches = (merged_df['__indicator__'] == 'both')
@@ -115,8 +114,6 @@ class PdLookupJoinPipe(pemi.Pipe):
                 lambda row: pemi.log.warning('No lookup values found for %s', dict(row)),
                 axis=1
             )
-
-        return None
 
     def _remove_indicator(self, _na):
         if self.indicator:

@@ -137,8 +137,9 @@ disable=print-statement,
         redefined-outer-name, # Needed for pytest
         unused-wildcard-import, # No other nice way for fields - spark does this too
         len-as-condition, # just really don't like inferred truthiness - problematic for pandas
-        no-member # too many false-positives
-
+        no-member, # too many false-positives
+        bad-continuation, # Started reporting false positives after upgrading to 2.1.1 (https://github.com/PyCQA/pylint/issues/289)
+        too-few-public-methods # too many false-positives
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

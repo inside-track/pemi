@@ -12,7 +12,7 @@ from pemi.fields import *
 class KeyFactory(factory.Factory):
     class Meta:
         model = dict
-    id = factory.Sequence(lambda n: 'k{}'.format(n))
+    id = factory.Sequence('k{}'.format)
 
 
 def generate_scenario(name, pipe):
@@ -31,8 +31,10 @@ def generate_scenario(name, pipe):
             'errors': lambda pipe: pipe.targets['errors']
         },
         target_case_collectors={
-            'main_target': pt.CaseCollector(subject_field='key', factory='keys', factory_field='id'),
-            'errors': pt.CaseCollector(subject_field='key', factory='keys', factory_field='id'),
+            'main_target': pt.CaseCollector(subject_field='key', factory='keys',
+                                            factory_field='id'),
+            'errors': pt.CaseCollector(subject_field='key', factory='keys',
+                                       factory_field='id'),
         }
     )
 
@@ -391,8 +393,10 @@ with pt.Scenario(
         'errors': lambda pipe: pipe.targets['errors']
     },
     target_case_collectors={
-        'main_target': pt.CaseCollector(subject_field='alt_key', factory='keys', factory_field='id'),
-        'errors': pt.CaseCollector(subject_field='alt_key', factory='keys', factory_field='id'),
+        'main_target': pt.CaseCollector(subject_field='alt_key', factory='keys',
+                                        factory_field='id'),
+        'errors': pt.CaseCollector(subject_field='alt_key', factory='keys',
+                                   factory_field='id'),
     }
 ) as scenario:
 
