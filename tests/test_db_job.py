@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 
+import factory
 import sqlalchemy as sa
 
 import pemi
@@ -126,29 +127,29 @@ class DenormalizeBeersPipe(pemi.Pipe):
                 '''
             )
 
-with pt.Scenario('DenormalizeBeersPipe') as scenario:
-    pipe = DenormalizeBeersPipe()
+class BeersKeyFactory(factory.Factory):
+    class Meta:
+        model = dict
+    id = factory.Sequence(lambda n: n)
 
-    def case_keys():
-        ids = list(range(1000))
-        for i in ids:
-            yield {
-                'sales': {'beer_id': i},
-                'beers': {'id': i},
-                'beer_sales': {'beer_id': i}
-            }
 
-    scenario.setup(
-        runner=pipe.flow,
-        case_keys=case_keys(),
-        sources={
-            'sales': pipe.sources['sales'],
-            'beers': pipe.sources['beers']
-        },
-        targets={
-            'beer_sales': pipe.targets['beer_sales']
-        }
-    )
+with pt.Scenario(
+    name='DenormalizeBeersPipe',
+    pipe=DenormalizeBeersPipe(),
+    factories={
+        'beers': BeersKeyFactory
+    },
+    sources={
+        'sales': lambda pipe: pipe.sources['sales'],
+        'beers': lambda pipe: pipe.sources['beers']
+    },
+    targets={
+        'beer_sales': lambda pipe: pipe.targets['beer_sales']
+    },
+    target_case_collectors={
+        'beer_sales': pt.CaseCollector(subject_field='beer_id', factory='beers', factory_field='id')
+    }
+) as scenario:
 
     with scenario.case('it joins sales to beers') as case:
         sales_table = pemi.data.Table(
@@ -161,8 +162,10 @@ with pt.Scenario('DenormalizeBeersPipe') as scenario:
             | {b[4]}  | 01/04/2017 | 8        |
             | {b[5]}  | 01/04/2017 | 6        |
             | {b[1]}  | 01/06/2017 | 1        |
-            '''.format(b=scenario.case_keys.cache('sales', 'beer_id')),
-            schema=pipe.sources['sales'].schema
+            '''.format(
+                b=scenario.factories['beers']['id']
+            ),
+            schema=scenario.sources['sales'].schema
         )
 
         beers_table = pemi.data.Table(
@@ -173,8 +176,10 @@ with pt.Scenario('DenormalizeBeersPipe') as scenario:
             | {b[2]} | OldStyle      | Pale  |
             | {b[3]} | Pipewrench    | IPA   |
             | {b[4]} | AbstRedRibbon | Lager |
-            '''.format(b=scenario.case_keys.cache('beers', 'id')),
-            schema=pipe.sources['beers'].schema.merge(pemi.Schema(
+            '''.format(
+                b=scenario.factories['beers']['id']
+            ),
+            schema=scenario.sources['beers'].schema.merge(pemi.Schema(
                 abv=DecimalField(faker=lambda: pemi.data.fake.pydecimal(2, 2, positive=True)),
                 price=DecimalField(faker=lambda: pemi.data.fake.pydecimal(2, 2, positive=True)),
             ))
@@ -190,8 +195,10 @@ with pt.Scenario('DenormalizeBeersPipe') as scenario:
             | {b[4]}  | 01/04/2017 | 8        | AbstRedRibbon | Lager |
             | {b[5]}  | 01/04/2017 | 6        |               |       |
             | {b[1]}  | 01/06/2017 | 1        | SpinCyle      | IPA   |
-            '''.format(b=scenario.case_keys.cache('beer_sales', 'beer_id')),
-            schema=pipe.targets['beer_sales'].schema
+            '''.format(
+                b=scenario.factories['beers']['id']
+            ),
+            schema=scenario.targets['beer_sales'].schema
         )
 
         case.when(

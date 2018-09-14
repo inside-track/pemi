@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
+import factory
 
 import pemi
 import pemi.data
@@ -8,88 +9,85 @@ import pemi.testing as pt
 import pemi.pipes.pd
 from pemi.fields import *
 
-class PdLookupJoinPipeScenarioFactory():
-    def __init__(self, scenario, pipe):
-        self.scenario = scenario
-        self.pipe = pipe
+class KeyFactory(factory.Factory):
+    class Meta:
+        model = dict
+    id = factory.Sequence(lambda n: 'k{}'.format(n))
 
-    @staticmethod
-    def case_keys():
-        ids = list(range(1000))
-        for i in ids:
-            yield {
-                'main_source': {'key': 'k{}'.format(i)},
-                'lookup': {'lkey': 'k{}'.format(i)},
-                'main_target': {'key': 'k{}'.format(i)},
-                'errors': {'key': 'k{}'.format(i)}
-            }
 
-    def scenario_setup(self):
-        return {
-            'runner': self.pipe.flow,
-            'case_keys': self.case_keys(),
-            'sources': {
-                'main_source': pipe.sources['main'],
-                'lookup': pipe.sources['lookup']
-            },
-            'targets': {
-                'main_target': pipe.targets['main'],
-                'errors': pipe.targets['errors']
-            }
+def generate_scenario(name, pipe):
+    return pt.Scenario(
+        name=name,
+        pipe=pipe,
+        factories={
+            'keys': KeyFactory
+        },
+        sources={
+            'main_source': lambda pipe: pipe.sources['main'],
+            'lookup': lambda pipe: pipe.sources['lookup']
+        },
+        targets={
+            'main_target': lambda pipe: pipe.targets['main'],
+            'errors': lambda pipe: pipe.targets['errors']
+        },
+        target_case_collectors={
+            'main_target': pt.CaseCollector(subject_field='key', factory='keys', factory_field='id'),
+            'errors': pt.CaseCollector(subject_field='key', factory='keys', factory_field='id'),
         }
+    )
 
-    def ex_main(self):
-        return pemi.data.Table(
-            '''
-            | key    | words |
-            | -      | -     |
-            | {k[1]} | words |
-            | {k[1]} | words |
-            | {k[3]} | more  |
-            | {k[7]} | words |
-            | {k[4]} | even  |
-            | {k[4]} | more  |
-            '''.format(k=self.scenario.case_keys.cache('main_source', 'key')),
-            schema=pemi.Schema(
-                key=StringField(),
-                words=StringField()
-            )
+def background(scenario):
+    ex_main = pemi.data.Table(
+        '''
+        | key    | words |
+        | -      | -     |
+        | {k[1]} | words |
+        | {k[1]} | words |
+        | {k[3]} | more  |
+        | {k[7]} | words |
+        | {k[4]} | even  |
+        | {k[4]} | more  |
+        '''.format(
+            k=scenario.factories['keys']['id']
+        ),
+        schema=pemi.Schema(
+            key=StringField(),
+            words=StringField()
         )
+    )
 
-    def ex_lookup(self):
-        return pemi.data.Table(
-            '''
-            | lkey    | values | words  |
-            | -       | -      | -      |
-            | {k[1]}  | one    | I      |
-            | {k[4]}  | four   | people |
-            | {k[1]}  | ONE    | fnord  |
-            | {k[3]}  | three  | dead   |
-            | {k[4]}  | FOUR   | fnord  |
-            | {k[2]}  | two    | see    |
-            '''.format(k=self.scenario.case_keys.cache('lookup', 'lkey')),
-            schema=pemi.Schema(
-                lkey=StringField(),
-                values=StringField(),
-                words=StringField()
-            )
+    ex_lookup = pemi.data.Table(
+        '''
+        | lkey    | values | words  |
+        | -       | -      | -      |
+        | {k[1]}  | one    | I      |
+        | {k[4]}  | four   | people |
+        | {k[1]}  | ONE    | fnord  |
+        | {k[3]}  | three  | dead   |
+        | {k[4]}  | FOUR   | fnord  |
+        | {k[2]}  | two    | see    |
+        '''.format(
+            k=scenario.factories['keys']['id']
+        ),
+        schema=pemi.Schema(
+            lkey=StringField(),
+            values=StringField(),
+            words=StringField()
         )
+    )
 
-    def background(self):
-        return [
-            pt.when.example_for_source(self.scenario.sources['main_source'], self.ex_main()),
-            pt.when.example_for_source(self.scenario.sources['lookup'], self.ex_lookup())
-        ]
+    return [
+        pt.when.example_for_source(scenario.sources['main_source'], ex_main),
+        pt.when.example_for_source(scenario.sources['lookup'], ex_lookup)
+    ]
 
-
-
-with pt.Scenario('PdLookupJoinPipe Basics') as scenario:
-    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+with generate_scenario(
+    name='PdLookupJoinPipe Basics',
+    pipe=pemi.pipes.pd.PdLookupJoinPipe(
         main_key=['key'],
         lookup_key=['lkey']
     )
-    factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
-    scenario.setup(**factory.scenario_setup())
+) as scenario:
 
     with scenario.case('it performs the lookup') as case:
         expected = pemi.data.Table(
@@ -102,13 +100,13 @@ with pt.Scenario('PdLookupJoinPipe Basics') as scenario:
             | {k[4]} | even  | {lk[4]}  | four    | people    |
             | {k[4]} | more  | {lk[4]}  | four    | people    |
             '''.format(
-                k=scenario.case_keys.cache('main_target', 'key'),
-                lk=scenario.case_keys.cache('lookup', 'lkey')
+                k=scenario.factories['keys']['id'],
+                lk=scenario.factories['keys']['id']
             )
         )
 
         case.when(
-            *factory.background()
+            *background(scenario)
         ).then(
             pt.then.target_matches_example(scenario.targets['main_target'], expected)
         )
@@ -119,29 +117,30 @@ with pt.Scenario('PdLookupJoinPipe Basics') as scenario:
             | key    | words |
             | -      | -     |
             | {k[7]} | words |
-            '''.format(k=scenario.case_keys.cache('errors', 'key'))
+            '''.format(
+                k=scenario.factories['keys']['id']
+            )
         )
 
         case.when(
-            *factory.background()
+            *background(scenario)
         ).then(
             pt.then.target_matches_example(scenario.targets['errors'], expected)
         )
 
 
-with pt.Scenario('PdLookupJoinPipe on_missing=ignore') as scenario:
-    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+with generate_scenario(
+    name='PdLookupJoinPipe on_missing=ignore',
+    pipe=pemi.pipes.pd.PdLookupJoinPipe(
         main_key=['key'],
         lookup_key=['lkey'],
         on_missing='ignore'
     )
-
-    factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
-    scenario.setup(**factory.scenario_setup())
+) as scenario:
 
     with scenario.case('it does not redirect errors') as case:
         case.when(
-            *factory.background()
+            *background(scenario)
         ).then(
             pt.then.target_is_empty(scenario.targets['errors'])
         )
@@ -170,18 +169,37 @@ with pt.Scenario('PdLookupJoinPipe on_missing=ignore') as scenario:
             | {k[4]} | even  |
             | {k[4]} | more  |
             '''.format(
-                k=scenario.case_keys.cache('main_target', 'key')
+                k=scenario.factories['keys']['id']
             )
         )
 
         case.when(
-            *factory.background(),
+            *background(scenario),
             pt.when.example_for_source(scenario.sources['lookup'], ex_lookup)
         ).then(
             pt.then.target_is_empty(scenario.targets['errors'])
         )
 
     with scenario.case('it works when the lookup is REALLY empty') as case:
+        ex_main = pemi.data.Table(
+            '''
+            | key    | words |
+            | -      | -     |
+            | {k[1]} | words |
+            | {k[1]} | words |
+            | {k[3]} | more  |
+            | {k[7]} | words |
+            | {k[4]} | even  |
+            | {k[4]} | more  |
+            '''.format(
+                k=scenario.factories['keys']['id']
+            ),
+            schema=pemi.Schema(
+                key=StringField(),
+                words=StringField()
+            )
+        )
+
         expected = pemi.data.Table(
             '''
             | key    | words |
@@ -193,26 +211,25 @@ with pt.Scenario('PdLookupJoinPipe on_missing=ignore') as scenario:
             | {k[4]} | even  |
             | {k[4]} | more  |
             '''.format(
-                k=scenario.case_keys.cache('main_target', 'key')
+                k=scenario.factories['keys']['id']
             )
         )
 
         case.when(
-            pt.when.example_for_source(scenario.sources['main_source'], factory.ex_main()),
+            pt.when.example_for_source(scenario.sources['main_source'], ex_main),
         ).then(
             pt.then.target_is_empty(scenario.targets['errors'])
         )
 
-
-with pt.Scenario('PdLookupJoinPipe FillNa') as scenario:
-    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+with generate_scenario(
+    name='PdLookupJoinPipe FillNa',
+    pipe=pemi.pipes.pd.PdLookupJoinPipe(
         main_key=['key'],
         lookup_key=['lkey'],
         on_missing='ignore',
         fillna={'value': 'EMPTY'}
     )
-    factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
-    scenario.setup(**factory.scenario_setup())
+) as scenario:
 
     with scenario.case('it fills in missing values') as case:
         expected = pemi.data.Table(
@@ -226,28 +243,27 @@ with pt.Scenario('PdLookupJoinPipe FillNa') as scenario:
             | {k[4]} | even  | {lk[4]} | four    | people    |
             | {k[4]} | more  | {lk[4]} | four    | people    |
             '''.format(
-                k=scenario.case_keys.cache('main_target', 'key'),
-                lk=scenario.case_keys.cache('lookup', 'lkey')
+                k=scenario.factories['keys']['id'],
+                lk=scenario.factories['keys']['id']
             )
         )
 
         case.when(
-            *factory.background()
+            *background(scenario)
         ).then(
             pt.then.target_matches_example(scenario.targets['main_target'], expected)
         )
 
 
 
-with pt.Scenario('PdLookupJoinPipe Lookup Prefix') as scenario:
-    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+with generate_scenario(
+    name='PdLookupJoinPipe Lookup Prefix',
+    pipe=pemi.pipes.pd.PdLookupJoinPipe(
         main_key=['key'],
         lookup_key=['lkey'],
         lookup_prefix='existing_'
     )
-
-    factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
-    scenario.setup(**factory.scenario_setup())
+) as scenario:
 
     with scenario.case('it prefixes lookup fields') as case:
         expected = pemi.data.Table(
@@ -260,28 +276,27 @@ with pt.Scenario('PdLookupJoinPipe Lookup Prefix') as scenario:
             | {k[4]} | even  | {lk[4]} | four            | people         |
             | {k[4]} | more  | {lk[4]} | four            | people         |
             '''.format(
-                k=scenario.case_keys.cache('main_target', 'key'),
-                lk=scenario.case_keys.cache('lookup', 'lkey')
+                k=scenario.factories['keys']['id'],
+                lk=scenario.factories['keys']['id']
             )
         )
 
         case.when(
-            *factory.background()
+            *background(scenario)
         ).then(
             pt.then.target_matches_example(scenario.targets['main_target'], expected)
         )
 
 
-with pt.Scenario('PdLookupJoinPipe Prefix Missing') as scenario:
-    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+with generate_scenario(
+    name='PdLookupJoinPipe Prefix Missing',
+    pipe=pemi.pipes.pd.PdLookupJoinPipe(
         main_key=['key'],
         lookup_key=['lkey'],
         lookup_prefix='existing_',
         on_missing='ignore'
     )
-
-    factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
-    scenario.setup(**factory.scenario_setup())
+) as scenario:
 
     with scenario.case('it prefixes lookup fields when lookup is empty') as case:
         lookup = pemi.data.Table(
@@ -307,7 +322,7 @@ with pt.Scenario('PdLookupJoinPipe Prefix Missing') as scenario:
             | {k[4]} | even  |      |                 |                |
             | {k[4]} | more  |      |                 |                |
             '''.format(
-                k=scenario.case_keys.cache('main_target', 'key')
+                k=scenario.factories['keys']['id']
             ),
             schema=pemi.Schema(
                 values=StringField(),
@@ -316,7 +331,7 @@ with pt.Scenario('PdLookupJoinPipe Prefix Missing') as scenario:
         )
 
         case.when(
-            *factory.background(),
+            *background(scenario),
             pt.when.example_for_source(scenario.sources['lookup'], lookup)
         ).then(
             pt.then.target_matches_example(scenario.targets['main_target'], expected)
@@ -324,16 +339,15 @@ with pt.Scenario('PdLookupJoinPipe Prefix Missing') as scenario:
 
 
 
-with pt.Scenario('PdLookupJoinPipe Indicator') as scenario:
-    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+with generate_scenario(
+    name='PdLookupJoinPipe Indicator',
+    pipe=pemi.pipes.pd.PdLookupJoinPipe(
         main_key=['key'],
         lookup_key=['lkey'],
         on_missing='ignore',
         indicator='lkp_found'
     )
-
-    factory = PdLookupJoinPipeScenarioFactory(scenario, pipe)
-    scenario.setup(**factory.scenario_setup())
+) as scenario:
 
     with scenario.case('it adds an indicator') as case:
         expected = pemi.data.Table(
@@ -347,45 +361,40 @@ with pt.Scenario('PdLookupJoinPipe Indicator') as scenario:
             | {k[4]} | even  | True      |
             | {k[4]} | more  | True      |
             '''.format(
-                k=scenario.case_keys.cache('main_target', 'key')
+                k=scenario.factories['keys']['id']
             )
         )
 
         case.when(
-            *factory.background()
+            *background(scenario)
         ).then(
             pt.then.target_matches_example(scenario.targets['main_target'], expected)
         )
 
 
 
-with pt.Scenario('PdLookupJoinPipe Blank Keys') as scenario:
-    pipe = pemi.pipes.pd.PdLookupJoinPipe(
+with pt.Scenario(
+    name='PdLookupJoinPipe Blank Keys',
+    pipe=pemi.pipes.pd.PdLookupJoinPipe(
         main_key=['key'],
         lookup_key=['key']
-    )
-
-    def case_keys():
-        ids = list(range(1000))
-        for i in ids:
-            yield {
-                'main_source': {'alt_key': 'k{}'.format(i)},
-                'main_target': {'alt_key': 'k{}'.format(i)},
-                'errors': {'alt_key': 'k{}'.format(i)}
-            }
-
-    scenario.setup(
-        runner=pipe.flow,
-        case_keys=case_keys(),
-        sources={
-            'main_source': pipe.sources['main'],
-            'lookup': pipe.sources['lookup']
-        },
-        targets={
-            'main_target': pipe.targets['main'],
-            'errors': pipe.targets['errors']
-        }
-    )
+    ),
+    factories={
+        'keys': KeyFactory
+    },
+    sources={
+        'main_source': lambda pipe: pipe.sources['main'],
+        'lookup': lambda pipe: pipe.sources['lookup']
+    },
+    targets={
+        'main_target': lambda pipe: pipe.targets['main'],
+        'errors': lambda pipe: pipe.targets['errors']
+    },
+    target_case_collectors={
+        'main_target': pt.CaseCollector(subject_field='alt_key', factory='keys', factory_field='id'),
+        'errors': pt.CaseCollector(subject_field='alt_key', factory='keys', factory_field='id'),
+    }
+) as scenario:
 
     with scenario.case('it does not use blanks as keys') as case:
         ex_main = pemi.data.Table(
@@ -395,7 +404,9 @@ with pt.Scenario('PdLookupJoinPipe Blank Keys') as scenario:
             | one | {k[1]}  |
             |     | {k[2]}  |
             | two | {k[3]}  |
-            '''.format(k=scenario.case_keys.cache('main_source', 'alt_key')),
+            '''.format(
+                k=scenario.factories['keys']['id']
+            ),
             schema=pemi.Schema(
                 key=StringField(),
                 alt_key=StringField()
@@ -422,7 +433,9 @@ with pt.Scenario('PdLookupJoinPipe Blank Keys') as scenario:
             | -   | -     | -       |
             | one | ONE   | {k[1]}  |
             | two | TWO   | {k[3]}  |
-            '''.format(k=scenario.case_keys.cache('main_target', 'alt_key')),
+            '''.format(
+                k=scenario.factories['keys']['id']
+            ),
             schema=pemi.Schema(
                 key=StringField(),
                 value=StringField(),
@@ -436,7 +449,9 @@ with pt.Scenario('PdLookupJoinPipe Blank Keys') as scenario:
             | key | alt_key |
             | -   | -       |
             |     | {k[2]}  |
-            '''.format(k=scenario.case_keys.cache('main_target', 'alt_key')),
+            '''.format(
+                k=scenario.factories['keys']['id']
+            ),
             schema=pemi.Schema(
                 key=StringField(),
                 alt_key=StringField()

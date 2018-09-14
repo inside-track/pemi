@@ -1,3 +1,5 @@
+import factory
+
 import pemi
 import pemi.testing as pt
 from pemi.fields import *
@@ -30,35 +32,35 @@ class HelloNamePipe(pemi.Pipe):
             'Hello {}'.format
         )
 
-
-with pt.Scenario('Testing HelloNamePipe') as scenario:
-    pipe = HelloNamePipe()
-
-    def case_keys():
-        scooby_ids = pemi.data.UniqueIdGenerator('scooby-{}'.format)
-        while True:
-            scooby_id = next(scooby_ids)
-            yield {
-                'input': {'id': scooby_id},
-                'output': {'id': scooby_id}
-            }
+class KeyFactory(factory.Factory):
+    class Meta:
+        model = dict
+    id = factory.Sequence(lambda n: 'scooby-{}'.format(n))
 
 
-    scenario.setup(
-        runner=pipe.flow,
-        case_keys=case_keys(),
-        sources={
-            'input': pipe.sources['input']
-        },
-        targets={
-            'output': pipe.targets['output']
-        }
-    )
+with pt.Scenario(
+    name='Testing HelloNamePipe',
+    pipe=HelloNamePipe(),
+    factories={
+        'scooby': KeyFactory
+    },
+    sources={
+        'input': lambda pipe: pipe.sources['input']
+    },
+    targets={
+        'output': lambda pipe: pipe.targets['output']
+    },
+    target_case_collectors={
+        'output': pt.CaseCollector(subject_field='id', factory='scooby', factory_field='id')
+    }
+) as scenario:
 
     with scenario.case('Populating salutation') as case:
         case.when(
-            pt.when.source_conforms_to_schema(scenario.sources['input']),
-            pt.when.source_has_keys(scenario.sources['input'], scenario.case_keys),
+            pt.when.source_conforms_to_schema(
+                scenario.sources['input'],
+                {'id': scenario.factories['scooby']['id']}
+            ),
             pt.when.source_field_has_value(scenario.sources['input'], 'name', 'Dawn')
         ).then(
             pt.then.target_field_has_value(scenario.targets['output'], 'salutation', 'Hello Dawn')
@@ -66,8 +68,10 @@ with pt.Scenario('Testing HelloNamePipe') as scenario:
 
     with scenario.case('Name is copied') as case:
         case.when(
-            pt.when.source_conforms_to_schema(scenario.sources['input']),
-            pt.when.source_has_keys(scenario.sources['input'], scenario.case_keys),
+            pt.when.source_conforms_to_schema(
+                scenario.sources['input'],
+                {'id': scenario.factories['scooby']['id']}
+            ),
         ).then(
             pt.then.field_is_copied(scenario.sources['input'], 'name',
                                     scenario.targets['output'], 'name')
@@ -81,7 +85,7 @@ with pt.Scenario('Testing HelloNamePipe') as scenario:
             | {sid[1]} | Spike |
             | {sid[2]} | Angel |
             '''.format(
-                sid=scenario.case_keys.cache('input', 'id')
+                sid=scenario.factories['scooby']['id']
             )
         )
 
@@ -92,12 +96,11 @@ with pt.Scenario('Testing HelloNamePipe') as scenario:
             | {sid[1]} | Hello Spike |
             | {sid[2]} | Hello Angel |
             '''.format(
-                sid=scenario.case_keys.cache('output', 'id')
+                sid=scenario.factories['scooby']['id']
             )
         )
 
         case.when(
-            pt.when.source_conforms_to_schema(scenario.sources['input']),
             pt.when.example_for_source(scenario.sources['input'], ex_input)
         ).then(
             pt.then.target_matches_example(scenario.targets['output'], ex_output)
