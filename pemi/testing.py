@@ -19,7 +19,7 @@ pd.set_option('display.expand_frame_repr', False)
 class KeyFactoryFieldError(Exception): pass
 class CaseStructureError(Exception): pass
 class NoTargetCaseCollectorError(Exception): pass
-
+class UnableToFindCaseError(Exception): pass
 
 def assert_frame_equal(actual, expected, **kwargs):
     try:
@@ -367,11 +367,21 @@ class Scenario:
                     'No case collector defined for target {}'.format(target_name)
                 )
 
-            case_lkp = self.factories[collector.factory].case_lookup(collector.factory_field)
+            def case_lkp(v):
+                lkp = self.factories[collector.factory].case_lookup(collector.factory_field)
+                try:
+                    return lkp[v]
+                except KeyError as err:
+                    raise UnableToFindCaseError(
+                        'Unable to associate field "{}" and value "{}" with a case'.format(
+                            collector.subject_field, v
+                        )
+                    )
+
 
             if len(all_target_data) > 0:
                 all_target_data['__pemi_case__'] = all_target_data[collector.subject_field].apply(
-                    lambda v: case_lkp[v]
+                    case_lkp
                 )
                 for case, df in all_target_data.groupby(['__pemi_case__'], sort=False):
                     del df['__pemi_case__']
