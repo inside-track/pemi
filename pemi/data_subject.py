@@ -73,8 +73,7 @@ class PdDataSubject(DataSubject):
 
         if len(missing) == 0:
             return True
-        else:
-            raise MissingFieldsError('DataFrame missing expected fields: {}'.format(missing))
+        raise MissingFieldsError('DataFrame missing expected fields: {}'.format(missing))
 
     def _empty_df(self):
         return pd.DataFrame(columns=self.schema.keys())

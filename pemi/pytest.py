@@ -9,7 +9,7 @@ def pytest_generate_tests(metafunc):
         args = pymarks['scenario'].args
         scenario = args[0]
 
-        if len(args) > 1:
+        if args[1] is not None:
             metafunc.config.warn(
                 0, 'WARNING - Only a subset of cases are selected: {}'.format(args)
             )
