@@ -1,6 +1,5 @@
 from collections import namedtuple
 from collections import OrderedDict
-from itertools import tee
 
 import os
 import sys
@@ -94,7 +93,7 @@ class when: #pylint: disable=invalid-name
             ).df
 
             for field, values in key_values.items():
-                data[field] = pd.Series(values, index = data.index)
+                data[field] = pd.Series(values, index=data.index)
 
             source[case].data = data
         return _when
@@ -179,8 +178,8 @@ class then: #pylint: disable=invalid-name
 
     @staticmethod
     def fields_are_copied(source, target, mapping, by=None, source_by=None, target_by=None): #pylint: disable=too-many-arguments
-        source_fields = list(set([m[0] for m in mapping]))
-        target_fields = list(set([m[1] for m in mapping]))
+        source_fields = list({m[0] for m in mapping})
+        target_fields = list({m[1] for m in mapping})
 
         source_by = source_by or by
         target_by = target_by or by or source_by
@@ -274,7 +273,7 @@ class then: #pylint: disable=invalid-name
 
 CaseCollector = namedtuple('CaseCollector', ['subject_field', 'factory', 'factory_field'])
 
-class Scenario:
+class Scenario: #pylint: disable=too-many-instance-attributes, too-many-arguments
     '''
     A scenario blah blah.
 
@@ -283,7 +282,7 @@ class Scenario:
     '''
 
     def __init__(self, name, pipe, factories, sources, targets, target_case_collectors,
-                 flow='flow', selector=None, usefixtures=[]):
+                 flow='flow', selector=None, usefixtures=None):
         self.name = name
         self.pipe = pipe
         self.flow = flow
@@ -292,7 +291,7 @@ class Scenario:
         self.targets = self._setup_subjects(targets)
         self.target_case_collectors = target_case_collectors
         self.selector = selector
-        self.usefixtures = usefixtures
+        self.usefixtures = usefixtures or []
 
         self.cases = OrderedDict()
         self.has_run = False
@@ -313,7 +312,8 @@ class Scenario:
         calling_module = inspect.getouterframes(current_frame)[1].frame.f_locals['__name__']
         self._register_test(calling_module)
 
-    def _setup_factories(self, factories):
+    @staticmethod
+    def _setup_factories(factories):
         return {name: KeyFactory(factory) for name, factory in factories.items()}
 
     def _setup_subjects(self, subjects):
@@ -367,21 +367,9 @@ class Scenario:
                     'No case collector defined for target {}'.format(target_name)
                 )
 
-            def case_lkp(v):
-                lkp = self.factories[collector.factory].case_lookup(collector.factory_field)
-                try:
-                    return lkp[v]
-                except KeyError as err:
-                    raise UnableToFindCaseError(
-                        'Unable to associate field "{}" and value "{}" with a case'.format(
-                            collector.subject_field, v
-                        )
-                    )
-
-
             if len(all_target_data) > 0:
                 all_target_data['__pemi_case__'] = all_target_data[collector.subject_field].apply(
-                    case_lkp
+                    self.factories[collector.factory].case_lookup(collector)
                 )
                 for case, df in all_target_data.groupby(['__pemi_case__'], sort=False):
                     del df['__pemi_case__']
@@ -445,7 +433,7 @@ class Case:
 
 
 
-class KeyFactoryField:
+class KeyFactoryField: #pylint: disable=too-few-public-methods
     '''
     For internal use only.
 
@@ -469,12 +457,12 @@ class KeyFactoryField:
         instance = self.keyfactory.instance(ref)
         if self.field in instance:
             return instance[self.field]
-        else:
-            raise KeyFactoryFieldError(
-                'Key field "{}" not defined for factory {}'.format(
-                    self.field, self.keyfactory.factory
-                )
+
+        raise KeyFactoryFieldError(
+            'Key field "{}" not defined for factory {}'.format(
+                self.field, self.keyfactory.factory
             )
+        )
 
 class KeyFactory:
     '''
@@ -518,18 +506,29 @@ class KeyFactory:
             self.cached[self.case][ref] = self.factory()
         return self.cached[self.case][ref]
 
-    def case_lookup(self, factory_field):
+    def case_lookup(self, collector):
         lkp = {}
         for case_id, cached_keys in self.cached.items():
             for keys in cached_keys.values():
-                if factory_field not in keys:
-                    raise KeyFactoryField(
+                if collector.factory_field not in keys:
+                    raise KeyFactoryFieldError(
                         '"{}" is not a known factory fields for {}'.format(
-                            factory_field, self.factory
+                            collector.factory_field, self.factory
                         )
                     )
-                lkp[keys[factory_field]] = case_id
-        return lkp
+                lkp[keys[collector.factory_field]] = case_id
+
+        def _lkp(v):
+            try:
+                return lkp[v]
+            except KeyError as _err:
+                raise UnableToFindCaseError(
+                    'Unable to associate field "{}" and value "{}" with a case'.format(
+                        collector.subject_field, v
+                    )
+                )
+
+        return _lkp
 
 
 
