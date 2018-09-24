@@ -270,6 +270,45 @@ class then: #pylint: disable=invalid-name
         return _then
 
 
+class SubscriptableLambda: #pylint: disable=too-few-public-methods
+    '''
+    Used to help with putting specific values in example data tables.  For example::
+
+        payload = pt.SubscriptableLambda(lambda cache: json.dumps({
+            'external_id': scenario.factories['students']['external_id'][cache]
+        }))
+
+        response = pt.SubscriptableLambda(lambda cache: json.dumps([{
+            'itk-api': [
+                {'resource_uuid': scenario.factories['students']['uuid'][cache]}
+            ]
+        }]))
+
+        ex_create_response = pemi.data.Table(
+            """
+            | payload             | response             |
+            | -                   | -                    |
+            | {payload[created1]} | {response[created1]} |
+            | {payload[created2]} | {response[created2]} |
+            | {payload[created3]} | {response[created3]} |
+            | {payload[created4]} | {response[created4]} |
+            """.format(
+                payload=payload,
+                response=response
+            ),
+            schema=pemi.Schema(
+                payload=JsonField(),
+                response=JsonField()
+            )
+        )
+    '''
+
+    def __init__(self, func):
+        self.func = func
+
+    def __getitem__(self, key=None):
+        return self.func(key)
+
 
 CaseCollector = namedtuple('CaseCollector', ['subject_field', 'factory', 'factory_field'])
 
