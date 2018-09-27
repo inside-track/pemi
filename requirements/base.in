@@ -12,3 +12,5 @@ jupyterlab
 
 pytest
 pylint
+
+tabulate
