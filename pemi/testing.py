@@ -10,10 +10,13 @@ import pandas as pd
 import pemi
 import pemi.data
 
+from pemi.tabular import PemiTabular
+
 # Imported here for backwards compatiblity
 from pemi.pipe import mock_pipe #pylint: disable=unused-import
 
 pd.set_option('display.expand_frame_repr', False)
+errors_tbl = PemiTabular()
 
 def assert_frame_equal(actual, expected, **kwargs):
     try:
@@ -388,15 +391,19 @@ class Case:
         except AssertionError:
             msg = '\nAssertion Error for {}'.format(self)
             for name, source in self.scenario.sources.items():
-                msg += '\nSource {}:\n{}'.format(name, source.subject.to_pd())
+                source_df = source.subject.to_pd()
+                msg += '\nSource {}:\n{}'.format(name, source_df)
+                errors_tbl.add(df=source_df, df_name="\nSource {}".format(name))
             for name, target in self.scenario.targets.items():
-                msg += '\nTarget {}:\n{}'.format(name, target.subject.to_pd())
+                target_df = target.subject.to_pd()
+                msg += '\nTarget {}:\n{}'.format(name, target_df)
+                errors_tbl.add(df=target_df, df_name="\nTarget {}".format(name))
+            errors_tbl.render(file='pemi-errors.html')
             raise AssertionError(msg)
         except CaseStructureError:
             msg = '\nCase Structure Error for {}'.format(self)
             msg += '\tNo .then clause found in test case'
             raise CaseStructureError(msg)
-
 
     def __str__(self):
         return "<Case '{}' ({})>".format(self.name, id(self))

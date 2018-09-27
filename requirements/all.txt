@@ -77,6 +77,7 @@ sphinx-rtd-theme==0.4.0
 sphinx==1.7.5
 sphinxcontrib-websupport==1.1.0  # via sphinx
 sqlalchemy==1.2.8
+tabulate==0.8.2
 terminado==0.8.1          # via notebook
 testpath==0.3.1           # via nbconvert
 text-unidecode==1.2       # via faker
