@@ -1,3 +1,21 @@
+'''
+
+Testing is described with examples in :doc:`tests`.
+
+.. autoclass:: Scenario
+  :members:
+
+.. autoclass:: Case
+  :members:
+
+.. autoclass:: when
+  :members:
+
+.. autoclass:: then
+  :members:
+
+'''
+
 from collections import namedtuple
 from collections import OrderedDict
 
@@ -12,6 +30,10 @@ import pemi.data
 
 # Imported here for backwards compatiblity
 from pemi.pipe import mock_pipe #pylint: disable=unused-import
+
+
+#pylint: disable=too-many-lines
+
 
 pd.set_option('display.expand_frame_repr', False)
 
@@ -48,6 +70,25 @@ class when: #pylint: disable=invalid-name
 
     @staticmethod
     def source_field_has_value(source, field, value):
+        '''
+        Sets the value of a specific field to a specific value.
+
+        Args:
+            source (scenario.sources[]): The scenario source data subject.
+
+            field (str): Name of field.
+
+            value (str): Value to set for the field.
+
+        Examples:
+            Set the value of the field ``name`` to the string value ``Buffy`` in
+            the scenario source ``main``::
+
+                case.when(
+                    when.source_field_has_value(scenario.sources['main'], 'name', 'Buffy')
+                )
+        '''
+
         def _when(case):
             nrecords = len(source[case].data)
             if hasattr(value, '__next__'):
@@ -59,6 +100,31 @@ class when: #pylint: disable=invalid-name
 
     @staticmethod
     def source_fields_have_values(source, mapping):
+        '''
+        Sets the value of a multiples fields to a specific values.
+
+        Args:
+            source (scenario.sources[]): The scenario source data subject.
+
+            mapping (dict): Dictionary where the keys are the names of fields and the values
+                are the values those fields are to be set to.
+
+        Examples:
+            Set the value of the field ``name`` to the string value ``Buffy`` and
+            the value of the field ``vampires_slain`` to ``133`` in
+            the scenario source ``main``::
+
+                case.when(
+                    when.source_fields_have_values(
+                        scenario.sources['main'],
+                        {
+                            'name': 'Buffy',
+                            'vampires_slain': 133
+                        }
+                    )
+                )
+        '''
+
         def _when(case):
             for field, value in mapping.items():
                 nrecords = len(source[case].data)
@@ -71,6 +137,35 @@ class when: #pylint: disable=invalid-name
 
     @staticmethod
     def example_for_source(source, table):
+        """
+        Set specific rows and columns to specific values.
+
+        Args:
+            source (scenario.sources[]): The scenario source data subject.
+
+            table (pemi.data.Table): Pemi data table to use for specifying data.
+
+        Example:
+            Given a Pemi data table, specify rows and columns for the source `main`::
+
+                case.when(
+                    when.example_for_source(
+                        scenario.sources['main'],
+                        pemi.data.Table(
+                            '''
+                            | id       | name  |
+                            | -        | -     |
+                            | {sid[1]} | Spike |
+                            | {sid[2]} | Angel |
+                            '''.format(
+                                sid=scenario.factories['vampires']['id']
+                            )
+                        )
+                    )
+                )
+
+        """
+
         def _when(case):
             source[case].data = table.df
 
@@ -78,6 +173,34 @@ class when: #pylint: disable=invalid-name
 
     @staticmethod
     def source_conforms_to_schema(source, key_factories=None):
+        '''
+        Creates 3 records and fills out data for a data source subject
+        that conforms to the data types specified by the data
+        subject's schema.
+
+        Args:
+            source (scenario.sources[]): The scenario source data subject.
+
+            key_factories (dict): A dictionary where the keys are the names of fields
+            and the values are the field value generator originating from a scenario
+            key factory (just see the example ;)).
+
+        Example:
+
+            For the source subject 'main', this will generate faked data that conforms
+            to the schema defined for main.  It will also populate the ``id`` field
+            with values generated from the ``id`` field in the ``vampires`` factory::
+
+                case.when(
+                    when.source_conforms_to_schema(
+                        scenario.sources['main'],
+                        {'id': scenario.factories['vampires']['id']}
+                    )
+                )
+
+        '''
+
+
         key_factories = key_factories or {}
         ntestrows = 3
 
@@ -108,6 +231,25 @@ class then: #pylint: disable=invalid-name
 
     @staticmethod
     def target_field_has_value(target, field, value):
+        '''
+        Asserts that a specific field has a specific value.
+
+        Args:
+            target (scenario.targets[]): The scenario target data subject.
+
+            field (str): Name of field.
+
+            value (str): Value of the field that is expected.
+
+        Examples:
+            Asserts that the value of the field ``name`` is set to the string value ``Buffy`` in
+            the scenario target ``main``::
+
+                case.then(
+                    then.target_field_has_value(scenario.targets['main'], 'name', 'Buffy')
+                )
+        '''
+
         def _then(case):
             target_data = pd.Series(list(target[case].data[field]))
             expected_data = pd.Series([value] * len(target_data), index=target_data.index)
@@ -121,6 +263,31 @@ class then: #pylint: disable=invalid-name
 
     @staticmethod
     def target_fields_have_values(target, mapping):
+        '''
+        Asserts that multiple fields have specific values.
+
+        Args:
+            target (scenario.targets[]): The scenario target data subject.
+
+            mapping (dict): Dictionary where the keys are the names of fields and the values
+                are the expected values those fields.
+
+        Examples:
+            Asserts that the value of the field ``name`` is the string value ``Buffy`` and
+            the value of the field ``vampires_slain`` is ``133`` in
+            the scenario target ``main``::
+
+                case.then(
+                    then.target_fields_have_values(
+                        scenario.targets['main'],
+                        {
+                            'name': 'Buffy',
+                            'vampires_slain': 133
+                        }
+                    )
+                )
+        '''
+
         def _then(case):
             actual = target[case].data[list(mapping.keys())]
             expected = pd.DataFrame(index=actual.index)
@@ -132,6 +299,41 @@ class then: #pylint: disable=invalid-name
 
     @staticmethod
     def target_matches_example(target, expected_table, by=None):
+        """
+        Asserts that a given target matches an example data table
+
+        Args:
+            target (scenario.targets[]): The scenario target data subject.
+
+            expected_table (pemi.data.Table): Expected result data.  If the table
+                has fewer columns than the pipe generates, those extra columns are
+                not considered in the comparison.
+
+            by (list): A list of field names to sort the result data by before
+                performing the comparison.
+
+        Examples:
+            Asserts that the scenario target ``main`` conforms to the expected data::
+
+                case.then(
+                    then.target_matches_example(
+                        scenario.targets['main'],
+                        pemi.data.Table(
+                            '''
+                            | id       | name  |
+                            | -        | -     |
+                            | {sid[1]} | Spike |
+                            | {sid[2]} | Angel |
+                            '''.format(
+                                sid=scenario.factories['vampires']['id']
+                            )
+                        ),
+                        by=['id'] #esp important if the ids are generated randomly
+                    )
+                )
+        """
+
+
         subject_fields = expected_table.defined_fields
 
         def _then(case):
@@ -152,6 +354,40 @@ class then: #pylint: disable=invalid-name
     @staticmethod
     def field_is_copied(source, source_field, target, target_field, by=None, #pylint: disable=too-many-arguments
                         source_by=None, target_by=None):
+        '''
+        Asserts that a field value is copied from the source to the target.
+
+        Args:
+            source (scenario.sources[]): The scenario source data subject.
+
+            source_field (str): The name of the source field.
+
+            target (scenario.targets[]): The scenario target data subject.
+
+            target_field (str): The name of the target field.
+
+            by (list): A list of field names to sort the data by before
+                performing the comparison.
+
+            source_by (list): A list of field names to sort the source data by before
+                performing the comparison (uses ``by`` if not given).
+
+            target_by (list): A list of field names to sort the target data by before
+                performing the comparison (uses ``by`` if not given).
+
+        Examples:
+            Asserts that the value of the source field ``name`` is copied to the
+            target field ``slayer_name``::
+
+                case.then(
+                    then.field_is_copied(
+                        scenario.sources['main'], 'name',
+                        scenario.targets['main'], 'slayer_name',
+                        by=['id']
+                    )
+                )
+        '''
+
         source_by = source_by or by
         target_by = target_by or by or source_by
 
@@ -178,6 +414,44 @@ class then: #pylint: disable=invalid-name
 
     @staticmethod
     def fields_are_copied(source, target, mapping, by=None, source_by=None, target_by=None): #pylint: disable=too-many-arguments
+        '''
+        Asserts that various field values are copied from the source to the target.
+
+        Args:
+            source (scenario.sources[]): The scenario source data subject.
+
+            target (scenario.targets[]): The scenario target data subject.
+
+            mapping (list): A list of tuples.  Each tuple contains the source field name
+                and target field name, in that order.
+
+            by (list): A list of field names to sort the data by before
+                performing the comparison.
+
+            source_by (list): A list of field names to sort the source data by before
+                performing the comparison (uses ``by`` if not given).
+
+            target_by (list): A list of field names to sort the target data by before
+                performing the comparison (uses ``by`` if not given).
+
+        Examples:
+            Asserts that the value of the source field ``name`` is copied to the
+            target field ``slayer_name`` and ``num`` is copied to ``vampires_slain``::
+
+                case.then(
+                    then.fields_are_copied(
+                        scenario.sources['main'],
+                        scenario.targets['main'],
+                        [
+                            ('name', 'slayer_name'),
+                            ('num', 'vampires_slain')
+                        ],
+                        by=['id']
+                    )
+                )
+        '''
+
+
         source_fields = list({m[0] for m in mapping})
         target_fields = list({m[1] for m in mapping})
 
@@ -210,6 +484,27 @@ class then: #pylint: disable=invalid-name
 
     @staticmethod
     def target_does_not_have_fields(target, fields):
+        '''
+        Asserts that the target does not have certain fields.
+
+        Args:
+            target (scenario.targets[]): The scenario target data subject.
+
+            fields (list): List of field names that should not be on the target.
+
+        Examples:
+            Asserts that the scenario target ``main`` does not have the fields
+            ``sparkle_factor`` or ``is_werewolf``::
+
+                case.then(
+                    then.target_does_not_have_fields(
+                        scenario.targets['main'],
+                        ['sparkle_factor', 'is_werewolf']
+                    )
+                )
+        '''
+
+
         def _then(case):
             unexpected_fields = set(fields) & set(target[case].data.columns)
             if len(unexpected_fields) > 0:
@@ -223,6 +518,30 @@ class then: #pylint: disable=invalid-name
 
     @staticmethod
     def target_has_fields(target, fields, only=False):
+        '''
+        Asserts that the target has certain fields.
+
+        Args:
+            target (scenario.targets[]): The scenario target data subject.
+
+            fields (list): List of field names that should not be on the target.
+
+            only (bool): Specifies whether the target should only have the fields listed.  Raises
+                an exception if there are additional fields.
+
+        Examples:
+            Asserts that the scenario target ``main`` only has the fields
+            ``name`` and ``vampires_slain``::
+
+                case.then(
+                    then.target_has_fields(
+                        scenario.targets['main'],
+                        ['name', 'vampires_slain'],
+                        only=True
+                    )
+                )
+        '''
+
         def _then(case):
             missing_fields = set(fields) - set(target[case].data.columns)
             extra_fields = set(target[case].data.columns) - set(fields)
@@ -245,6 +564,18 @@ class then: #pylint: disable=invalid-name
 
     @staticmethod
     def target_is_empty(target):
+        '''
+        Asserts that the target has no records.
+
+        Args:
+            target (scenario.targets[]): The scenario target data subject.
+
+        Examples:
+            Asserts that the scenario target ``errors`` does not have any records::
+
+                case.then(then.target_is_empty(scenario.targets['errors'])
+        '''
+
         def _then(case):
             nrecords = len(target[case].data)
             if nrecords != 0:
@@ -258,6 +589,20 @@ class then: #pylint: disable=invalid-name
 
     @staticmethod
     def target_has_n_records(target, expected_n):
+        '''
+        Asserts that the target has a specific number of records.
+
+        Args:
+            target (scenario.targets[]): The scenario target data subject.
+
+            expected_n (int): The number of records expected.
+
+        Examples:
+            Asserts that the scenario target ``main`` has 3 records::
+
+                case.then(then.target_has_n_records(scenario.targets['main'], 3)
+        '''
+
         def _then(case):
             nrecords = len(target[case].data)
             if nrecords != expected_n:
@@ -272,35 +617,48 @@ class then: #pylint: disable=invalid-name
 
 class SubscriptableLambda: #pylint: disable=too-few-public-methods
     '''
-    Used to help with putting specific values in example data tables.  For example::
+    Used to help with putting specific values in example data tables.
 
-        payload = pt.SubscriptableLambda(lambda cache: json.dumps({
-            'external_id': scenario.factories['students']['external_id'][cache]
-        }))
+    Args:
+        func (func): Some python function you want to access as subscriptable.
 
-        response = pt.SubscriptableLambda(lambda cache: json.dumps([{
-            'itk-api': [
-                {'resource_uuid': scenario.factories['students']['uuid'][cache]}
-            ]
-        }]))
+    Examples:
+        In the simplest form::
 
-        ex_create_response = pemi.data.Table(
-            """
-            | payload             | response             |
-            | -                   | -                    |
-            | {payload[created1]} | {response[created1]} |
-            | {payload[created2]} | {response[created2]} |
-            | {payload[created3]} | {response[created3]} |
-            | {payload[created4]} | {response[created4]} |
-            """.format(
-                payload=payload,
-                response=response
-            ),
-            schema=pemi.Schema(
-                payload=JsonField(),
-                response=JsonField()
+            sl = SubscriptableLambda(lambda v: v + 10)
+            sl[3] #=> 13
+
+
+        This class is useful in tests when creating complex methods that need to be used
+        int table data::
+
+            payload = pt.SubscriptableLambda(lambda ref: json.dumps({
+                'external_id': scenario.factories['students']['external_id'][ref]
+            }))
+
+            response = pt.SubscriptableLambda(lambda ref: json.dumps([{
+                'itk-api': [
+                    {'resource_uuid': scenario.factories['students']['uuid'][ref]}
+                ]
+            }]))
+
+            ex_create_response = pemi.data.Table(
+                """
+                | payload             | response             |
+                | -                   | -                    |
+                | {payload[created1]} | {response[created1]} |
+                | {payload[created2]} | {response[created2]} |
+                | {payload[created3]} | {response[created3]} |
+                | {payload[created4]} | {response[created4]} |
+                """.format(
+                    payload=payload,
+                    response=response
+                ),
+                schema=pemi.Schema(
+                    payload=JsonField(),
+                    response=JsonField()
+                )
             )
-        )
     '''
 
     def __init__(self, func):
@@ -314,10 +672,44 @@ CaseCollector = namedtuple('CaseCollector', ['subject_field', 'factory', 'factor
 
 class Scenario: #pylint: disable=too-many-instance-attributes, too-many-arguments
     '''
-    A scenario blah blah.
+    A **Scenario** describes the transformation that is being tested
+    (a Pemi pipe), and the data sources and targets that are the
+    subject of the test.  Scenarios are composed of one more **Cases**.
 
-    Args::
-       blah blah
+    Args:
+        name (str): The name of a scenario.  Multiple scenarios may be present in a file,
+            but the names of each scenario must be unique.
+
+        pipe (pemi.Pipe): The Pemi pipe that is the main subject of the test.  Test
+            data will be provided to the sources of the pipe (defined below), and the pipe
+            will be executed.  Note that the pipe is only executed once per scenario.
+
+        flow (str): The name of the method used to execute the pipe (default: `flow`).
+
+        factories(dict): A dictionary where the keys are the names of factories and
+            the values are FactoryBoy factories that will be used to generate unique keys.
+
+        sources (dict): A dictionary where the keys are the names of sources that will
+            be the subjects of testing.  The values are methods that accept the pipe
+            referenced in the **pipe** argument above and return the data subject that
+            will be used as a source.
+
+        targets (dict): A dictionary where the keys are the names of targets that will
+            be the subjects of testing.  The values are methods that accept the pipe
+            referenced in the **pipe** argument above and return the data subject that
+            will be used as a target.
+
+        target_case_collectors (dict): A dictionary where the keys are the names of the
+            targets that will be the subjects of testing.  The values are ``CaseCollector``
+            objects that tie a field in the scenario's target to the field in a given factory.
+            Every named target needs to have a case collector.
+
+        selector (str): A string representing a regular expression.  Any case names that
+            **do not** match this regex will be excluded from testing.
+
+        usefixtures (str): Name of a Pytest fixture to use for the scenario.  Often used
+            for database setup/teardown options.
+
     '''
 
     def __init__(self, name, pipe, factories, sources, targets, target_case_collectors,
@@ -416,7 +808,14 @@ class Scenario: #pylint: disable=too-many-instance-attributes, too-many-argument
 
 class Case:
     '''
-    A case blah blah....
+    A **Case** is a set of **Conditions** and **Expectations** that describe
+    how the pipe is supposed to function.
+
+    Args:
+
+        name (str): The name of the case.  The names of cases within a scenario must be unique.
+
+        scenario (pemi.testing.Scenario): The scenario object that this case is associated with.
     '''
 
     def __init__(self, name, scenario):

@@ -1,5 +1,5 @@
-Pipes
-=====
+pipe
+====
 
 .. currentmodule:: pemi.pipe
 

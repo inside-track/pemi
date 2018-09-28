@@ -66,6 +66,12 @@ def lint(ctx):
     ctx.run('docker-compose run app pylint --rcfile pemi/.pylintrc pemi')
     ctx.run('docker-compose run app pylint --rcfile tests/.pylintrc tests')
 
+
+@task
+def doc_generate(ctx):
+    'Generates documents locally and writes to docs/_build/html'
+    ctx.run('docker-compose run -w /app/docs --rm app sphinx-build -E . _build/html')
+
 @task
 def ps(ctx):
     'View environment containers'

@@ -1,5 +1,5 @@
-Schemas
-=======
+schema
+======
 
 .. automodule:: pemi.schema
    :members:
