@@ -1,6 +1,12 @@
 Pemi Changelog
 ==============
 
+v0.4.3
+------
+
+* Adds PemiTabular methods that will create an HTML file when tests fail.  This can
+  help with debugging failed tests.
+
 v0.4.0
 ------
 
