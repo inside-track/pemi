@@ -61,6 +61,7 @@ send2trash==1.5.0         # via notebook
 simplegeneric==0.8.1      # via ipython
 six==1.11.0               # via astroid, bleach, faker, html5lib, more-itertools, prompt-toolkit, pylint, pytest, python-dateutil, traitlets
 sqlalchemy==1.2.8
+tabulate==0.8.2
 terminado==0.8.1          # via notebook
 testpath==0.3.1           # via nbconvert
 text-unidecode==1.2       # via faker
