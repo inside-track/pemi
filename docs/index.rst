@@ -46,7 +46,7 @@ Index
 
 * :doc:`install`
 * :doc:`concepts_features`
-* :doc:`testing`
+* :doc:`tests`
 * :doc:`tutorial`
 * :doc:`roadmap`
 
@@ -57,7 +57,7 @@ Index
 
    install.rst
    concepts_features.rst
-   testing.rst
+   tests.rst
    tutorial.rst
    roadmap.rst
 
@@ -67,6 +67,7 @@ Index
 * :doc:`pipe`
 * :doc:`data_subject`
 * :doc:`schema`
+* :doc:`testing`
 
 .. toctree::
    :maxdepth: 2
@@ -76,7 +77,7 @@ Index
    pipe.rst
    data_subject.rst
    schema.rst
-
+   testing.rst
 
 Indices and tables
 ==================

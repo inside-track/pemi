@@ -1,5 +1,5 @@
-Data Subjects
-=============
+data_subject
+============
 
 
 .. currentmodule:: pemi.data_subject
