@@ -1,10 +1,6 @@
 Roadmap
 =======
 
-* v0.5
-
-  * Refactor testing to be more intelligible.  Replace case keys with id factories.
-
 * Future
 
   * SQLAlchemy/Spark as plugins
