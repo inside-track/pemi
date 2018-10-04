@@ -59,7 +59,7 @@ WORKDIR /app
 COPY ./requirements/all.txt requirements/all.txt
 RUN pip install --upgrade pip
 RUN pip install pip-tools invoke && rm -rf /root/.cache
-RUN pip install -r requirements/all.txt && rm -rf /root/.cache
+RUN pip install --ignore-installed -r requirements/all.txt && rm -rf /root/.cache
 
 # Configure Jupyterlab
 ENV PYTHONPATH /app
