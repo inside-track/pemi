@@ -1,6 +1,11 @@
 Pemi Changelog
 ==============
 
+v0.5.1
+------
+
+* Decimal faker now honors precision/scale when faking data.
+
 v0.5.0
 ------
 
