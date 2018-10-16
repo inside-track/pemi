@@ -274,10 +274,7 @@ with pt.Scenario(
             '''.format(
                 b=scenario.factories['beers']['id']
             ),
-            schema=SCHEMAS['beers'].merge(pemi.Schema(
-                abv=DecimalField(faker=lambda: pemi.data.fake.pydecimal(2, 2, positive=True)),
-                price=DecimalField(faker=lambda: pemi.data.fake.pydecimal(2, 2, positive=True)),
-            ))
+            schema=SCHEMAS['beers']
         )
 
         beer_sales_table = pemi.data.Table(

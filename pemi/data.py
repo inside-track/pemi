@@ -9,8 +9,7 @@ import pemi
 from pemi.fields import *
 
 
-fake = Factory.create() #pylint: disable=invalid-name
-
+FAKER = Factory.create()
 
 class UniqueIdGenerator: #pylint: disable=too-few-public-methods
     '''
@@ -49,19 +48,36 @@ class UniqueIdGenerator: #pylint: disable=too-few-public-methods
 
 class InvalidHeaderSeparatorError(Exception): pass
 
-default_fakers = { #pylint: disable=invalid-name
-    IntegerField:  fake.pyint, #pylint: disable=no-member
-    StringField:   fake.word, #pylint: disable=no-member
-    DateField:     fake.date_object, #pylint: disable=no-member
-    DateTimeField: fake.date_time, #pylint: disable=no-member
-    FloatField:    fake.pyfloat, #pylint: disable=no-member
-    DecimalField:  fake.pydecimal, #pylint: disable=no-member
-    BooleanField:  fake.pybool, #pylint: disable=no-member
-    JsonField:     lambda: fake.pydict(5, True, 'str', 'int', 'date') #pylint: disable=no-member
-}
 
+class Table: #pylint: disable=too-few-public-methods
 
-class Table: #pylint: disable=too-many-arguments,too-few-public-methods
+    #pylint: disable=no-member
+    @staticmethod
+    def _fake_decimal(field):
+        def digits(precision, scale):
+            left_digits = FAKER.random_int(min=0, max=precision - scale)
+            right_digits = FAKER.random_int(min=0, max=scale)
+
+            if left_digits == right_digits == 0:
+                left_digits = precision - scale
+                right_digits = scale
+
+            return {'left_digits': left_digits, 'right_digits': right_digits}
+
+        return lambda: FAKER.pydecimal(**digits(field.precision, field.scale))
+
+    DEFAULT_FAKERS = {
+        IntegerField:  lambda field: FAKER.pyint,
+        StringField:   lambda field: FAKER.word,
+        DateField:     lambda field: FAKER.date_object,
+        DateTimeField: lambda field: FAKER.date_time,
+        FloatField:    lambda field: FAKER.pyfloat,
+        DecimalField:  _fake_decimal.__func__,
+        BooleanField:  lambda field: FAKER.pybool,
+        JsonField:     lambda field: lambda: FAKER.pydict(5, True, 'str', 'int', 'date')
+    }
+    #pylint: enable=no-member
+
     def __init__(self, markdown=None, nrows=10,
                  schema=pemi.Schema(), coerce_with=None):
         self.markdown = markdown
@@ -117,8 +133,10 @@ class Table: #pylint: disable=too-many-arguments,too-few-public-methods
         return df
 
     def _fake_series(self, column, nsample=5):
-        default_faker = default_fakers.get(type(self.schema[column]))
-        faker_func = self.schema[column].metadata.get('faker', default_faker)
+        field = self.schema[column]
+
+        default_faker = self.DEFAULT_FAKERS.get(type(field))(field)
+        faker_func = field.metadata.get('faker', default_faker)
         fake_data = [faker_func() for i in range(nsample)]
         return pd.Series(fake_data)
 
