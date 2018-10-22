@@ -43,6 +43,7 @@ class KeyFactoryFieldError(Exception): pass
 class CaseStructureError(Exception): pass
 class NoTargetCaseCollectorError(Exception): pass
 class UnableToFindCaseError(Exception): pass
+class NoTargetDataError(AssertionError): pass
 
 def assert_frame_equal(actual, expected, **kwargs):
     try:
@@ -253,6 +254,9 @@ class then: #pylint: disable=invalid-name
         '''
 
         def _then(case):
+            if len(target[case].data[field]) < 1:
+                raise NoTargetDataError('Target has no data for case')
+
             target_data = pd.Series(list(target[case].data[field]))
             expected_data = pd.Series([value] * len(target_data), index=target_data.index)
 
@@ -291,6 +295,9 @@ class then: #pylint: disable=invalid-name
         '''
 
         def _then(case):
+            if len(target[case].data) < 1:
+                raise NoTargetDataError('Target has no data for case')
+
             actual = target[case].data[list(mapping.keys())]
             expected = pd.DataFrame(index=actual.index)
             for k, v in mapping.items():
@@ -825,6 +832,7 @@ class Case:
         self.scenario = scenario
         self.whens = []
         self.thens = []
+        self.expected_exception = None
 
     def __enter__(self):
         return self
@@ -833,16 +841,44 @@ class Case:
         pass
 
     def when(self, *funcs):
+        '''
+        Accepts a list of functions that are used to set up the data for a specific case.
+        Each of the functions should accept one argument, which is the case object.
+        See pemi.testing.when for examples.
+        '''
+
         self.whens.extend(funcs)
         return self
 
     def then(self, *funcs):
+        '''
+        Accepts a list of functions that are used to test the result data for a specific case.
+        Each of the functions should accept one argument, which is the case object.
+        See pemi.testing.then for examples.
+        '''
+
         self.thens.extend(funcs)
         return self
+
+    def expect_exception(self, exception):
+        '''
+        Used to indicate that the test case is expected to fail with exception ``exception``.
+        If the test case raises this exception, then it will pass.  If it does not raise the
+        exception, then it will fail.
+        '''
+
+        self.expected_exception = exception
 
     def setup(self):
         for i_when in self.whens:
             i_when(self)
+
+    def _assert_then(self, i_then):
+        if self.expected_exception:
+            with pytest.raises(self.expected_exception):
+                i_then(self)
+        else:
+            i_then(self)
 
     def assert_case(self):
         self.scenario.run()
@@ -851,7 +887,8 @@ class Case:
             if len(self.thens) < 1:
                 raise CaseStructureError
             for i_then in self.thens:
-                i_then(self)
+                self._assert_then(i_then)
+
         except AssertionError:
             errors_tbl = PemiTabular()
             msg = '\nAssertion Error for {}'.format(self)

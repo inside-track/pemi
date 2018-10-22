@@ -548,6 +548,132 @@ with pt.Scenario(
         )
 
 
+class FilteredPipe(pemi.Pipe):
+    def __init__(self):
+        super().__init__()
+
+        self.source(
+            pemi.PdDataSubject,
+            name='main',
+            schema=pemi.Schema(
+                id=StringField(),
+                first_name=StringField(),
+                last_name=StringField()
+            )
+        )
+
+        self.target(
+            pemi.PdDataSubject,
+            name='main',
+            schema=pemi.Schema(
+                tid=StringField(),
+                first_name=StringField(),
+                last_name=StringField()
+            )
+        )
+
+    def flow(self):
+        self.targets['main'].df = self.sources['main'].df.query('last_name != "Test"')
+
+
+with pt.Scenario(
+    name='Testing with data filters',
+    pipe=FilteredPipe(),
+    factories={
+        'student': StudentKeyFactory
+    },
+    sources={
+        'main': lambda pipe: pipe.sources['main']
+    },
+    targets={
+        'main': lambda pipe: pipe.targets['main']
+    },
+    target_case_collectors={
+        'main': pt.CaseCollector(subject_field='id', factory='student', factory_field='id')
+    }
+) as scenario:
+
+    with scenario.case('Test records are filtered out') as case:
+        ex_main_source = pemi.data.Table(
+            '''
+            | id       | last_name |
+            | -        | -         |
+            | {sid[1]} | Sanchez   |
+            | {sid[2]} | Test      |
+            | {sid[3]} | Smith     |
+            '''.format(
+                sid=scenario.factories['student']['id']
+            ),
+            schema=scenario.sources['main'].schema
+        )
+
+        ex_main_target = pemi.data.Table(
+            '''
+            | id       | last_name |
+            | -        | -         |
+            | {sid[1]} | Sanchez   |
+            | {sid[3]} | Smith     |
+            '''.format(
+                sid=scenario.factories['student']['id']
+            )
+        )
+
+        case.when(
+            pt.when.example_for_source(scenario.sources['main'], ex_main_source),
+        ).then(
+            pt.then.target_matches_example(scenario.targets['main'], ex_main_target),
+        )
+
+    with scenario.case('target_field_has_value should fail with no data') as case:
+        ex_main_source = pemi.data.Table(
+            '''
+            | id       | last_name |
+            | -        | -         |
+            | {sid[1]} | Test      |
+            | {sid[2]} | Test      |
+            | {sid[3]} | Test      |
+            '''.format(
+                sid=scenario.factories['student']['id']
+            ),
+            schema=scenario.sources['main'].schema
+        )
+
+        case.when(
+            pt.when.example_for_source(scenario.sources['main'], ex_main_source),
+        ).then(
+            pt.then.target_field_has_value(
+                scenario.targets['main'], 'last_name', 'Test'
+            )
+        ).expect_exception(pt.NoTargetDataError)
+
+
+    with scenario.case('target_fields_have_values should fail with no data') as case:
+        ex_main_source = pemi.data.Table(
+            '''
+            | id       | last_name | first_name |
+            | -        | -         | -          |
+            | {sid[1]} | Test      | Alpha      |
+            | {sid[2]} | Test      | Alpha      |
+            | {sid[3]} | Test      | Alpha      |
+            '''.format(
+                sid=scenario.factories['student']['id']
+            ),
+            schema=scenario.sources['main'].schema
+        )
+
+        case.when(
+            pt.when.example_for_source(scenario.sources['main'], ex_main_source),
+        ).then(
+            pt.then.target_fields_have_values(
+                scenario.targets['main'],
+                {
+                    'last_name': 'Test',
+                    'first_name': 'Alpha'
+                }
+            )
+        ).expect_exception(pt.NoTargetDataError)
+
+
 
 class ChildPipe(pemi.Pipe):
     def __init__(self, **kwargs):
