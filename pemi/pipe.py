@@ -172,6 +172,31 @@ class Pipe:
         self.connections.append(conn)
         return conn
 
+    def job_summarize(self, plumbing=None, cur_name='', ret_arr=None):
+        ret_arr = ret_arr or {}
+        plumbing = plumbing or self
+        for key in plumbing.pipes:
+            if key == 'self':
+                ret_arr[cur_name] = {'sources': {}, 'targets': {}}
+                for source in plumbing.pipes[key].sources:
+                    source_val = {
+                        'rows': len(plumbing.pipes[key].sources[source].df.index),
+                        'columns': (len(plumbing.pipes[key].sources[source].df.columns)),
+                        'size': plumbing.pipes[key].sources[source].df.size
+                    }
+                    ret_arr[cur_name]['sources'][source] = source_val
+                for target in plumbing.pipes[key].targets:
+                    target_val = {
+                        'rows': len(plumbing.pipes[key].targets[target].df.index),
+                        'columns': len(plumbing.pipes[key].targets[target].df.columns),
+                        'size': plumbing.pipes[key].targets[target].df.size
+                    }
+                    ret_arr[cur_name]['targets'][target] = target_val
+            else:
+                self.job_summarize(plumbing.pipes[key], key, ret_arr)
+        return ret_arr
+
+
 
     def to_pickle(self, picklepipe=None):
         '''
