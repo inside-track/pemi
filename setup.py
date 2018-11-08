@@ -88,7 +88,7 @@ setup(
         'graphviz>=0.8',
         'faker>=0.8',
         'pandas-mapper>=0.1.0',
-        'tabulate>=0.8'
+        'tabulate'
     ],
 
     python_requires='>=3',
