@@ -324,7 +324,8 @@ The job pipe can be executed by calling its ``flow`` method::
 Furthermore, if you're running this in a Jupyter notebook, you can see a graph of the
 connections by running::
 
-    MyJob().connections.graph()
+    import pemi.dot
+    pemi.dot.graph(MyJob())
 
 
 Referencing pipes in pipes
