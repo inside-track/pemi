@@ -118,7 +118,7 @@ class PdLookupJoinPipe(pemi.Pipe):
     def _remove_indicator(self, _na):
         if self.indicator:
             indicator_bool = self.targets['main'].df['__indicator__'].apply(
-                lambda v: True if v == 'both' else False
+                lambda v: v == 'both'
             ).astype('bool')
 
             self.targets['main'].df[self.indicator] = indicator_bool
