@@ -81,7 +81,7 @@ class when: #pylint: disable=invalid-name
 
             field (str): Name of field.
 
-            value (str): Value to set for the field.
+            value (str, iter): Value to set for the field.
 
         Examples:
             Set the value of the field ``name`` to the string value ``Buffy`` in
@@ -95,9 +95,14 @@ class when: #pylint: disable=invalid-name
         def _when(case):
             nrecords = len(source[case].data)
             if hasattr(value, '__next__'):
-                source[case].data[field] = pd.Series([next(value) for i in range(nrecords)])
+                values = pd.Series([next(value) for i in range(nrecords)])
             else:
-                source[case].data[field] = pd.Series([value]*nrecords)
+                values = pd.Series([value]*nrecords)
+
+            if field in source.schema:
+                values = values.apply(source.schema[field].coerce)
+
+            source[case].data[field] = values
 
         return _when
 
@@ -132,9 +137,15 @@ class when: #pylint: disable=invalid-name
             for field, value in mapping.items():
                 nrecords = len(source[case].data)
                 if hasattr(value, '__next__'):
-                    source[case].data[field] = pd.Series([next(value) for i in range(nrecords)])
+                    values = pd.Series([next(value) for i in range(nrecords)])
                 else:
-                    source[case].data[field] = pd.Series([value]*nrecords)
+                    values = pd.Series([value]*nrecords)
+
+                if field in source.schema:
+                    values = values.apply(source.schema[field].coerce)
+
+                source[case].data[field] = values
+
 
         return _when
 

@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 import factory
 import pandas as pd
@@ -32,7 +34,8 @@ class BasicPipe(pemi.Pipe):
             schema=pemi.Schema(
                 id=StringField(),
                 first_name=StringField(),
-                last_name=StringField(faker=lambda: 'Faked')
+                last_name=StringField(faker=lambda: 'Faked'),
+                birthdate=DateField(format='%m/%d/%Y')
             )
         )
 
@@ -43,7 +46,8 @@ class BasicPipe(pemi.Pipe):
                 tid=StringField(),
                 first_name=StringField(),
                 last_name=StringField(),
-                full_name=StringField()
+                full_name=StringField(),
+                birthdate=DateField()
             )
         )
 
@@ -58,6 +62,7 @@ class BasicPipe(pemi.Pipe):
             target_df['full_name'] = source_df.apply(
                 lambda row: '{} {}'.format(row['first_name'], row['last_name']), axis=1
             )
+            target_df['birthdate'] = source_df['birthdate']
 
         self.targets['main'].df = target_df
 
@@ -91,6 +96,16 @@ with pt.Scenario(
             pt.then.target_field_has_value(scenario.targets['main'], 'full_name', 'Joe Jones')
         )
 
+    with scenario.case('when.source_field_has_value coerces values') as case:
+        case.when(
+            pt.when.source_field_has_value(scenario.sources['main'], 'id',
+                                           scenario.factories['student']['id'][1]),
+            pt.when.source_field_has_value(scenario.sources['main'], 'birthdate', '01/09/2014')
+        ).then(
+            pt.then.target_field_has_value(scenario.targets['main'], 'birthdate',
+                                           datetime.datetime(2014, 1, 9).date())
+        )
+
     with scenario.case('Using when.source_fields_have_values') as case:
         case.when(
             pt.when.source_fields_have_values(scenario.sources['main'], mapping={
@@ -100,6 +115,19 @@ with pt.Scenario(
             })
         ).then(
             pt.then.target_field_has_value(scenario.targets['main'], 'full_name', 'Joe Jones')
+        )
+
+    with scenario.case('when.source_fields_have_values coerces values') as case:
+        case.when(
+            pt.when.source_fields_have_values(scenario.sources['main'], mapping={
+                'id': scenario.factories['student']['id'][1],
+                'first_name': 'Joe',
+                'last_name': 'Jones',
+                'birthdate': '01/09/2014'
+            })
+        ).then(
+            pt.then.target_field_has_value(scenario.targets['main'], 'birthdate',
+                                           datetime.datetime(2014, 1, 9).date())
         )
 
     with scenario.case('Using then.target_fields_have_values') as case:
@@ -263,7 +291,7 @@ with pt.Scenario(
         ).then(
             pt.then.target_has_fields(
                 scenario.targets['main'],
-                ['tid', 'last_name', 'first_name', 'full_name'],
+                ['tid', 'last_name', 'first_name', 'full_name', 'birthdate'],
                 only=True
             )
         )
@@ -573,7 +601,7 @@ class FilteredPipe(pemi.Pipe):
         )
 
     def flow(self):
-        self.targets['main'].df = self.sources['main'].df.query('last_name != "Test"')
+        self.targets['main'].df = self.sources['main'].df.query('last_name != "Test"').copy()
 
 
 with pt.Scenario(
