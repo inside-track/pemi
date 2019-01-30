@@ -32,7 +32,7 @@ SCHEMAS = { #pylint: disable=invalid-name
         name=StringField(),
         style=StringField(),
         abv=FloatField(),
-        price=DecimalField(precision=16, scale=2)
+        price=DecimalField(precision=14, scale=2)
     ),
     'beer_sales': pemi.Schema(
         beer_id=IntegerField(),
