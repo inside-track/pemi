@@ -1,3 +1,4 @@
+import warnings
 import re
 
 def pytest_generate_tests(metafunc):
@@ -10,8 +11,8 @@ def pytest_generate_tests(metafunc):
         scenario = args[0]
 
         if args[1] is not None:
-            metafunc.config.warn(
-                0, 'WARNING - Only a subset of cases are selected: {}'.format(args)
+            warnings.warn(
+                'WARNING - Only a subset of cases are selected: {}'.format(args)
             )
             re_tag = re.compile(args[1])
             for name, _ in list(scenario.cases.items()):
