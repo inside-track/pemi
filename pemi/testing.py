@@ -100,7 +100,10 @@ class when: #pylint: disable=invalid-name
                 values = pd.Series([value]*nrecords)
 
             if field in source.schema:
-                values = values.apply(source.schema[field].coerce)
+                values = values.apply(
+                    lambda v: v if hasattr(v, '__pemi_test_no_coerce__') \
+                        else source.schema[field].coerce(v)
+                )
 
             source[case].data[field] = values
 
@@ -142,7 +145,10 @@ class when: #pylint: disable=invalid-name
                     values = pd.Series([value]*nrecords)
 
                 if field in source.schema:
-                    values = values.apply(source.schema[field].coerce)
+                    values = values.apply(
+                        lambda v, f=field: v if hasattr(v, '__pemi_test_no_coerce__') \
+                            else source.schema[f].coerce(v)
+                    )
 
                 source[case].data[field] = values
 
