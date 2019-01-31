@@ -1,6 +1,21 @@
 Pemi Changelog
 ==============
 
+v0.5.3
+------
+
+* Improved pipe connection graphing.
+* Source has(have) value(s) will now coerce values according to the field types before
+  sending data to pipe to be tested.  This may result in some tests that falsely pass
+  to now start raising errors.
+* Fixed a pytest warning error following pytest upgrade.
+
+
+v0.5.2
+------
+
+* Relaxes some packages requirements.
+
 v0.5.1
 ------
 
