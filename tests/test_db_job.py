@@ -76,7 +76,7 @@ class DenormalizeBeersPipe(pemi.Pipe):
                 name  = StringField(),
                 style = StringField(),
                 abv   = FloatField(),
-                price = DecimalField(precision=16, scale=2)
+                price = DecimalField(precision=14, scale=2)
                 #pylint: enable=bad-whitespace
 
             ),
