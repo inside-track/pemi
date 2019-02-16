@@ -2,6 +2,8 @@ import decimal
 import datetime
 import json
 
+from functools import wraps
+
 import dateutil
 
 import pemi.transforms
@@ -22,6 +24,7 @@ class CoercionError(ValueError): pass
 class DecimalCoercionError(ValueError): pass
 
 def convert_exception(fun):
+    @wraps(fun)
     def wrapper(self, value):
         try:
             coerced = fun(self, value)

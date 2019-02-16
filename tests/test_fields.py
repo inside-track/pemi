@@ -1,5 +1,6 @@
 import datetime
 import decimal
+import pickle
 
 import pytest
 
@@ -27,6 +28,12 @@ class TestField:
         '''
         field = pemi.fields.Field(null='#N/A')
         assert field.null == '#N/A'
+
+    def test_coercion_can_be_pickled_unpickled(self):
+        field = pemi.fields.Field()
+
+        pickle.loads(pickle.dumps(field.coerce))
+
 
 class TestStringField:
     def test_convert_a_string(self):
