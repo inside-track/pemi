@@ -55,16 +55,37 @@ def logs(ctx):
     'Follow docker logs'
     ctx.run('docker-compose logs -f')
 
-@task(help={'pytest': "Arguments to pass to pytest running in the container."})
-def test(ctx, pytest=''):
+DEFAULT_TEST_OPTS = '-s -x -vv --tb=short --color=yes'
+@task(help={
+    'tests': 'Specify the test you want to run - e.g., tests/test_fields.py',
+    'opts': 'Set the options passed to pytest (default: {})'.format(DEFAULT_TEST_OPTS),
+    'ignore': 'Specify the tests you want to ignore - e.g., tests/test_spark_job.py',
+})
+def test(ctx, opts=DEFAULT_TEST_OPTS, tests='tests', ignore=None):
     'Runs the test suite.  User can specifiy pytest options to run specific tests.'
-    ctx.run('docker-compose run app pytest {}'.format(pytest))
 
-@task
-def lint(ctx):
+    if ignore:
+        opts += ' --ignore={}'.format(ignore)
+    ctx.run('docker-compose run app pytest {} {}'.format(opts, tests))
+
+
+@task(help={
+    'all': 'Run all linters (default)',
+    'app': 'Just run the app linter (pemi)',
+    'tests': 'Just run the tests linter',
+    'files': 'Specify files -- eg., pemi/fields.py'
+})
+def lint(ctx, all=False, app=False, tests=False, files=None):
     'Checks code quality with pylint'
-    ctx.run('docker-compose run app pylint --rcfile pemi/.pylintrc pemi')
-    ctx.run('docker-compose run app pylint --rcfile tests/.pylintrc tests')
+    all = all or not (app or tests)
+
+    if all or app:
+        opts = files or 'pemi'
+        ctx.run('docker-compose run app pylint --rcfile pemi/.pylintrc {}'.format(opts))
+
+    if all or tests:
+        opts = files or 'tests'
+        ctx.run('docker-compose run app pylint --rcfile tests/.pylintrc {}'.format(opts))
 
 
 @task
