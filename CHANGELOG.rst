@@ -1,6 +1,11 @@
 Pemi Changelog
 ==============
 
+v0.5.4
+------
+
+* Resolves an issue pickling Pemi fields.
+
 v0.5.3
 ------
 
