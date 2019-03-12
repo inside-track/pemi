@@ -797,3 +797,22 @@ class TestPipeMock:
     def test_parent_target_reassigned(self, real_pipe, mock_pipe):
         assert real_pipe.pipes['parent'].targets['parent_target'].schema \
             == mock_pipe.pipes['parent'].targets['parent_target'].schema
+
+
+def test_raises_on_duplicated_scenarios():
+    scenario1 = pt.Scenario(name='Some Scenario', pipe=BasicPipe(), factories={},
+                            sources={}, targets={}, target_case_collectors={})
+    scenario2 = pt.Scenario(name='Some Scenario', pipe=BasicPipe(), factories={},
+                            sources={}, targets={}, target_case_collectors={})
+
+    with pytest.raises(pemi.testing.DuplicateScenarioError):
+        scenario1._register_test('tests.test_testing') #pylint: disable=protected-access
+        scenario2._register_test('tests.test_testing') #pylint: disable=protected-access
+
+def test_raises_on_duplicated_cases():
+    scenario = pt.Scenario(name='Some Scenario', pipe=BasicPipe(), factories={},
+                           sources={}, targets={}, target_case_collectors={})
+
+    with pytest.raises(pemi.testing.DuplicateCaseError):
+        scenario.case('Some Case')
+        scenario.case('Some Case')

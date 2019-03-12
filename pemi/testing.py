@@ -21,6 +21,7 @@ from collections import OrderedDict
 
 import os
 import sys
+import inspect
 
 import pytest
 import pandas as pd
@@ -696,6 +697,9 @@ class SubscriptableLambda: #pylint: disable=too-few-public-methods
 
 CaseCollector = namedtuple('CaseCollector', ['subject_field', 'factory', 'factory_field'])
 
+class DuplicateScenarioError(Exception): pass
+class DuplicateCaseError(Exception): pass
+
 class Scenario: #pylint: disable=too-many-instance-attributes, too-many-arguments
     '''
     A **Scenario** describes the transformation that is being tested
@@ -758,13 +762,18 @@ class Scenario: #pylint: disable=too-many-instance-attributes, too-many-argument
         @pytest.mark.scenario(self, self.selector)
         def test_scenario(case):
             case.assert_case()
-        setattr(sys.modules[module_name], 'testScenario:{}'.format(self.name), test_scenario)
+        test_attr = 'testScenario:{}'.format(self.name)
+        if hasattr(sys.modules[module_name], test_attr):
+            raise DuplicateScenarioError(
+                'Scenario names must be unique to a module.  '
+                'Duplicate detected: {}'.format(test_attr)
+            )
+        setattr(sys.modules[module_name], test_attr, test_scenario)
 
     def __enter__(self):
         return self
 
     def __exit__(self, *exc):
-        import inspect
         current_frame = inspect.currentframe()
         calling_module = inspect.getouterframes(current_frame)[1].frame.f_locals['__name__']
         self._register_test(calling_module)
@@ -777,6 +786,11 @@ class Scenario: #pylint: disable=too-many-instance-attributes, too-many-argument
         return {name: TestSubject(subject(self.pipe), name) for name, subject in subjects.items()}
 
     def case(self, name):
+        if name in self.cases:
+            raise DuplicateCaseError(
+                'Case names must be unique to a scenario.  Duplicate detected: {}'.format(name)
+            )
+
         case = Case(name, self)
 
         for factory in self.factories.values():
