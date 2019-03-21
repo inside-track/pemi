@@ -43,7 +43,7 @@ class TestPdDataSubject():
             f1=StringField(),
             f2=StringField()
             ),
-            strict_match=True)
+            strict_match_schema=True)
         ds1.df = pd.DataFrame({
             'f1': [1, 2, 3],
             'f2': [1, 2, 3],
@@ -58,7 +58,7 @@ class TestPdDataSubject():
             f2=StringField(),
             f3=StringField()
             ),
-            strict_match=True)
+            strict_match_schema=True)
         ds1.df = pd.DataFrame({
             'f1': [1, 2, 3],
             'f2': [1, 2, 3],

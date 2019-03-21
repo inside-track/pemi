@@ -47,12 +47,12 @@ class DataSubject:
 
 
 class PdDataSubject(DataSubject):
-    def __init__(self, df=None, strict_match=False, **kwargs):
+    def __init__(self, df=None, strict_match_schema=False, **kwargs):
         super().__init__(**kwargs)
 
         if df is None or df.shape == (0, 0):
             df = self._empty_df()
-        self.strict_match = strict_match
+        self.strict_match_schema = strict_match_schema
         self.df = df
 
     def to_pd(self):
@@ -70,7 +70,7 @@ class PdDataSubject(DataSubject):
 
     def validate_schema(self):
         'Verify that the dataframe contains all of the columns specified in the schema'
-        if self.strict_match:
+        if self.strict_match_schema:
             return self.validate_data_frame_columns()
         missing = set(self.schema.keys()) - set(self.df.columns)
         if len(missing) == 0:
