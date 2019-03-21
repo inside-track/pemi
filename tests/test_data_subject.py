@@ -38,6 +38,36 @@ class TestPdDataSubject():
             ds2.connect_from(ds1)
 
 
+    def test_it_catch_inexact_schema(self):
+        ds1 = pemi.PdDataSubject(schema=pemi.Schema(
+            f1=StringField(),
+            f2=StringField()
+            ),
+            strict_match_schema=True)
+        ds1.df = pd.DataFrame({
+            'f1': [1, 2, 3],
+            'f2': [1, 2, 3],
+            'f3': [1, 2, 3]
+            })
+        with pytest.raises(pemi.data_subject.MissingFieldsError):
+            ds1.validate_schema()
+
+    def test_it_pass_exact_df_and_scema(self):
+        ds1 = pemi.PdDataSubject(schema=pemi.Schema(
+            f1=StringField(),
+            f2=StringField(),
+            f3=StringField()
+            ),
+            strict_match_schema=True)
+        ds1.df = pd.DataFrame({
+            'f1': [1, 2, 3],
+            'f2': [1, 2, 3],
+            'f3': [1, 2, 3]
+            })
+        assert ds1.validate_schema()
+
+
+
     def test_it_creates_an_empty_df_with_schema_when_connected_to_empty(self):
         ds1 = pemi.PdDataSubject()
 
