@@ -47,11 +47,12 @@ class DataSubject:
 
 
 class PdDataSubject(DataSubject):
-    def __init__(self, df=None, **kwargs):
+    def __init__(self, df=None, strict_match=False, **kwargs):
         super().__init__(**kwargs)
 
         if df is None or df.shape == (0, 0):
             df = self._empty_df()
+        self.strict_match = strict_match
         self.df = df
 
     def to_pd(self):
@@ -69,11 +70,19 @@ class PdDataSubject(DataSubject):
 
     def validate_schema(self):
         'Verify that the dataframe contains all of the columns specified in the schema'
+        if self.strict_match:
+            return self.validate_data_frame_columns()
         missing = set(self.schema.keys()) - set(self.df.columns)
-
         if len(missing) == 0:
             return True
         raise MissingFieldsError('DataFrame missing expected fields: {}'.format(missing))
+
+    def validate_data_frame_columns(self):
+        'Verify that the schema contains all the columns specefied in the dataframe'
+        missing = set(self.df.columns) - set(self.schema.keys())
+        if len(missing) > 0:
+            raise MissingFieldsError("Schema is missing current columns: {}".format(missing))
+        return True
 
     def _empty_df(self):
         return pd.DataFrame(columns=self.schema.keys())
