@@ -139,3 +139,49 @@ class TestTableConvertMarkdown():
         )
 
         assert_frame_equal(actual.df, expected.df)
+
+    def test_ignores_trailing_comments(self):
+
+        given_table = pemi.data.Table(
+            '''
+            | id | name  |
+            | -  | -     |
+            | 1  | one   |
+            | 2  | two   | # Some comment
+            | 3  | three |
+            ''',
+            schema=pemi.Schema(
+                id=IntegerField(),
+                name=StringField()
+            )
+        )
+
+        expected_df = pd.DataFrame({
+            'id': [1, 2, 3],
+            'name': ['one', 'two', 'three']
+        })
+
+        assert_frame_equal(given_table.df, expected_df)
+
+    def test_honors_embedded_octothorpes(self):
+
+        given_table = pemi.data.Table(
+            '''
+            | id | name  |
+            | -  | -     |
+            | 1  | one   |
+            | 2  | #2    |
+            | 3  | three |
+            ''',
+            schema=pemi.Schema(
+                id=IntegerField(),
+                name=StringField()
+            )
+        )
+
+        expected_df = pd.DataFrame({
+            'id': [1, 2, 3],
+            'name': ['one', '#2', 'three']
+        })
+
+        assert_frame_equal(given_table.df, expected_df)
