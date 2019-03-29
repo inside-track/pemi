@@ -94,7 +94,7 @@ class Table: #pylint: disable=too-few-public-methods
         cleaned = self.markdown
 
         # Remove trailing comments
-        cleaned = re.compile(r'(#.*$)', flags=re.MULTILINE).sub('', cleaned)
+        cleaned = re.compile(r'(#[^\|]*$)', flags=re.MULTILINE).sub('', cleaned)
 
         # Remove whitespace surrouding pipes
         cleaned = re.compile(r'[ \t]*\|[ \t]*').sub('|', cleaned)
