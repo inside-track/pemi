@@ -73,6 +73,9 @@ class JobPipe(pemi.Pipe):
     def flow(self):
         self.connections.flow()
 
+def test_parent_pipe():
+    job_pipe = JobPipe()
+    assert job_pipe.pipes['concat'].parent_pipe == job_pipe
 
 
 class TestPickling():
