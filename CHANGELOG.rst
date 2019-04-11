@@ -1,6 +1,15 @@
 Pemi Changelog
 ==============
 
+v0.5.5
+------
+
+* Raise an exception if duplicate case/scenario names are used
+* New option for data subject connections that will raise an error if schemas fields don't
+  match up with dataframe fields.
+* Allow embedded # in data tables
+
+
 v0.5.4
 ------
 
