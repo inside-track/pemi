@@ -1,10 +1,12 @@
-FROM ubuntu:14.04
+FROM ubuntu:16.04
 
 # Miniconda (w/ Python 3.6)
 RUN apt-get update && apt-get install -y\
     wget \
+    bzip2 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
 ENV CONDA_DIR /opt/conda
 ENV PATH $CONDA_DIR/bin:$PATH
 ENV MINICONDA_VERSION 4.5.4
@@ -21,19 +23,12 @@ RUN cd /tmp && \
     conda install -y python=3.6.5 && \
     conda clean -tipsy
 
-# JAVA 8
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install -y  software-properties-common \
-    && add-apt-repository ppa:webupd8team/java -y \
-    && apt-get update \
-    && echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections \
-    && apt-get install -y oracle-java8-installer \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 # App-specific packages
 RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    libpq-dev \
+    gcc \
+    openjdk-8-jdk \
     graphviz \
     postgresql-client \
     bash-completion \
@@ -58,7 +53,6 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /app
 COPY ./requirements/all.txt requirements/all.txt
 RUN pip install --upgrade pip
-RUN pip install pip-tools invoke && rm -rf /root/.cache
 RUN pip install --ignore-installed -r requirements/all.txt && rm -rf /root/.cache
 
 # Configure Jupyterlab

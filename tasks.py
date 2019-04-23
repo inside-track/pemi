@@ -16,20 +16,26 @@ def package_deploy(ctx):
     ctx.run('twine upload dist/*')
 
 @task
-def compile_requirements(ctx):
+def requirements_compile(ctx):
     '''
     Compile Python requirements without upgrading.
     Docker images need to be rebuilt after running this (inv build).
     '''
-    ctx.run('docker-compose run app inv pip-compile')
+
+    ctx.run('pip-compile requirements/base.in')
+    ctx.run('pip-compile requirements/doc.in')
+    ctx.run('pip-compile requirements/all.in')
 
 @task
-def upgrade_requirements(ctx):
+def requirements_upgrade(ctx):
     '''
     Compile Python requirements with upgrading.
     Docker images need to be rebuilt after running this (inv build).
     '''
-    ctx.run('docker-compose run app inv pip-compile-upgrade')
+
+    ctx.run('pip-compile -U requirements/base.in')
+    ctx.run('pip-compile -U requirements/doc.in')
+    ctx.run('pip-compile -U requirements/all.in')
 
 @task
 def build(ctx):
@@ -102,17 +108,3 @@ def ps(ctx):
 def shell(ctx):
     'Start a shell running in the app container'
     ctx.run('docker-compose run --rm app /bin/bash')
-
-@task
-def pip_compile(ctx):
-    'Compile pip resources.  This should only be run in the container.'
-    ctx.run('pip-compile requirements/base.in')
-    ctx.run('pip-compile requirements/doc.in')
-    ctx.run('pip-compile requirements/all.in')
-
-@task
-def pip_compile_upgrade(ctx):
-    'Upgrate pip resources.  This should only be run in the container.'
-    ctx.run('pip-compile -U requirements/base.in')
-    ctx.run('pip-compile -U requirements/doc.in')
-    ctx.run('pip-compile -U requirements/all.in')
