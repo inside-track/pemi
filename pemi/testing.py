@@ -788,7 +788,10 @@ class Scenario: #pylint: disable=too-many-instance-attributes, too-many-argument
     def case(self, name):
         if name in self.cases:
             raise DuplicateCaseError(
-                'Case names must be unique to a scenario.  Duplicate detected: {}'.format(name)
+                'Case names must be unique to a scenario.  '
+                'Duplicate case detected in scenario "{}": "{}"'.format(
+                    self.cases[name].scenario.name, name
+                )
             )
 
         case = Case(name, self)
