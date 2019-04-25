@@ -36,7 +36,6 @@ class Pipe:
         self.targets = OrderedDict()
         self.pipes = OrderedDict()
         self.connections = pemi.connections.PipeConnections()
-        self.parent_pipe = None
 
         self.pipes['self'] = self
 
@@ -131,7 +130,6 @@ class Pipe:
         '''
 
         pipe.name = name
-        pipe.parent_pipe = self
         self.pipes[name] = pipe
 
 
