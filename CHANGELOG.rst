@@ -1,6 +1,11 @@
 Pemi Changelog
 ==============
 
+v0.5.6
+------
+
+* Reverted creating a parent_pipe reference, which was causing pickling issues.
+
 v0.5.5
 ------
 
