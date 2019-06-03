@@ -557,6 +557,23 @@ class TestPdFieldValueForkPipe: #pylint: disable=no-self-use
         pipe.flow()
         return pipe
 
+    @pytest.fixture
+    def no_remainder_pipe(self):
+        pipe = pemi.pipes.pd.PdFieldValueForkPipe(
+            field='target',
+            forks=['create', 'update', 'empty']
+        )
+
+        df = pd.DataFrame({
+            'target': ['create', 'update', 'update'],
+            'values': [1, 2, 3]
+        })
+
+        pipe.sources['main'].df = df
+        pipe.flow()
+        return pipe
+
+
     def test_it_forks_data_to_create(self, pipe):
         expected_df = pd.DataFrame({
             'target': ['create', 'create'],
@@ -585,6 +602,13 @@ class TestPdFieldValueForkPipe: #pylint: disable=no-self-use
         expected_df = pd.DataFrame(columns=['target', 'values'])
         actual_df = pipe.targets['empty'].df
         pt.assert_frame_equal(actual_df, expected_df)
+
+    def test_empty_remainder_has_all_the_columns(self, no_remainder_pipe):
+        expected_df = pd.DataFrame(columns=['target', 'values'])
+        actual_df = no_remainder_pipe.targets['remainder'].df
+        pt.assert_frame_equal(actual_df, expected_df)
+
+
 
 class TestPdLambdaPipe: #pylint: disable=too-few-public-methods
     def test_it_runs_a_simple_function(self):
