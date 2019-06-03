@@ -187,6 +187,8 @@ class PdFieldValueForkPipe(pemi.Pipe):
             self.targets['remainder'].df = pd.concat(
                 [grouped.get_group(r) for r in remainder]
             ).sort_index()
+        else:
+            self.targets['remainder'].df = pd.DataFrame(columns=self.sources['main'].df.columns)
 
 class PdLambdaPipe(pemi.Pipe):
     '''
