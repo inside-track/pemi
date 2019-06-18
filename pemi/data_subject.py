@@ -101,16 +101,14 @@ class SaDataSubject(DataSubject):
             return self.cached_test_df
 
         with self.engine.connect() as conn:
-            sql_df = pd.read_sql_table(
+            df = pd.read_sql_table(
                 self.table,
                 conn,
                 schema=self.sql_schema,
-                columns=self.schema.keys()
             )
 
-            df = pd.DataFrame()
-            for column in list(sql_df):
-                df[column] = sql_df[column].apply(self.schema[column].coerce)
+            for column in set(df.columns) & set(self.schema.keys()):
+                df[column] = df[column].apply(self.schema[column].coerce)
 
             self.cached_test_df = df
         return df
