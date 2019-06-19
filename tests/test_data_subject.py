@@ -107,6 +107,8 @@ class TestSaDataSubject:
                 '''
                 DROP TABLE IF EXISTS some_data;
                 CREATE TABLE some_data (
+                  afield TEXT,
+                  bfield TEXT,
                   json_field JSON
                 );
                 '''
@@ -125,3 +127,9 @@ class TestSaDataSubject:
         sa_subject.from_pd(df)
 
         assert_frame_equal(df, sa_subject.to_pd())
+
+    def test_it_includes_all_columns(self, sa_subject):
+        'even if they are not in the pemi schema'
+
+        df = sa_subject.to_pd()
+        assert sorted(df.columns) == sorted(['afield', 'bfield', 'json_field'])
