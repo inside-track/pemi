@@ -1,6 +1,13 @@
 Pemi Changelog
 ==============
 
+v0.5.7
+------
+
+* Add columns to empty remainders of PdForkPipe.
+* Resolves a bug where tests using SaDataSubjects were
+  falsely passing the target_has_fields test.
+
 v0.5.6
 ------
 
