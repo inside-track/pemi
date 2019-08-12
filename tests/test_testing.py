@@ -246,6 +246,41 @@ with pt.Scenario(
             pt.then.target_matches_example(scenario.targets['main'], target_table, by=['tid'])
         )
 
+    with scenario.case('Filtering result sets pior to comparison') as case:
+        source_table = pemi.data.Table(
+            '''
+            | id        | first_name | last_name |
+            | -         | -          | -         |
+            | {sid[1]}  | Glerbo     | McDuck1   |
+            | {sid[2]}  | Glerbo     | McDuck2   |
+            '''.format(
+                sid=scenario.factories['student']['id']
+            ),
+            schema=scenario.sources['main'].schema
+        )
+
+        target_table = pemi.data.Table(
+            '''
+            | tid       | full_name      |
+            | -         | -              |
+            | {tid[2]}  | Glerbo McDuck2 |
+            '''.format(
+                tid=scenario.factories['student']['tid']
+            ),
+            schema=scenario.targets['main'].schema
+        )
+
+        case.when(
+            pt.when.example_for_source(scenario.sources['main'], source_table),
+        ).then(
+            pt.then.target_matches_example(
+                scenario.targets['main'],
+                target_table,
+                by=['tid'],
+                query='full_name.str.endswith("2")'
+            )
+        )
+
     with scenario.case('Using then.field_is_copied') as case:
         case.when(
             *background()
