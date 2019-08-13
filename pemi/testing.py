@@ -325,7 +325,7 @@ class then: #pylint: disable=invalid-name
         return _then
 
     @staticmethod
-    def target_matches_example(target, expected_table, by=None):
+    def target_matches_example(target, expected_table, by=None, query=None):
         """
         Asserts that a given target matches an example data table
 
@@ -338,6 +338,9 @@ class then: #pylint: disable=invalid-name
 
             by (list): A list of field names to sort the result data by before
                 performing the comparison.
+
+            query (string): A pandas query string that can be used to filter down target
+                records prior to comparison
 
         Examples:
             Asserts that the scenario target ``main`` conforms to the expected data::
@@ -366,6 +369,9 @@ class then: #pylint: disable=invalid-name
         def _then(case):
             expected = expected_table.df[subject_fields]
             actual = target[case].data[subject_fields]
+
+            if query:
+                actual = actual.query(query)
 
             if by:
                 expected = expected.sort_values(by).reset_index(drop=True)
