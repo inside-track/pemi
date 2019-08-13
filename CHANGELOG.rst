@@ -1,6 +1,12 @@
 Pemi Changelog
 ==============
 
+0.5.8
+-----
+
+* Allows ``target_matches_example`` to accept a ``query`` parameter, which
+  will filter result sets before comparing with the example data.
+
 v0.5.7
 ------
 
