@@ -2,17 +2,20 @@ import math
 import numpy as np
 import pandas as pd
 
+
 def _isnan(value):
     try:
         return math.isnan(value)
     except TypeError:
         return None
 
+
 def _isnat(value):
     try:
         return bool(np.isnat(value))
     except TypeError:
         return None
+
 
 def isblank(value):
     isnan = _isnan(value)
@@ -21,7 +24,7 @@ def isblank(value):
     if isnan is not None: return isnan
     if isnat is not None: return isnat
 
-    blank = [np.nan, pd.NaT, [], {}, None, '', 'null', 'none', 'nan', 'nat']
+    blank = [np.nan, pd.NaT, [], {}, None, '']
     return value in blank
 
 

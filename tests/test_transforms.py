@@ -7,7 +7,7 @@ import pemi.transforms
 from pemi.fields import *
 
 
-class TestIsBlank: #pylint: disable=too-many-public-methods
+class TestIsBlank:  # pylint: disable=too-many-public-methods
     def test_np_nan(self):
         assert pemi.transforms.isblank(np.nan) is True
 
@@ -71,17 +71,6 @@ class TestIsBlank: #pylint: disable=too-many-public-methods
     def test_pd_nat(self):
         assert pemi.transforms.isblank(pd.NaT) is True
 
-    def test_str_null(self):
-        assert pemi.transforms.isblank('null') is True
-
-    def test_str_none(self):
-        assert pemi.transforms.isblank('none') is True
-
-    def test_str_nan(self):
-        assert pemi.transforms.isblank('nan') is True
-
-    def test_str_nat(self):
-        assert pemi.transforms.isblank('nat') is True
 
 class TestConcatenate:
     def test_it_concatenates(self):

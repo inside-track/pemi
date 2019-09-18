@@ -7,6 +7,7 @@ import pytest
 import pemi.fields
 from pemi.fields import *
 
+
 class TestField:
     def test_it_accepts_metadata(self):
         '''
@@ -77,8 +78,6 @@ class TestStringField:
         assert coerced == 'annoying'
 
 
-
-
 class TestIntegerField:
     def test_convert_to_integers(self):
         '''
@@ -108,7 +107,7 @@ class TestIntegerField:
         assert coerced == 42
 
 
-class TestFloatField: #pylint: disable=too-few-public-methods
+class TestFloatField:  # pylint: disable=too-few-public-methods
     def test_convert_to_float(self):
         '''
         String values should be converted into floats
@@ -263,6 +262,38 @@ class TestDateTimeField:
         with pytest.raises(pemi.fields.CoercionError):
             coerce()
 
+    def test_convert_null_str(self):
+        '''
+        String value of `null` should return None
+        '''
+        field = DateTimeField()
+        coerced = field.coerce('Null')
+        assert coerced is None
+
+    def test_convert_none_str(self):
+        '''
+        String value of `none` should return None
+        '''
+        field = DateTimeField()
+        coerced = field.coerce('None')
+        assert coerced is None
+
+    def test_convert_nan_str(self):
+        '''
+        String value of `nan` should return None
+        '''
+        field = DateTimeField()
+        coerced = field.coerce('NaN')
+        assert coerced is None
+
+    def test_convert_nat_str(self):
+        '''
+        String value of `nat` should return None
+        '''
+        field = DateTimeField()
+        coerced = field.coerce('NaT')
+        assert coerced is None
+
 
 class TestBooleanField:
     def test_convert_to_true(self):
@@ -405,6 +436,7 @@ class TestDecimalField:
         assert field.scale == 2
         assert field.truncate_decimal is False
         assert field.enforce_decimal is True
+
 
 class TestJsonField:
     def test_convert_to_json(self):
