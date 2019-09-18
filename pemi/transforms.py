@@ -21,7 +21,7 @@ def isblank(value):
     if isnan is not None: return isnan
     if isnat is not None: return isnat
 
-    blank = [np.nan, pd.NaT, [], {}, None, '']
+    blank = [np.nan, pd.NaT, [], {}, None, '', 'null', 'none', 'nan', 'nat']
     return value in blank
 
 
