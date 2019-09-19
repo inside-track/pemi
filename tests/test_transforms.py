@@ -7,7 +7,7 @@ import pemi.transforms
 from pemi.fields import *
 
 
-class TestIsBlank: #pylint: disable=too-many-public-methods
+class TestIsBlank:  # pylint: disable=too-many-public-methods
     def test_np_nan(self):
         assert pemi.transforms.isblank(np.nan) is True
 

@@ -136,7 +136,8 @@ class DateTimeField(Field):
         if hasattr(value, 'strip'):
             value = value.strip()
 
-        if pemi.transforms.isblank(value):
+        if pemi.transforms.isblank(value) or (
+                isinstance(value, str) and value.lower() in ['null', 'none', 'nan', 'nat']):
             return self.null
         return self.parse(value)
 
