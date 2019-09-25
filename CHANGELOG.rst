@@ -1,6 +1,12 @@
 Pemi Changelog
 ==============
 
+0.5.9
+-----
+
+* Treats certain values (like "nan", "none", "nat", "null") as blanks when coercing
+  Date and DateTime fields.
+
 0.5.8
 -----
 
