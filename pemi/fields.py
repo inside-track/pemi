@@ -19,6 +19,7 @@ __all__ = [
     'JsonField'
 ]
 
+BLANK_DATE_VALUES = ['null', 'none', 'nan', 'nat']
 
 class CoercionError(ValueError): pass
 class DecimalCoercionError(ValueError): pass
@@ -111,7 +112,8 @@ class DateField(Field):
         if hasattr(value, 'strip'):
             value = value.strip()
 
-        if pemi.transforms.isblank(value):
+        if pemi.transforms.isblank(value) or (
+                isinstance(value, str) and value.lower() in BLANK_DATE_VALUES):
             return self.null
         return self.parse(value)
 
@@ -137,7 +139,7 @@ class DateTimeField(Field):
             value = value.strip()
 
         if pemi.transforms.isblank(value) or (
-                isinstance(value, str) and value.lower() in ['null', 'none', 'nan', 'nat']):
+                isinstance(value, str) and value.lower() in BLANK_DATE_VALUES):
             return self.null
         return self.parse(value)
 
