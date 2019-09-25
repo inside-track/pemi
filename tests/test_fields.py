@@ -194,6 +194,13 @@ class TestDateField:
         with pytest.raises(pemi.fields.CoercionError):
             coerce()
 
+    @pytest.mark.parametrize('value', ['Null', 'NoNe', 'NAN', 'nat'])
+    def test_convert_date_blanks(self, value):
+        field = DateField()
+        coerced = field.coerce(value)
+        assert coerced is None
+
+
 
 class TestDateTimeField:
     def test_convert_to_datetime(self):
@@ -262,37 +269,12 @@ class TestDateTimeField:
         with pytest.raises(pemi.fields.CoercionError):
             coerce()
 
-    def test_convert_null_str(self):
-        '''
-        String value of `null` should return None
-        '''
+    @pytest.mark.parametrize('value', ['Null', 'NoNe', 'NAN', 'nat'])
+    def test_convert_datetime_blanks(self, value):
         field = DateTimeField()
-        coerced = field.coerce('Null')
+        coerced = field.coerce(value)
         assert coerced is None
 
-    def test_convert_none_str(self):
-        '''
-        String value of `none` should return None
-        '''
-        field = DateTimeField()
-        coerced = field.coerce('None')
-        assert coerced is None
-
-    def test_convert_nan_str(self):
-        '''
-        String value of `nan` should return None
-        '''
-        field = DateTimeField()
-        coerced = field.coerce('NaN')
-        assert coerced is None
-
-    def test_convert_nat_str(self):
-        '''
-        String value of `nat` should return None
-        '''
-        field = DateTimeField()
-        coerced = field.coerce('NaT')
-        assert coerced is None
 
 
 class TestBooleanField:
