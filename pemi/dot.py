@@ -3,7 +3,7 @@ from graphviz import Digraph
 
 
 GRAPH_OPTS = {
-    'source': {'shape': 'invhouse', 'color': 'lightgreen', 'style': 'filled'},
+    'source': {'shape': 'invhouse', 'color': 'limegreen', 'style': 'filled'},
     'target': {'shape': 'house', 'color': 'lightblue', 'style': 'filled'},
     'pipe': {'shape': 'box', 'color': 'orange', 'style': 'filled, rounded'}
 }
