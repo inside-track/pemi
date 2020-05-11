@@ -1,6 +1,12 @@
 Pemi Changelog
 ==============
 
+0.5.10
+------
+
+* Removes pandas.util.testing deprecation warning.
+* Fixes an issue with coloring graphs in JupyterLab.
+
 0.5.9
 -----
 
