@@ -2,7 +2,7 @@ import tempfile
 from pathlib import Path
 
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal
 
 import pemi
 import pemi.testing as pt

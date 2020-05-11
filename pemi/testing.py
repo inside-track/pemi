@@ -48,7 +48,7 @@ class NoTargetDataError(AssertionError): pass
 
 def assert_frame_equal(actual, expected, **kwargs):
     try:
-        pd.util.testing.assert_frame_equal(actual, expected, **kwargs)
+        pd.testing.assert_frame_equal(actual, expected, **kwargs)
     except AssertionError as err:
         msg = str(err)
         msg += '\nActual:\n{}'.format(actual)
@@ -59,7 +59,7 @@ def assert_series_equal(actual, expected, **kwargs):
     actual.reset_index(drop=True, inplace=True)
     expected.reset_index(drop=True, inplace=True)
     try:
-        pd.util.testing.assert_series_equal(actual, expected, **kwargs)
+        pd.testing.assert_series_equal(actual, expected, **kwargs)
     except AssertionError as err:
         msg = str(err)
         msg += '\nActual:\n{}'.format(actual)
