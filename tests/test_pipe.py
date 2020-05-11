@@ -3,7 +3,7 @@ import os
 import pytest
 import sqlalchemy as sa
 
-from pandas.util.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal
 
 import pemi
 import pemi.data

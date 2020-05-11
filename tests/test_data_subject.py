@@ -4,7 +4,7 @@ import pytest
 
 import sqlalchemy as sa
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal
 
 import pemi
 from pemi.fields import *
