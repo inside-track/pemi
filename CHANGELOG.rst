@@ -1,6 +1,11 @@
 Pemi Changelog
 ==============
 
+0.5.11
+------
+
+* Resolves some compatibility issues with Pandas 1.1
+
 0.5.10
 ------
 
