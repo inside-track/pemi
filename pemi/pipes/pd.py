@@ -11,7 +11,8 @@ class PdForkPipe(pemi.pipes.patterns.ForkPipe):
 
 
 class PdConcatPipe(pemi.pipes.patterns.ConcatPipe):
-    def __init__(self, *, concat_opts={}, **params):
+    def __init__(self, *, concat_opts=None, **params):
+        concat_opts = concat_opts or {}
         super().__init__(**params)
         self.concat_opts = concat_opts
 

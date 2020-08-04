@@ -74,7 +74,15 @@ class Table: #pylint: disable=too-few-public-methods
         FloatField:    lambda field: FAKER.pyfloat,
         DecimalField:  _fake_decimal.__func__,
         BooleanField:  lambda field: FAKER.pybool,
-        JsonField:     lambda field: lambda: FAKER.pydict(5, True, 'str', 'int', 'date')
+        JsonField:     lambda field: lambda: FAKER.pydict(
+            nb_elements=5,
+            variable_nb_elements=True,
+            value_types=[
+                'str',
+                'int',
+                'date'
+            ],
+        )
     }
     #pylint: enable=no-member
 

@@ -435,7 +435,9 @@ class then: #pylint: disable=invalid-name
                 actual = target[case].data[[target_field]]
 
             try:
-                assert_series_equal(actual[target_field], expected[source_field], check_names=False)
+                assert_series_equal(actual[target_field], expected[source_field],
+                                    check_names=False, check_dtype=False,
+                                    check_datetimelike_compat=True)
             except AssertionError as err:
                 raise AssertionError(
                     'Source field {} not copied to target field {}: {}'.format(
@@ -504,7 +506,8 @@ class then: #pylint: disable=invalid-name
             for source_field, target_field in mapping:
                 try:
                     assert_series_equal(actual[target_field], expected[source_field],
-                                        check_names=False, check_dtype=False)
+                                        check_names=False, check_dtype=False,
+                                        check_datetimelike_compat=True)
                 except AssertionError as err:
                     raise AssertionError(
                         'Source field {} not copied to target field {}: {}'.format(
