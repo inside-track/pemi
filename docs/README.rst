@@ -367,7 +367,7 @@ Once the containers are built, spin up the containers to run the tests
 
 And then run the tests using something like (you may prefer different pytest options):
 
-    >>> inv test --pytest="-s -x -vv --tb=short --color=yes tests"
+    >>> inv test --opts="-s -x -vv --tb=short --color=yes tests"
 
 The test container also launches a local Jupyter notebook server.  This can be a convenient tool to
 have when developing Pemi.  To access the notebook severs, just visit http://localhost:8890/lab

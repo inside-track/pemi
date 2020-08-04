@@ -4,10 +4,10 @@ dask
 graphviz
 faker
 sqlalchemy
-psycopg2
+psycopg2-binary
 pandas-mapper
 
-jupyter>=0.30
+ipython
 jupyterlab
 
 pytest
