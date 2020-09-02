@@ -83,11 +83,11 @@ class TestConcatenate:
 
     def test_it_concatenates_w_leading_blank(self):
         row = pd.Series(['', 'c', 'd'])
-        assert pemi.transforms.concatenate('-')(row) == 'c-d'
+        assert pemi.transforms.concatenate('-', ignore_blanks=True)(row) == 'c-d'
 
     def test_it_concatenates_w_tailing_blank(self):
         row = pd.Series(['ab', 'c', ''])
-        assert pemi.transforms.concatenate('-')(row) == 'ab-c'
+        assert pemi.transforms.concatenate('-', ignore_blanks=True)(row) == 'ab-c'
 
 class TestNvl:
     def test_it_picks_the_first_non_blank(self):

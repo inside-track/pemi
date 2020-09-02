@@ -28,9 +28,9 @@ def isblank(value):
     return value in blank
 
 
-def concatenate(delimiter=''):
+def concatenate(delimiter='', ignore_blanks=False):
     def _concatenate(row):
-        row = row[row.astype(bool)]
+        row = row[row.astype(bool)] if ignore_blanks else row
         return delimiter.join(row)
 
     return _concatenate
