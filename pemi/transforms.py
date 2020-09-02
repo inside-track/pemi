@@ -30,6 +30,7 @@ def isblank(value):
 
 def concatenate(delimiter=''):
     def _concatenate(row):
+        row = row[row.astype(bool)]
         return delimiter.join(row)
 
     return _concatenate
