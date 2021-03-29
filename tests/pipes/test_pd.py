@@ -549,8 +549,8 @@ class TestPdFieldValueForkPipe: #pylint: disable=no-self-use
         )
 
         df = pd.DataFrame({
-            'target': ['create', 'update', 'update', 'else1', 'create', 'else2'],
-            'values': [1, 2, 3, 4, 5, 6]
+            'target': ['create', 'update', 'update', 'else1', 'create', 'else2', '', None],
+            'values': [1, 2, 3, 4, 5, 6, 7, 8]
         })
 
         pipe.sources['main'].df = df
@@ -592,9 +592,9 @@ class TestPdFieldValueForkPipe: #pylint: disable=no-self-use
 
     def test_it_puts_unknown_values_in_remainder(self, pipe):
         expected_df = pd.DataFrame({
-            'target': ['else1', 'else2'],
-            'values': [4, 6]
-        }, index=[3, 5])
+            'target': ['else1', 'else2', '', None],
+            'values': [4, 6, 7, 8]
+        }, index=[3, 5, 6, 7])
         actual_df = pipe.targets['remainder'].df
         pt.assert_frame_equal(actual_df, expected_df)
 

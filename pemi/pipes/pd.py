@@ -175,13 +175,14 @@ class PdFieldValueForkPipe(pemi.Pipe):
         )
 
     def flow(self):
-        grouped = self.sources['main'].df.groupby(self.field)
+        work_df = self.sources['main'].df.copy()
+        grouped = work_df.groupby(self.field)
 
         for fork in self.forks:
             if fork in grouped.groups:
                 self.targets[fork].df = grouped.get_group(fork).copy()
             else:
-                self.targets[fork].df = pd.DataFrame(columns=self.sources['main'].df.columns)
+                self.targets[fork].df = pd.DataFrame(columns=work_df.columns)
 
         remainder = set(grouped.groups.keys()) - set(self.forks)
         if len(remainder) > 0:
@@ -189,7 +190,13 @@ class PdFieldValueForkPipe(pemi.Pipe):
                 [grouped.get_group(r) for r in remainder]
             ).sort_index()
         else:
-            self.targets['remainder'].df = pd.DataFrame(columns=self.sources['main'].df.columns)
+            self.targets['remainder'].df = pd.DataFrame(columns=work_df.columns)
+
+        if None in work_df[self.field].unique():
+            self.targets['remainder'].df = pd.concat(
+                [self.targets['remainder'].df, work_df[work_df[self.field].isna()]]
+            ).sort_index()
+
 
 class PdLambdaPipe(pemi.Pipe):
     '''
